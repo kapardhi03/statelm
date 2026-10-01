@@ -9,8 +9,8 @@
   quoted in `literature.md`, ADR-status rule and CLAUDE.md rule 5 refined.
 
 ## Results (numbers only)
-Models `all-MiniLM-L6-v2` @ `1110a243`, `bge-base-en-v1.5` @ `a5beb1e3`, seed 0. Deterministic
-given pinned revisions, so no seed spread; axes are 2 encoders x 5 variants.
+Models `all-MiniLM-L6-v2` @ `1110a243`, `bge-base-en-v1.5` @ `a5beb1e3`, seed 0, deterministic;
+axes are 2 encoders x 5 variants.
 - Gate, run `20261001T172749Z-63641d3`, N0, instances: slots 75/116 = 64.66% (band 60-70,
   published 65); intents 20/28 = 71.43% (band 66-76, published 71). Unique names: 57.29%, 70.37%.
 - H1, run `20261001T180031Z-746c803`, n=41, space 215, threshold >= 50%: both-model 12.20%
@@ -21,8 +21,7 @@ given pinned revisions, so no seed spread; axes are 2 encoders x 5 variants.
   0.8359, p = 4.98e-14, rho identical, inversions 1. `would_hold_without_float_tolerance` false.
 - Post-hoc, 44 seen-service pairs: MiniLM 0.7760, 0.7503, 0.7018, 0.7001, 0.7184, p = 0.0027,
   rho -0.7. BGE 0.8789, 0.8523, 0.8298, 0.8223, 0.8335, p = 9.45e-05, rho -0.7.
-- Post-hoc calibration, same-slot paraphrases below 0.8: MiniLM 67/160 v1, 111/160 v5; BGE 9/160
-  v1, 42/160 v5. Exploratory: 75 matched instances, 55 distinct names.
+- Post-hoc, same-slot paraphrases below 0.8: MiniLM 67/160 v1, 111/160 v5; BGE 9/160, 42/160.
 
 ## Deviations from plan
 - H2 was implemented on all 160 test pairs, though an earlier Change log entry restricted it to
@@ -35,7 +34,6 @@ given pinned revisions, so no seed spread; axes are 2 encoders x 5 variants.
 - Pairing key: original `service_name` with the variant-index suffix stripped, plus slot
   position, since SGD-X renames every service (`Alarm_1` -> `Alarm_11`).
 - No instruction prefix for either encoder, on the grounds that the task is symmetric.
-- N2 singularization is rule-based with an explicit exception list; secondary only.
 - Run-id `YYYYMMDDTHHMMSSZ-<sha>`; tracked `sanity_check.json` and `per_slot.jsonl`; deleted the
   619 MB clone after copying; filled `<date>` with 2026-10-01.
 
@@ -45,9 +43,8 @@ given pinned revisions, so no seed spread; axes are 2 encoders x 5 variants.
 - H2 measured cosine to each slot's own test original. ADR-004 defines the covariate against the
   nearest train field, not measured here, and ADR-005 generalizes to that untested relation.
 - H1's cutoff sits below the cosine of a same-slot paraphrase under MiniLM (41.9% at v1).
-- The 160 slots are treated as independent; they are nested in 21 services.
-- No interval pre-registered on any deciding number; encoder contamination unaddressed (SGD
-  public since 2019, SGD-X since 2021).
+- The 160 slots are treated as independent but nest in 21 services; no interval was
+  pre-registered; encoder contamination unaddressed (SGD public 2019, SGD-X 2021).
 - Commit `7fc8825` bundled a CLAUDE.md rule change with a threshold a verdict depends on.
 
 ## Decisions needed (human)
