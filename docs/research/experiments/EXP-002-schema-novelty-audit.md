@@ -1,6 +1,6 @@
 # EXP-002: Schema novelty audit on SGD / SGD-X
 
-Status: Planned
+Status: Running
 Owner: Kapardhi
 Created: 2026-10-01
 Revised: 2026-10-01 (pre-run, see Change log)
@@ -14,9 +14,11 @@ Blocked by: nothing
 - **2026-10-01, before any run and before any code existed.** Hypothesis, Metric and
   "Decision informed" revised by Kapardhi. The original hypothesis ("refuted if fewer than ~20%
   of unseen-service slots have a near match at cosine >= 0.8") was unfalsifiable once the
-  sanity-check gate passed: exact name matches are a subset of the cosine >= 0.8 set, so a gate
-  asserting ~65% exact matches over the same population makes a <20% result arithmetically
-  impossible. Replaced by H1 and H2, which are evaluated on populations the gate does not already
+  sanity-check gate passed: exact name matches are, with near certainty though not as a matter of
+  arithmetic, also near matches under the cosine measure, so a gate asserting ~65% exact matches
+  over the same population left no realistic path to a <20% result. (The qualifier matters: the
+  embedding input carries each slot's description, so identical names do not strictly guarantee
+  cosine >= 0.8. The original wording claimed arithmetic it did not have.) Replaced by H1 and H2, which are evaluated on populations the gate does not already
   determine. At the time of this change no run had been executed, no metric had been computed,
   and `experiments/EXP-002/` did not exist.
 - **2026-10-01, same revision.** Step 4 (proposed L0 / L1 / L2 bin assignment) dropped entirely.
@@ -108,8 +110,9 @@ condition fails. Variants that pass both are usable L1 material.
 - Entry points: `experiments/EXP-002/run_sanity_check.py` (gate) and
   `experiments/EXP-002/run_audit.py` (H1, H2). Local `pyproject.toml`, `uv`-managed.
 - Run id format: `YYYYMMDDTHHMMSSZ-<git-short-sha>`.
-- `runs/EXP-002/<run-id>/` holds `config.json`, `metrics.json`, `sanity_check.json`,
-  `per_slot.jsonl` (tracked), `log.txt`.
+- `runs/EXP-002/<run-id>/` holds `config.json` and `log.txt` at every step, `sanity_check.json`
+  from Step 1, and `metrics.json` plus `per_slot.jsonl` (tracked) from Step 2 onward. A Step 1
+  run directory therefore has no `metrics.json`.
 - `config.json` records: git commit, run id, seed, dataset repo URL and pinned commit SHA, SHA-256
   per schema file, normalization pipeline ids and version, both embedding model names and
   revisions, `input_template_hash`, and every threshold in Metric below.
@@ -215,16 +218,23 @@ the H1 population.
 
 Normalization observations, for the record: N1 moves no rate for either kind, because SGD slot
 names are already lowercase snake_case and intent names are consistently CamelCase on both
-sides. Exactly one slot matches under N2 but not N0, `Buses_3/to_city` normalizing to "city"
-against train's `city`. One name, `Trains_1/to`, normalizes to the empty string under N2; no
+sides. Exactly one slot matches under N2 but not N0: 76 - 75 = one, and because normalization is
+applied to both sides the N0 matches are a subset of the N2 matches. That slot is
+`Buses_3/to_city`, normalizing to "city" against train's `city`, established by a separate
+check rather than from the run artifacts, whose `evidence` block holds the N0 cells only. One name, `Trains_1/to`, normalizes to the empty string under N2; no
 train slot name does, so it produced no spurious match in this run.
 
 ## Interpretation
 
-**What the gate establishes.** Both published figures reproduce on the pre-registered primary
-definition, within 0.34 points for slots (64.66% vs 65%) and 0.43 points for intents (71.43% vs
-71%). The pipeline reads the schema files the paper describes and counts what the paper counts,
-so the measurement machinery for H1 and H2 can be trusted to the extent this gate tests it.
+**What the gate establishes.** One reading of each published statistic lands inside its
+pre-registered band: 64.66% against a published 65% for slots, 71.43% against a published 71%
+for intents. The agreement should not be quoted more tightly than that, because both published
+figures are whole percents and could stand for anything in a half-point either way. The reading
+itself is ours: the definition the gate implements is the one recorded in `literature.md`, not a
+quotation of the paper's own operationalization, which is still not in this repo. What the gate
+licenses is narrow: the pipeline loads the right files, partitions services as specified, and
+counts instances correctly, so the machinery H1 and H2 will reuse works to the extent this
+tests it.
 On SGD's own published labels, roughly two thirds of the slot names in services marked unseen
 are literally present in train, which is the condition EXP-002 exists to quantify.
 
@@ -232,14 +242,20 @@ are literally present in train, which is the condition EXP-002 exists to quantif
 
 1. The pass depends on the unit definition, and the secondary unit would have failed. On
    unique names the slot rate is 57.29%, below the 60% band edge. The instance unit was fixed
-   as primary before the run (Q1, recorded in the Change log), so the verdict stands as
-   pre-registered, but the gap is substantive rather than cosmetic: the slot names that repeat
+   as primary in the Setup section by commit `133cd2b`, before `experiments/EXP-002/` existed and
+   two commits before the run, so the verdict stands as pre-registered. (An earlier draft of this
+   section cited a "Q1" that appears nowhere in the repo; the decision was real but the citation
+   pointed at nothing.) The gap is substantive rather than cosmetic: the slot names that repeat
    across unseen services are disproportionately the ones that match train. Any later claim
    about "how much of SGD's unseen set is really unseen" has to name its unit.
-2. This is a reproduction on current files, not on the paper's files. The pinned commit is
-   `e852981`, whose HEAD is a post-publication merge titled "sgdx-intent-bug". The intent
-   figure in particular is computed on schema files that changed after the paper was written,
-   and it still lands at 71.43%. That is agreement, not identity of inputs.
+2. Resolved by checking, and recorded because an earlier draft of this section got it wrong.
+   That draft inferred from the pinned commit's title ("sgdx-intent-bug") that the files behind
+   the intent figure had changed after publication. The file history says otherwise:
+   `train/schema.json` and `test/schema.json` last changed on 2020-05-07, which predates both
+   the SGD-X dataset release (2021-10-20) and the paper. The two files Step 1 read are therefore
+   the same ones that existed when SGD-X was published, and the post-publication fix in HEAD
+   touches `sgd_x/` files that Step 1 never opened. H2 reads those files, so the concern returns
+   there rather than here.
 3. Small denominators on the intent side. With 28 intent instances, one intent moves the rate
    by 3.57 points, which is a sizeable fraction of a 10-point band.
 4. Exact name matching is the weakest possible notion of overlap, and it is deliberately so
@@ -259,6 +275,78 @@ in `docs/research/knowns-unknowns.md`.
 
 Required caveat for any later fill of this section: the paragraph above must appear, in
 substance, whenever a result from this experiment is written up.
+
+## Review
+
+`research-reviewer` pass on run `20261001T172749Z-63641d3`, 2026-10-01, after Result and
+Interpretation were filled. Verdict: **Sound with caveats**. Its two FAILs were both real and
+are fixed above; the sections it passed are listed so the record shows what was actually checked.
+
+### Failed, and what changed
+
+- **Pre-registration, FAIL on one point.** Thresholds themselves verified clean: the record
+  revisions (`133cd2b`, `1e4db75`) precede the code commit (`63641d3`), the run id timestamp is
+  seconds after it, and `config.json.thresholds` matches `thresholds.py` exactly, including the
+  unrun H1 and H2 numbers. But the Interpretation justified the decisive unit choice by citing a
+  "Q1" that exists nowhere in the repo. The decision was real and pre-run, recorded in Setup by
+  `133cd2b`; the citation pointed at nothing. Replaced with the commit.
+- **Claim scope, FAIL on three overclaims.** "Counts what the paper counts" was unverifiable,
+  since the paper's own operationalization is not in this repo. "Within 0.34 points" was false
+  precision against figures published as whole percents. "Computed on schema files that changed
+  after the paper" was inferred from a commit title; checking the file history showed
+  `train/schema.json` and `test/schema.json` last changed 2020-05-07, before the SGD-X release.
+  The first two were rewritten, the third withdrawn and replaced with the verified fact.
+
+### Passed
+
+Decision linkage (with the coherence problem below), leakage (`config.json.files_read` lists only
+the two schema files; no dialogue or annotation file is opened anywhere in the code; `data/splits/`
+untouched), generator/judge circularity (no model invoked, `embedding_models: null`),
+contamination (no model, and the required caveat is present), label provenance (with the caveat
+that the comparison target is partly self-supplied), statistical adequacy (a census of a fixed
+population, not a sample, so the >= 3 seeds convention genuinely does not apply), literature
+conflict (consistent with the SGD-X row and with `knowns-unknowns.md`).
+
+Also flagged and fixed: the record's own `Status` still read Planned, and Setup listed
+`metrics.json` in a Step 1 run directory.
+
+### Independently reconciled against the artifacts
+
+- 75 matched + 41 unmatched = 116 slot instances; 20 + 8 = 28 intent instances. 75/116 =
+  64.6552%, 20/28 = 71.4286%. Table, log and JSON agree.
+- Verified from the raw files: `train/schema.json` has 26 services and 215 + 53 = 268 slot and
+  intent names; `test/schema.json` has 21 services splitting exactly 6 seen / 15 unseen.
+- Stronger than the Interpretation stated: 75 - 55 = 20 = 116 - 96, so every duplicated slot
+  instance is a matching name. That is the full mechanism behind threat 1.
+
+### Open for the researcher, not fixed here
+
+1. **ADR-004 may already settle what H1 is supposed to inform.** ADR-004 says a test-only SGD
+   service is not automatically L2, because we did not hold the field out. If levels come only
+   from construction, no overlap measurement can make SGD test services L2, so H1's "whether SGD
+   can supply L2 items, or we must construct our own" looks pre-answered by a Proposed ADR.
+2. **H2's decision rule selects benchmark material by a measurement.** "Variants that pass are
+   usable L1 material" sits in tension with ADR-004's "never by similarity thresholds", and makes
+   "L1 is surface-only" partly true by construction.
+3. **No contrast condition for the 64.66%.** The matched names are dominated by `price`, `date`,
+   `time`, `city`, `address`, `phone_number`, `location`, so the overlap may reflect ordinary
+   English field naming rather than anything specific to SGD's split. Adding a contrast after
+   seeing the result would be post-hoc, so it is left as a proposal for Step 2 rather than
+   computed now.
+
+### One finding not accepted
+
+The review suggested a variant could pass H2 condition 1 by colliding with a different train
+slot name. A collision keeps the slot matching train, which holds the exact-match rate up and so
+makes condition 1 harder, not easier. The underlying observation still stands as a blind spot
+worth recording, in the other direction: a paraphrase that renames a slot onto another train
+slot's name looks un-paraphrased to condition 1, which makes that condition conservative.
+
+### Not done, needs a decision
+
+The review's cheapest fix also asks for SGD-X's own definition of its 65% / 71% statistic to be
+quoted in `literature.md`. The definition there was supplied by the researcher rather than
+quoted from the paper, so closing this means fetching arXiv 2110.06800, which is his call.
 
 ## Decision
 (pending, human)

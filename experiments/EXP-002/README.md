@@ -31,7 +31,7 @@ cd /tmp/sgd && find . -name schema.json -print0 \
 
 ```
 cd experiments/EXP-002
-uv run pytest                                    # 82 tests, no network, no data needed
+uv run pytest                                    # 46 test functions, 82 cases; no network or data needed
 uv run python run_sanity_check.py \
   --data-root ../../data/raw/sgd/e852981ae34990f4358979625854259302feaa78 \
   --dataset-commit e852981ae34990f4358979625854259302feaa78
