@@ -20,8 +20,9 @@ Blocked by: nothing
   over the same population left no realistic path to a <20% result. (The qualifier matters: the
   embedding input carries each slot's description, so identical names do not strictly guarantee
   cosine >= 0.8. The original wording claimed arithmetic it did not have.) Replaced by H1 and H2,
-  which are evaluated on populations the gate does not already determine. At the time of this change no run had been executed, no metric had been computed,
-  and `experiments/EXP-002/` did not exist.
+  which are evaluated on populations the gate does not already determine. At the time of this
+  change no run had been executed, no metric had been computed, and `experiments/EXP-002/` did
+  not exist.
 - **2026-10-01, same revision.** Step 4 (proposed L0 / L1 / L2 bin assignment) dropped entirely.
   This experiment emits no novelty-level labels. Similarity is reported as a per-item covariate
   only. Rationale recorded in ADR-004 (Proposed), which cites this experiment as evidence.
