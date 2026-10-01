@@ -1,0 +1,24 @@
+# Data (raw data and frozen splits stay local; the schema-to-split map is tracked)
+data/raw/
+data/splits/**
+!data/splits/**/
+!data/splits/schema_assignment.json
+
+# Run outputs (only configs and metrics are tracked)
+runs/**
+!runs/**/
+!runs/**/metrics.json
+!runs/**/config.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Personal Claude Code config
+CLAUDE.local.md
+.claude/settings.local.json
+
+# OS
+.DS_Store

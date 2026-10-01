@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "defaultMode": "plan",
+    "deny": [
+      "Read(./data/splits/test/**)",
+      "Edit(./data/splits/test/**)"
+    ],
+    "ask": [
+      "Edit(./docs/research/adr/**)",
+      "Edit(./docs/research/research-question.md)",
+      "Edit(./docs/research/architecture.md)"
+    ]
+  }
+}
