@@ -1,0 +1,518 @@
+{
+  "experiment": "EXP-002",
+  "step": "steps-2-3-h1-h2",
+  "run_id": "20261001T180031Z-746c803",
+  "sgd_x_structural_validation": {
+    "v1": {
+      "ok": true,
+      "problems": []
+    },
+    "v2": {
+      "ok": true,
+      "problems": []
+    },
+    "v3": {
+      "ok": true,
+      "problems": []
+    },
+    "v4": {
+      "ok": true,
+      "problems": []
+    },
+    "v5": {
+      "ok": true,
+      "problems": []
+    }
+  },
+  "h1": {
+    "population": "unseen-service slots with no N0 exact name match in train",
+    "n": 41,
+    "nearest_neighbour_search_space": "all train (service, slot) instances",
+    "search_space_n": 215,
+    "both_models_clear_cosine_rate_percent": 12.1951,
+    "threshold_percent": 50.0,
+    "supported": false,
+    "per_model_clear_rate_percent": {
+      "sentence-transformers/all-MiniLM-L6-v2": 12.1951,
+      "BAAI/bge-base-en-v1.5": 41.4634
+    },
+    "per_model_mean_nearest_cosine": {
+      "sentence-transformers/all-MiniLM-L6-v2": 0.613074,
+      "BAAI/bge-base-en-v1.5": 0.774731
+    },
+    "per_model_cosine_quantiles": {
+      "sentence-transformers/all-MiniLM-L6-v2": {
+        "p10": 0.423279,
+        "p50": 0.593193,
+        "p90": 0.804736
+      },
+      "BAAI/bge-base-en-v1.5": {
+        "p10": 0.689348,
+        "p50": 0.781231,
+        "p90": 0.856031
+      }
+    },
+    "jaccard_clear_rate_percent": 39.0244,
+    "agreement": {
+      "top1_identity_rate_percent": 56.0976,
+      "cohen_kappa_on_cosine_decision": 0.327869
+    }
+  },
+  "h2": {
+    "population": "every slot of every service in each variant test schema, paired 1:1 with its own original slot",
+    "n_slot_pairs": 160,
+    "pairing_key": "(original service_name with the variant-index suffix stripped, slot position)",
+    "per_model": {
+      "sentence-transformers/all-MiniLM-L6-v2": {
+        "mean_cosine_by_variant": {
+          "v1": 0.80117,
+          "v2": 0.775249,
+          "v3": 0.73842,
+          "v4": 0.734645,
+          "v5": 0.735128
+        },
+        "cosine_quantiles_by_variant": {
+          "v1": {
+            "p10": 0.670402,
+            "p50": 0.816482,
+            "p90": 0.920161
+          },
+          "v2": {
+            "p10": 0.643721,
+            "p50": 0.804074,
+            "p90": 0.887204
+          },
+          "v3": {
+            "p10": 0.606794,
+            "p50": 0.749024,
+            "p90": 0.877381
+          },
+          "v4": {
+            "p10": 0.576661,
+            "p50": 0.744371,
+            "p90": 0.867961
+          },
+          "v5": {
+            "p10": 0.575735,
+            "p50": 0.746828,
+            "p90": 0.886783
+          }
+        },
+        "condition_a_wilcoxon_v5_below_v1": {
+          "statistic": 2653.0,
+          "p_value": 5.529404702063721e-11,
+          "alpha": 0.01,
+          "holds": true
+        },
+        "condition_b_spearman_index_vs_mean": {
+          "rho": -0.8999999999999998,
+          "rho_6dp": -0.9,
+          "p_value": 0.03738607346849874,
+          "max_rho": -0.9,
+          "float_tolerance": 1e-09,
+          "holds": true,
+          "would_hold_without_float_tolerance": false,
+          "adjacent_inversions": 1
+        },
+        "supported": true,
+        "reported_non_deciding": {
+          "strictly_decreasing_means": false
+        }
+      },
+      "BAAI/bge-base-en-v1.5": {
+        "mean_cosine_by_variant": {
+          "v1": 0.881881,
+          "v2": 0.861699,
+          "v3": 0.84209,
+          "v4": 0.832018,
+          "v5": 0.835944
+        },
+        "cosine_quantiles_by_variant": {
+          "v1": {
+            "p10": 0.821473,
+            "p50": 0.883406,
+            "p90": 0.946701
+          },
+          "v2": {
+            "p10": 0.78873,
+            "p50": 0.867874,
+            "p90": 0.924474
+          },
+          "v3": {
+            "p10": 0.773434,
+            "p50": 0.848195,
+            "p90": 0.899509
+          },
+          "v4": {
+            "p10": 0.741047,
+            "p50": 0.835933,
+            "p90": 0.913888
+          },
+          "v5": {
+            "p10": 0.742956,
+            "p50": 0.843963,
+            "p90": 0.915888
+          }
+        },
+        "condition_a_wilcoxon_v5_below_v1": {
+          "statistic": 2072.0,
+          "p_value": 4.9759219931882337e-14,
+          "alpha": 0.01,
+          "holds": true
+        },
+        "condition_b_spearman_index_vs_mean": {
+          "rho": -0.8999999999999998,
+          "rho_6dp": -0.9,
+          "p_value": 0.03738607346849874,
+          "max_rho": -0.9,
+          "float_tolerance": 1e-09,
+          "holds": true,
+          "would_hold_without_float_tolerance": false,
+          "adjacent_inversions": 1
+        },
+        "supported": true,
+        "reported_non_deciding": {
+          "strictly_decreasing_means": false
+        }
+      }
+    },
+    "supported": true
+  },
+  "exploratory_post_hoc": {
+    "label": "EXPLORATORY, POST-HOC. No hypothesis, no threshold. Chosen after the Step 1 gate result was seen, and may not be reported as support for or against H1, H2 or any ADR.",
+    "matched_instances": 75,
+    "distinct_shared_names": 55,
+    "frequency_table": [
+      {
+        "name": "phone_number",
+        "unseen_service_instances": 4,
+        "distinct_unseen_services": 4,
+        "distinct_train_services": 9
+      },
+      {
+        "name": "address",
+        "unseen_service_instances": 3,
+        "distinct_unseen_services": 3,
+        "distinct_train_services": 3
+      },
+      {
+        "name": "city",
+        "unseen_service_instances": 3,
+        "distinct_unseen_services": 3,
+        "distinct_train_services": 6
+      },
+      {
+        "name": "genre",
+        "unseen_service_instances": 3,
+        "distinct_unseen_services": 3,
+        "distinct_train_services": 4
+      },
+      {
+        "name": "location",
+        "unseen_service_instances": 3,
+        "distinct_unseen_services": 3,
+        "distinct_train_services": 3
+      },
+      {
+        "name": "price",
+        "unseen_service_instances": 3,
+        "distinct_unseen_services": 3,
+        "distinct_train_services": 4
+      },
+      {
+        "name": "category",
+        "unseen_service_instances": 2,
+        "distinct_unseen_services": 2,
+        "distinct_train_services": 3
+      },
+      {
+        "name": "date",
+        "unseen_service_instances": 2,
+        "distinct_unseen_services": 2,
+        "distinct_train_services": 4
+      },
+      {
+        "name": "departure_date",
+        "unseen_service_instances": 2,
+        "distinct_unseen_services": 2,
+        "distinct_train_services": 3
+      },
+      {
+        "name": "from_station",
+        "unseen_service_instances": 2,
+        "distinct_unseen_services": 2,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "number_of_tickets",
+        "unseen_service_instances": 2,
+        "distinct_unseen_services": 2,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "time",
+        "unseen_service_instances": 2,
+        "distinct_unseen_services": 2,
+        "distinct_train_services": 3
+      },
+      {
+        "name": "to_station",
+        "unseen_service_instances": 2,
+        "distinct_unseen_services": 2,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "airlines",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "album",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "amount",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "appointment_date",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 3
+      },
+      {
+        "name": "appointment_time",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 3
+      },
+      {
+        "name": "area",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "artist",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "car_name",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "car_type",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "check_in_date",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 3
+      },
+      {
+        "name": "departure_time",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "destination_airport",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "directed_by",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "event_name",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 3
+      },
+      {
+        "name": "event_type",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "inbound_arrival_time",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "inbound_departure_time",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "number_of_adults",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "number_of_baths",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "number_of_beds",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "number_of_rooms",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "number_of_seats",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "origin_airport",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "outbound_arrival_time",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "outbound_departure_time",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "pickup_location",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "pickup_time",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "price_per_night",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "price_range",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "property_name",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "rating",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "restaurant_name",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "return_date",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "seating_class",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "star_rating",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "street_address",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 6
+      },
+      {
+        "name": "title",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "type",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 2
+      },
+      {
+        "name": "venue",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "venue_address",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "visit_date",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      },
+      {
+        "name": "year",
+        "unseen_service_instances": 1,
+        "distinct_unseen_services": 1,
+        "distinct_train_services": 1
+      }
+    ]
+  }
+}
