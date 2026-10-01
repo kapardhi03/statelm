@@ -62,6 +62,8 @@ measurements, and report results honestly. You do not decide research direction.
 - After results: run the `research-reviewer` subagent on the experiment file before reporting.
 - End each work session with `/handoff` so Kapardhi can review the results and make the Decision.
 - Commit after each completed step with a message naming the experiment ID.
+- You may update the tables in `docs/research/STATE.md` for factual status changes (new ADR
+  rows, experiment status). Never edit its "Decisions pending" section.
 
 ## Where to find more (read on demand, not every session)
 

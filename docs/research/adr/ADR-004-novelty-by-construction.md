@@ -14,7 +14,8 @@ provenance at construction time:
 
 Lexical overlap and embedding similarity to the nearest train field are **reported per item as a
 covariate**, never used to assign or reassign a level. No experiment emits a novelty level derived
-from a threshold.
+from a threshold. Results are always reported stratified by the similarity covariate; a
+contradicting covariate never excludes or relabels an item.
 
 This ADR does not change ADR-001, ADR-002 or ADR-003, and does not alter the ladder in
 `docs/research/research-question.md`. It states how the ladder's levels are operationalized.

@@ -30,6 +30,7 @@ Detail lives in the linked files, not here.
 | ADR-001 | Interaction-scoped, benchmark-first claim | Proposed |
 | ADR-002 | Temporal memory is a deterministic ledger | Proposed |
 | ADR-003 | Typed abstention, distinct from NO-OP | Proposed |
+| ADR-004 | Novelty levels by construction, not thresholds | Proposed |
 
 Nothing may be built on a Proposed ADR as if it were Accepted.
 
