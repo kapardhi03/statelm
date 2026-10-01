@@ -31,6 +31,7 @@ Detail lives in the linked files, not here.
 | ADR-002 | Temporal memory is a deterministic ledger | Proposed |
 | ADR-003 | Typed abstention, distinct from NO-OP | Proposed |
 | ADR-004 | Novelty levels by construction, not thresholds | Accepted |
+| ADR-005 | Similarity reported as rank or stratum, never a cutoff | Proposed |
 
 Nothing may be built on a Proposed ADR as if it were Accepted.
 
@@ -40,7 +41,7 @@ Nothing may be built on a Proposed ADR as if it were Accepted.
 |---|---|---|---|
 | EXP-000 | Label feasibility (abstention agreement) | Planned | D3 |
 | EXP-001 | Headroom probe (frontier vs small) | Planned | EXP-000 |
-| EXP-002 | Schema novelty audit on SGD / SGD-X | Done (awaiting decision) | nothing |
+| EXP-002 | Schema novelty audit on SGD / SGD-X | Done | nothing |
 
 ## Where things live
 

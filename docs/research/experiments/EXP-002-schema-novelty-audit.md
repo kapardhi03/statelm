@@ -1,6 +1,6 @@
 # EXP-002: Schema novelty audit on SGD / SGD-X
 
-Status: Done (awaiting decision)
+Status: Done
 Owner: Kapardhi
 Created: 2026-10-01
 Revised: 2026-10-01 (pre-run, see Change log)
@@ -776,4 +776,20 @@ hygiene; it should have been three commits.
    should be changed on this record; this would be a new experiment.
 
 ## Decision
-(pending human review)
+
+Transcribed from Kapardhi, 2026-10-01.
+
+Gate: reproduced. The per-instance unit is adopted as the reading of SGD-X's figures.
+
+H1 refuted (12.2% both-model; 41.5% BGE alone; both below 50%; n=41). The benchmark
+motivation will cite SGD's lexical leakage only and will not claim semantic
+redundancy. SGD test-only services are not used as L2 material; L2 items will be
+constructed (ADR-004).
+
+H2 supported under the pre-registered rule, at its boundary: exactly one adjacent
+inversion (v4/v5) under both models. v1 vs v5 separation is strong (p < 1e-10).
+Adjacent variants are not separable by cosine. Embedding similarity is accepted as a
+coarse covariate only: within-model ranks or strata, at least two encoders, no
+absolute cutoffs. Recorded as ADR-005 (Proposed).
+
+All five SGD-X variants are usable L1 material by construction (ADR-004).
