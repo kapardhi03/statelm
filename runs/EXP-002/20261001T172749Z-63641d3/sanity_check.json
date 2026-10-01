@@ -1,0 +1,1174 @@
+{
+  "experiment": "EXP-002",
+  "step": "step-1-gate",
+  "run_id": "20261001T172749Z-63641d3",
+  "populations": {
+    "train_services": 26,
+    "test_services": 21,
+    "seen_test_services": [
+      "Hotels_2",
+      "Movies_1",
+      "RideSharing_2",
+      "Services_1",
+      "Travel_1",
+      "Weather_1"
+    ],
+    "unseen_test_services": [
+      "Alarm_1",
+      "Buses_3",
+      "Events_3",
+      "Flights_4",
+      "Homes_2",
+      "Hotels_4",
+      "Media_3",
+      "Messaging_1",
+      "Movies_3",
+      "Music_3",
+      "Payment_1",
+      "RentalCars_3",
+      "Restaurants_2",
+      "Services_4",
+      "Trains_1"
+    ],
+    "train_slot_instances": 215,
+    "train_intent_instances": 53,
+    "unseen_slot_instances": 116,
+    "unseen_intent_instances": 28,
+    "unseen_slot_unique_names": 96,
+    "unseen_intent_unique_names": 27
+  },
+  "gate": {
+    "pass": true,
+    "slots": {
+      "unit": "instances",
+      "pipeline": "N0",
+      "matched": 75,
+      "total": 116,
+      "rate_percent": 64.6552,
+      "band_percent": [
+        60.0,
+        70.0
+      ],
+      "in_band": true
+    },
+    "intents": {
+      "unit": "instances",
+      "pipeline": "N0",
+      "matched": 20,
+      "total": 28,
+      "rate_percent": 71.4286,
+      "band_percent": [
+        66.0,
+        76.0
+      ],
+      "in_band": true
+    },
+    "reference_figures_percent": {
+      "slots": 65,
+      "intents": 71
+    }
+  },
+  "secondary_non_gating": [
+    {
+      "kind": "slots",
+      "unit": "unique",
+      "pipeline": "N0",
+      "matched": 55,
+      "total": 96,
+      "rate_percent": 57.2917
+    },
+    {
+      "kind": "slots",
+      "unit": "instances",
+      "pipeline": "N1",
+      "matched": 75,
+      "total": 116,
+      "rate_percent": 64.6552
+    },
+    {
+      "kind": "slots",
+      "unit": "unique",
+      "pipeline": "N1",
+      "matched": 55,
+      "total": 96,
+      "rate_percent": 57.2917
+    },
+    {
+      "kind": "slots",
+      "unit": "instances",
+      "pipeline": "N2",
+      "matched": 76,
+      "total": 116,
+      "rate_percent": 65.5172
+    },
+    {
+      "kind": "slots",
+      "unit": "unique",
+      "pipeline": "N2",
+      "matched": 56,
+      "total": 96,
+      "rate_percent": 58.3333
+    },
+    {
+      "kind": "intents",
+      "unit": "unique",
+      "pipeline": "N0",
+      "matched": 19,
+      "total": 27,
+      "rate_percent": 70.3704
+    },
+    {
+      "kind": "intents",
+      "unit": "instances",
+      "pipeline": "N1",
+      "matched": 20,
+      "total": 28,
+      "rate_percent": 71.4286
+    },
+    {
+      "kind": "intents",
+      "unit": "unique",
+      "pipeline": "N1",
+      "matched": 19,
+      "total": 27,
+      "rate_percent": 70.3704
+    },
+    {
+      "kind": "intents",
+      "unit": "instances",
+      "pipeline": "N2",
+      "matched": 20,
+      "total": 28,
+      "rate_percent": 71.4286
+    },
+    {
+      "kind": "intents",
+      "unit": "unique",
+      "pipeline": "N2",
+      "matched": 19,
+      "total": 27,
+      "rate_percent": 70.3704
+    }
+  ],
+  "names_normalizing_to_empty": [
+    "to"
+  ],
+  "evidence": {
+    "slots_N0_instances": {
+      "matched": [
+        {
+          "service": "Buses_3",
+          "name": "from_station",
+          "train_services": [
+            "Buses_1"
+          ]
+        },
+        {
+          "service": "Buses_3",
+          "name": "to_station",
+          "train_services": [
+            "Buses_1"
+          ]
+        },
+        {
+          "service": "Buses_3",
+          "name": "departure_date",
+          "train_services": [
+            "Buses_2",
+            "Flights_1",
+            "Flights_2"
+          ]
+        },
+        {
+          "service": "Buses_3",
+          "name": "departure_time",
+          "train_services": [
+            "Buses_2"
+          ]
+        },
+        {
+          "service": "Buses_3",
+          "name": "price",
+          "train_services": [
+            "Buses_2",
+            "Flights_1",
+            "Hotels_3",
+            "Movies_1"
+          ]
+        },
+        {
+          "service": "Buses_3",
+          "name": "category",
+          "train_services": [
+            "Events_1",
+            "Events_2",
+            "Travel_1"
+          ]
+        },
+        {
+          "service": "Events_3",
+          "name": "event_type",
+          "train_services": [
+            "Events_2"
+          ]
+        },
+        {
+          "service": "Events_3",
+          "name": "event_name",
+          "train_services": [
+            "Calendar_1",
+            "Events_1",
+            "Events_2"
+          ]
+        },
+        {
+          "service": "Events_3",
+          "name": "date",
+          "train_services": [
+            "Events_1",
+            "Events_2",
+            "Restaurants_1",
+            "Weather_1"
+          ]
+        },
+        {
+          "service": "Events_3",
+          "name": "time",
+          "train_services": [
+            "Events_1",
+            "Events_2",
+            "Restaurants_1"
+          ]
+        },
+        {
+          "service": "Events_3",
+          "name": "number_of_tickets",
+          "train_services": [
+            "Events_2",
+            "Movies_1"
+          ]
+        },
+        {
+          "service": "Events_3",
+          "name": "city",
+          "train_services": [
+            "Events_2",
+            "Restaurants_1",
+            "Services_1",
+            "Services_2",
+            "Services_3",
+            "Weather_1"
+          ]
+        },
+        {
+          "service": "Events_3",
+          "name": "venue",
+          "train_services": [
+            "Events_2"
+          ]
+        },
+        {
+          "service": "Events_3",
+          "name": "venue_address",
+          "train_services": [
+            "Events_2"
+          ]
+        },
+        {
+          "service": "Flights_4",
+          "name": "number_of_tickets",
+          "train_services": [
+            "Events_2",
+            "Movies_1"
+          ]
+        },
+        {
+          "service": "Flights_4",
+          "name": "seating_class",
+          "train_services": [
+            "Flights_1",
+            "Flights_2"
+          ]
+        },
+        {
+          "service": "Flights_4",
+          "name": "origin_airport",
+          "train_services": [
+            "Flights_1",
+            "Flights_2"
+          ]
+        },
+        {
+          "service": "Flights_4",
+          "name": "destination_airport",
+          "train_services": [
+            "Flights_1",
+            "Flights_2"
+          ]
+        },
+        {
+          "service": "Flights_4",
+          "name": "departure_date",
+          "train_services": [
+            "Buses_2",
+            "Flights_1",
+            "Flights_2"
+          ]
+        },
+        {
+          "service": "Flights_4",
+          "name": "return_date",
+          "train_services": [
+            "Flights_1",
+            "Flights_2"
+          ]
+        },
+        {
+          "service": "Flights_4",
+          "name": "outbound_departure_time",
+          "train_services": [
+            "Flights_1",
+            "Flights_2"
+          ]
+        },
+        {
+          "service": "Flights_4",
+          "name": "outbound_arrival_time",
+          "train_services": [
+            "Flights_1",
+            "Flights_2"
+          ]
+        },
+        {
+          "service": "Flights_4",
+          "name": "inbound_arrival_time",
+          "train_services": [
+            "Flights_1",
+            "Flights_2"
+          ]
+        },
+        {
+          "service": "Flights_4",
+          "name": "inbound_departure_time",
+          "train_services": [
+            "Flights_1",
+            "Flights_2"
+          ]
+        },
+        {
+          "service": "Flights_4",
+          "name": "price",
+          "train_services": [
+            "Buses_2",
+            "Flights_1",
+            "Hotels_3",
+            "Movies_1"
+          ]
+        },
+        {
+          "service": "Flights_4",
+          "name": "airlines",
+          "train_services": [
+            "Flights_1",
+            "Flights_2"
+          ]
+        },
+        {
+          "service": "Homes_2",
+          "name": "area",
+          "train_services": [
+            "Homes_1"
+          ]
+        },
+        {
+          "service": "Homes_2",
+          "name": "address",
+          "train_services": [
+            "Homes_1",
+            "Hotels_2",
+            "Services_2"
+          ]
+        },
+        {
+          "service": "Homes_2",
+          "name": "property_name",
+          "train_services": [
+            "Homes_1"
+          ]
+        },
+        {
+          "service": "Homes_2",
+          "name": "phone_number",
+          "train_services": [
+            "Homes_1",
+            "Hotels_1",
+            "Hotels_2",
+            "Hotels_3",
+            "Restaurants_1",
+            "Services_1",
+            "Services_2",
+            "Services_3",
+            "Travel_1"
+          ]
+        },
+        {
+          "service": "Homes_2",
+          "name": "price",
+          "train_services": [
+            "Buses_2",
+            "Flights_1",
+            "Hotels_3",
+            "Movies_1"
+          ]
+        },
+        {
+          "service": "Homes_2",
+          "name": "visit_date",
+          "train_services": [
+            "Homes_1"
+          ]
+        },
+        {
+          "service": "Homes_2",
+          "name": "number_of_beds",
+          "train_services": [
+            "Homes_1"
+          ]
+        },
+        {
+          "service": "Homes_2",
+          "name": "number_of_baths",
+          "train_services": [
+            "Homes_1"
+          ]
+        },
+        {
+          "service": "Hotels_4",
+          "name": "location",
+          "train_services": [
+            "Hotels_3",
+            "Movies_1",
+            "Travel_1"
+          ]
+        },
+        {
+          "service": "Hotels_4",
+          "name": "number_of_rooms",
+          "train_services": [
+            "Hotels_1",
+            "Hotels_3"
+          ]
+        },
+        {
+          "service": "Hotels_4",
+          "name": "check_in_date",
+          "train_services": [
+            "Hotels_1",
+            "Hotels_2",
+            "Hotels_3"
+          ]
+        },
+        {
+          "service": "Hotels_4",
+          "name": "star_rating",
+          "train_services": [
+            "Hotels_1"
+          ]
+        },
+        {
+          "service": "Hotels_4",
+          "name": "street_address",
+          "train_services": [
+            "Hotels_1",
+            "Hotels_3",
+            "Movies_1",
+            "Restaurants_1",
+            "Services_1",
+            "Services_3"
+          ]
+        },
+        {
+          "service": "Hotels_4",
+          "name": "phone_number",
+          "train_services": [
+            "Homes_1",
+            "Hotels_1",
+            "Hotels_2",
+            "Hotels_3",
+            "Restaurants_1",
+            "Services_1",
+            "Services_2",
+            "Services_3",
+            "Travel_1"
+          ]
+        },
+        {
+          "service": "Hotels_4",
+          "name": "price_per_night",
+          "train_services": [
+            "Hotels_1"
+          ]
+        },
+        {
+          "service": "Media_3",
+          "name": "title",
+          "train_services": [
+            "Media_1"
+          ]
+        },
+        {
+          "service": "Media_3",
+          "name": "genre",
+          "train_services": [
+            "Media_1",
+            "Movies_1",
+            "Music_1",
+            "Music_2"
+          ]
+        },
+        {
+          "service": "Messaging_1",
+          "name": "location",
+          "train_services": [
+            "Hotels_3",
+            "Movies_1",
+            "Travel_1"
+          ]
+        },
+        {
+          "service": "Movies_3",
+          "name": "genre",
+          "train_services": [
+            "Media_1",
+            "Movies_1",
+            "Music_1",
+            "Music_2"
+          ]
+        },
+        {
+          "service": "Movies_3",
+          "name": "directed_by",
+          "train_services": [
+            "Media_1"
+          ]
+        },
+        {
+          "service": "Music_3",
+          "name": "artist",
+          "train_services": [
+            "Music_1",
+            "Music_2"
+          ]
+        },
+        {
+          "service": "Music_3",
+          "name": "album",
+          "train_services": [
+            "Music_1",
+            "Music_2"
+          ]
+        },
+        {
+          "service": "Music_3",
+          "name": "genre",
+          "train_services": [
+            "Media_1",
+            "Movies_1",
+            "Music_1",
+            "Music_2"
+          ]
+        },
+        {
+          "service": "Music_3",
+          "name": "year",
+          "train_services": [
+            "Music_1"
+          ]
+        },
+        {
+          "service": "Payment_1",
+          "name": "amount",
+          "train_services": [
+            "Banks_1"
+          ]
+        },
+        {
+          "service": "RentalCars_3",
+          "name": "car_type",
+          "train_services": [
+            "RentalCars_2"
+          ]
+        },
+        {
+          "service": "RentalCars_3",
+          "name": "car_name",
+          "train_services": [
+            "RentalCars_1",
+            "RentalCars_2"
+          ]
+        },
+        {
+          "service": "RentalCars_3",
+          "name": "pickup_location",
+          "train_services": [
+            "RentalCars_1",
+            "RentalCars_2"
+          ]
+        },
+        {
+          "service": "RentalCars_3",
+          "name": "pickup_time",
+          "train_services": [
+            "RentalCars_1",
+            "RentalCars_2"
+          ]
+        },
+        {
+          "service": "RentalCars_3",
+          "name": "city",
+          "train_services": [
+            "Events_2",
+            "Restaurants_1",
+            "Services_1",
+            "Services_2",
+            "Services_3",
+            "Weather_1"
+          ]
+        },
+        {
+          "service": "Restaurants_2",
+          "name": "restaurant_name",
+          "train_services": [
+            "Restaurants_1"
+          ]
+        },
+        {
+          "service": "Restaurants_2",
+          "name": "date",
+          "train_services": [
+            "Events_1",
+            "Events_2",
+            "Restaurants_1",
+            "Weather_1"
+          ]
+        },
+        {
+          "service": "Restaurants_2",
+          "name": "time",
+          "train_services": [
+            "Events_1",
+            "Events_2",
+            "Restaurants_1"
+          ]
+        },
+        {
+          "service": "Restaurants_2",
+          "name": "phone_number",
+          "train_services": [
+            "Homes_1",
+            "Hotels_1",
+            "Hotels_2",
+            "Hotels_3",
+            "Restaurants_1",
+            "Services_1",
+            "Services_2",
+            "Services_3",
+            "Travel_1"
+          ]
+        },
+        {
+          "service": "Restaurants_2",
+          "name": "rating",
+          "train_services": [
+            "Hotels_2"
+          ]
+        },
+        {
+          "service": "Restaurants_2",
+          "name": "address",
+          "train_services": [
+            "Homes_1",
+            "Hotels_2",
+            "Services_2"
+          ]
+        },
+        {
+          "service": "Restaurants_2",
+          "name": "number_of_seats",
+          "train_services": [
+            "Events_1",
+            "RideSharing_2"
+          ]
+        },
+        {
+          "service": "Restaurants_2",
+          "name": "price_range",
+          "train_services": [
+            "Restaurants_1"
+          ]
+        },
+        {
+          "service": "Restaurants_2",
+          "name": "location",
+          "train_services": [
+            "Hotels_3",
+            "Movies_1",
+            "Travel_1"
+          ]
+        },
+        {
+          "service": "Restaurants_2",
+          "name": "category",
+          "train_services": [
+            "Events_1",
+            "Events_2",
+            "Travel_1"
+          ]
+        },
+        {
+          "service": "Services_4",
+          "name": "phone_number",
+          "train_services": [
+            "Homes_1",
+            "Hotels_1",
+            "Hotels_2",
+            "Hotels_3",
+            "Restaurants_1",
+            "Services_1",
+            "Services_2",
+            "Services_3",
+            "Travel_1"
+          ]
+        },
+        {
+          "service": "Services_4",
+          "name": "address",
+          "train_services": [
+            "Homes_1",
+            "Hotels_2",
+            "Services_2"
+          ]
+        },
+        {
+          "service": "Services_4",
+          "name": "city",
+          "train_services": [
+            "Events_2",
+            "Restaurants_1",
+            "Services_1",
+            "Services_2",
+            "Services_3",
+            "Weather_1"
+          ]
+        },
+        {
+          "service": "Services_4",
+          "name": "appointment_date",
+          "train_services": [
+            "Services_1",
+            "Services_2",
+            "Services_3"
+          ]
+        },
+        {
+          "service": "Services_4",
+          "name": "appointment_time",
+          "train_services": [
+            "Services_1",
+            "Services_2",
+            "Services_3"
+          ]
+        },
+        {
+          "service": "Services_4",
+          "name": "type",
+          "train_services": [
+            "RentalCars_1",
+            "Services_3"
+          ]
+        },
+        {
+          "service": "Trains_1",
+          "name": "from_station",
+          "train_services": [
+            "Buses_1"
+          ]
+        },
+        {
+          "service": "Trains_1",
+          "name": "to_station",
+          "train_services": [
+            "Buses_1"
+          ]
+        },
+        {
+          "service": "Trains_1",
+          "name": "number_of_adults",
+          "train_services": [
+            "Hotels_2"
+          ]
+        }
+      ],
+      "unmatched": [
+        {
+          "service": "Alarm_1",
+          "name": "alarm_time"
+        },
+        {
+          "service": "Alarm_1",
+          "name": "alarm_name"
+        },
+        {
+          "service": "Alarm_1",
+          "name": "new_alarm_time"
+        },
+        {
+          "service": "Alarm_1",
+          "name": "new_alarm_name"
+        },
+        {
+          "service": "Buses_3",
+          "name": "from_city"
+        },
+        {
+          "service": "Buses_3",
+          "name": "to_city"
+        },
+        {
+          "service": "Buses_3",
+          "name": "additional_luggage"
+        },
+        {
+          "service": "Buses_3",
+          "name": "num_passengers"
+        },
+        {
+          "service": "Events_3",
+          "name": "price_per_ticket"
+        },
+        {
+          "service": "Flights_4",
+          "name": "is_nonstop"
+        },
+        {
+          "service": "Homes_2",
+          "name": "intent"
+        },
+        {
+          "service": "Homes_2",
+          "name": "has_garage"
+        },
+        {
+          "service": "Homes_2",
+          "name": "in_unit_laundry"
+        },
+        {
+          "service": "Hotels_4",
+          "name": "stay_length"
+        },
+        {
+          "service": "Hotels_4",
+          "name": "place_name"
+        },
+        {
+          "service": "Hotels_4",
+          "name": "smoking_allowed"
+        },
+        {
+          "service": "Media_3",
+          "name": "subtitle_language"
+        },
+        {
+          "service": "Media_3",
+          "name": "starring"
+        },
+        {
+          "service": "Messaging_1",
+          "name": "contact_name"
+        },
+        {
+          "service": "Movies_3",
+          "name": "movie_title"
+        },
+        {
+          "service": "Movies_3",
+          "name": "percent_rating"
+        },
+        {
+          "service": "Movies_3",
+          "name": "cast"
+        },
+        {
+          "service": "Music_3",
+          "name": "track"
+        },
+        {
+          "service": "Music_3",
+          "name": "device"
+        },
+        {
+          "service": "Payment_1",
+          "name": "payment_method"
+        },
+        {
+          "service": "Payment_1",
+          "name": "receiver"
+        },
+        {
+          "service": "Payment_1",
+          "name": "private_visibility"
+        },
+        {
+          "service": "RentalCars_3",
+          "name": "start_date"
+        },
+        {
+          "service": "RentalCars_3",
+          "name": "end_date"
+        },
+        {
+          "service": "RentalCars_3",
+          "name": "price_per_day"
+        },
+        {
+          "service": "RentalCars_3",
+          "name": "add_insurance"
+        },
+        {
+          "service": "Restaurants_2",
+          "name": "has_seating_outdoors"
+        },
+        {
+          "service": "Restaurants_2",
+          "name": "has_vegetarian_options"
+        },
+        {
+          "service": "Services_4",
+          "name": "therapist_name"
+        },
+        {
+          "service": "Trains_1",
+          "name": "from"
+        },
+        {
+          "service": "Trains_1",
+          "name": "to"
+        },
+        {
+          "service": "Trains_1",
+          "name": "date_of_journey"
+        },
+        {
+          "service": "Trains_1",
+          "name": "journey_start_time"
+        },
+        {
+          "service": "Trains_1",
+          "name": "total"
+        },
+        {
+          "service": "Trains_1",
+          "name": "class"
+        },
+        {
+          "service": "Trains_1",
+          "name": "trip_protection"
+        }
+      ]
+    },
+    "intents_N0_instances": {
+      "matched": [
+        {
+          "service": "Buses_3",
+          "name": "FindBus",
+          "train_services": [
+            "Buses_1",
+            "Buses_2"
+          ]
+        },
+        {
+          "service": "Buses_3",
+          "name": "BuyBusTicket",
+          "train_services": [
+            "Buses_1",
+            "Buses_2"
+          ]
+        },
+        {
+          "service": "Events_3",
+          "name": "FindEvents",
+          "train_services": [
+            "Events_1",
+            "Events_2"
+          ]
+        },
+        {
+          "service": "Events_3",
+          "name": "BuyEventTickets",
+          "train_services": [
+            "Events_1",
+            "Events_2"
+          ]
+        },
+        {
+          "service": "Flights_4",
+          "name": "SearchOnewayFlight",
+          "train_services": [
+            "Flights_1",
+            "Flights_2"
+          ]
+        },
+        {
+          "service": "Flights_4",
+          "name": "SearchRoundtripFlights",
+          "train_services": [
+            "Flights_1",
+            "Flights_2"
+          ]
+        },
+        {
+          "service": "Homes_2",
+          "name": "ScheduleVisit",
+          "train_services": [
+            "Homes_1"
+          ]
+        },
+        {
+          "service": "Hotels_4",
+          "name": "ReserveHotel",
+          "train_services": [
+            "Hotels_1",
+            "Hotels_3"
+          ]
+        },
+        {
+          "service": "Hotels_4",
+          "name": "SearchHotel",
+          "train_services": [
+            "Hotels_1",
+            "Hotels_3"
+          ]
+        },
+        {
+          "service": "Media_3",
+          "name": "FindMovies",
+          "train_services": [
+            "Media_1",
+            "Movies_1"
+          ]
+        },
+        {
+          "service": "Media_3",
+          "name": "PlayMovie",
+          "train_services": [
+            "Media_1"
+          ]
+        },
+        {
+          "service": "Movies_3",
+          "name": "FindMovies",
+          "train_services": [
+            "Media_1",
+            "Movies_1"
+          ]
+        },
+        {
+          "service": "Music_3",
+          "name": "PlayMedia",
+          "train_services": [
+            "Music_2"
+          ]
+        },
+        {
+          "service": "Music_3",
+          "name": "LookupMusic",
+          "train_services": [
+            "Music_2"
+          ]
+        },
+        {
+          "service": "RentalCars_3",
+          "name": "GetCarsAvailable",
+          "train_services": [
+            "RentalCars_1",
+            "RentalCars_2"
+          ]
+        },
+        {
+          "service": "RentalCars_3",
+          "name": "ReserveCar",
+          "train_services": [
+            "RentalCars_1",
+            "RentalCars_2"
+          ]
+        },
+        {
+          "service": "Restaurants_2",
+          "name": "ReserveRestaurant",
+          "train_services": [
+            "Restaurants_1"
+          ]
+        },
+        {
+          "service": "Restaurants_2",
+          "name": "FindRestaurants",
+          "train_services": [
+            "Restaurants_1"
+          ]
+        },
+        {
+          "service": "Services_4",
+          "name": "BookAppointment",
+          "train_services": [
+            "Services_1",
+            "Services_2",
+            "Services_3"
+          ]
+        },
+        {
+          "service": "Services_4",
+          "name": "FindProvider",
+          "train_services": [
+            "Services_1",
+            "Services_2",
+            "Services_3"
+          ]
+        }
+      ],
+      "unmatched": [
+        {
+          "service": "Alarm_1",
+          "name": "GetAlarms"
+        },
+        {
+          "service": "Alarm_1",
+          "name": "AddAlarm"
+        },
+        {
+          "service": "Homes_2",
+          "name": "FindHomeByArea"
+        },
+        {
+          "service": "Messaging_1",
+          "name": "ShareLocation"
+        },
+        {
+          "service": "Payment_1",
+          "name": "RequestPayment"
+        },
+        {
+          "service": "Payment_1",
+          "name": "MakePayment"
+        },
+        {
+          "service": "Trains_1",
+          "name": "GetTrainTickets"
+        },
+        {
+          "service": "Trains_1",
+          "name": "FindTrains"
+        }
+      ]
+    }
+  }
+}

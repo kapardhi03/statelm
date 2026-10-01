@@ -177,15 +177,88 @@ Not applicable in the training sense: schemas only, no labels, no model trained 
 annotations are read at any point. StateLM's own `data/splits/test/` is untouched and uncreated.
 
 ## Result
-(pending)
+
+**Step 1 gate only. H1 and H2 have not been run.** The experiment record stays at Running.
+
+Run `20261001T172749Z-63641d3`, code commit `63641d3` with a clean tree, seed 0, dataset
+commit `e852981ae34990f4358979625854259302feaa78`. Config, per-item evidence and log in
+`runs/EXP-002/20261001T172749Z-63641d3/`.
+
+### Gate: PASS
+
+| Measure (N0, instances) | Matched / total | Rate | Band | SGD-X paper | In band |
+|---|---|---|---|---|---|
+| Slot names | 75 / 116 | 64.66% | 60-70% | 65% | yes |
+| Intent names | 20 / 28 | 71.43% | 66-76% | 71% | yes |
+
+Populations: 26 train services, 21 test services, of which 15 unseen and 6 seen. 215 train slot
+instances and 53 train intent instances. 116 unseen-service slot instances across 96 unique
+names; 28 unseen-service intent instances across 27 unique names.
+
+### Secondary, non-gating
+
+| Kind | Pipeline | Unit | Matched / total | Rate |
+|---|---|---|---|---|
+| slots | N0 | unique | 55 / 96 | 57.29% |
+| slots | N1 | instances | 75 / 116 | 64.66% |
+| slots | N1 | unique | 55 / 96 | 57.29% |
+| slots | N2 | instances | 76 / 116 | 65.52% |
+| slots | N2 | unique | 56 / 96 | 58.33% |
+| intents | N0 | unique | 19 / 27 | 70.37% |
+| intents | N1 | instances | 20 / 28 | 71.43% |
+| intents | N1 | unique | 19 / 27 | 70.37% |
+| intents | N2 | instances | 20 / 28 | 71.43% |
+| intents | N2 | unique | 19 / 27 | 70.37% |
+
+41 of the 116 unseen-service slot instances have no exact N0 name match in train. That set is
+the H1 population.
+
+Normalization observations, for the record: N1 moves no rate for either kind, because SGD slot
+names are already lowercase snake_case and intent names are consistently CamelCase on both
+sides. Exactly one slot matches under N2 but not N0, `Buses_3/to_city` normalizing to "city"
+against train's `city`. One name, `Trains_1/to`, normalizes to the empty string under N2; no
+train slot name does, so it produced no spurious match in this run.
 
 ## Interpretation
-(pending)
 
-Required caveat, must appear in the filled Interpretation: "novel relative to SGD-train" must
-never be reported as "unseen by the model". This experiment measures overlap between SGD train
-schemas and SGD test schemas. It says nothing about whether a pretrained model has already seen
-SGD, which remains an open contamination risk in `docs/research/knowns-unknowns.md`.
+**What the gate establishes.** Both published figures reproduce on the pre-registered primary
+definition, within 0.34 points for slots (64.66% vs 65%) and 0.43 points for intents (71.43% vs
+71%). The pipeline reads the schema files the paper describes and counts what the paper counts,
+so the measurement machinery for H1 and H2 can be trusted to the extent this gate tests it.
+On SGD's own published labels, roughly two thirds of the slot names in services marked unseen
+are literally present in train, which is the condition EXP-002 exists to quantify.
+
+**Threats to validity, in order of how much they matter.**
+
+1. The pass depends on the unit definition, and the secondary unit would have failed. On
+   unique names the slot rate is 57.29%, below the 60% band edge. The instance unit was fixed
+   as primary before the run (Q1, recorded in the Change log), so the verdict stands as
+   pre-registered, but the gap is substantive rather than cosmetic: the slot names that repeat
+   across unseen services are disproportionately the ones that match train. Any later claim
+   about "how much of SGD's unseen set is really unseen" has to name its unit.
+2. This is a reproduction on current files, not on the paper's files. The pinned commit is
+   `e852981`, whose HEAD is a post-publication merge titled "sgdx-intent-bug". The intent
+   figure in particular is computed on schema files that changed after the paper was written,
+   and it still lands at 71.43%. That is agreement, not identity of inputs.
+3. Small denominators on the intent side. With 28 intent instances, one intent moves the rate
+   by 3.57 points, which is a sizeable fraction of a 10-point band.
+4. Exact name matching is the weakest possible notion of overlap, and it is deliberately so
+   here. It gives a floor, not a measure of novelty. The 41 non-matching slots are not thereby
+   novel: measuring them is H1's job and it has not run.
+
+**What this result does not license.** It says nothing about H1 or H2, which are unmeasured. It
+says nothing about whether any slot is semantically novel, only whether its name string occurs
+in train. It is not evidence for or against ADR-004, which is about how novelty levels are
+assigned, not about how much overlap SGD has. Nothing here contradicts any row in
+`docs/research/literature.md`; the SGD-X row is the figure being reproduced.
+
+**Required caveat.** "Novel relative to SGD-train" must never be reported as "unseen by the
+model". This experiment compares SGD train schemas against SGD test schemas. It says nothing
+about whether a pretrained model has already seen SGD, which remains an open contamination risk
+in `docs/research/knowns-unknowns.md`.
+
+Required caveat for any later fill of this section: the paragraph above must appear, in
+substance, whenever a result from this experiment is written up.
 
 ## Decision
 (pending, human)
