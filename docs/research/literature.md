@@ -5,7 +5,7 @@ Rule: no claim of novelty may contradict a row below. Add a row before citing a 
 | Work | What it establishes | Consequence for us |
 |---|---|---|
 | SGD (Rastogi et al. 2020) | Schema-in-prompt DST with unseen services in test | Schema conditioning is not novel |
-| SGD-X (Lee et al. 2022, arXiv 2110.06800) | Top BERT/T5 trackers lose 12–18% JGA from schema rewording alone. 65% of "unseen" SGD slot names exactly match train names | "Unseen" must be defined and overlap measured per item (EXP-002) |
+| SGD-X (Lee et al. 2022, arXiv 2110.06800) | Top BERT/T5 trackers lose 12–18% JGA from schema rewording alone. Of names in test schemas for services unseen in train, 71% of intent names and 65% of slot names exactly match train names (definition used by the EXP-002 gate) | "Unseen" must be defined and overlap measured per item (EXP-002) |
 | Coca et al. 2023 (arXiv 2303.09905) | Synthetic schema paraphrases improve SGD-X robustness | Augmentation baseline for L1 novelty |
 | SOM-DST (Kim et al. 2020, arXiv 1911.03906) | State as memory: CARRYOVER / DELETE / DONTCARE / UPDATE ops + value generation | Delta formulation is not novel. Rare ops are the hard part (DELETE F1 far below UPDATE) |
 | FnCTOD (Li et al. 2024, arXiv 2402.10466) | Fine-tuned 13B LLaMA2-Chat reaches ChatGPT-level zero-shot DST via function calling | Small-ish models doing DST is not novel. Our size range must go below 7B |
