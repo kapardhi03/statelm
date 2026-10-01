@@ -22,6 +22,7 @@ Detail lives in the linked files, not here.
 - D2. Contribution ordering: proposed benchmark-first, model-second (ADR-001)
 - D3. Real data source and second annotator for EXP-000
 - D4. Accept / modify / reject ADR-002 (ledger) and ADR-003 (typed abstention)
+- D5. Accept / modify / reject ADR-004 (novelty by construction)
 
 ## ADRs
 
@@ -40,7 +41,7 @@ Nothing may be built on a Proposed ADR as if it were Accepted.
 |---|---|---|---|
 | EXP-000 | Label feasibility (abstention agreement) | Planned | D3 |
 | EXP-001 | Headroom probe (frontier vs small) | Planned | EXP-000 |
-| EXP-002 | Schema novelty audit on SGD / SGD-X | Planned | nothing |
+| EXP-002 | Schema novelty audit on SGD / SGD-X | Running | nothing |
 
 ## Where things live
 
