@@ -9,6 +9,8 @@ runs/**
 !runs/**/
 !runs/**/metrics.json
 !runs/**/config.json
+!runs/**/sanity_check.json
+!runs/**/per_slot.jsonl
 
 # Python
 __pycache__/

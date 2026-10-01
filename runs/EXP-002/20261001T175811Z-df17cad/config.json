@@ -1,0 +1,53 @@
+{
+  "experiment": "EXP-002",
+  "step": "steps-2-3-h1-h2",
+  "run_id": "20261001T175811Z-df17cad",
+  "gate_run_id": "20261001T172749Z-63641d3",
+  "gate_slot_rate_percent": 64.6552,
+  "git_commit": "df17cadd4a03682c724de92b4f229fb678daabb1",
+  "git_tree_dirty": false,
+  "seed": 0,
+  "python": "3.11.15",
+  "platform": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
+  "dataset": {
+    "repo_url": "https://github.com/google-research-datasets/dstc8-schema-guided-dialogue",
+    "commit": "e852981ae34990f4358979625854259302feaa78",
+    "files_read": {
+      "train/schema.json": "97b6c21673aa7e5c2d1ceef52aa35170c565223cdcbf33bb24c69739bda04a82",
+      "test/schema.json": "0b4af32e01695aec4788681fe6b22fb7ee908907269f5ac7167d01f4c4132bcb",
+      "sgd_x/data/v1/test/schema.json": "05e6021b348db0ebb81d628db5b114f73a0a34005694bc558318fd0b33c9b02c",
+      "sgd_x/data/v2/test/schema.json": "8ee9956eb92e74d7b3ef0a47574d794bff3ff74fbda7b684b2ae02ea3609db51",
+      "sgd_x/data/v3/test/schema.json": "52b6283417da548c9217299e597231db7916b3cd26209f2ee0c0ddabc88efdf2",
+      "sgd_x/data/v4/test/schema.json": "c2d0d277605995f37044474a2f511ff8f583bfcb52cac26ee383da28057a76bf",
+      "sgd_x/data/v5/test/schema.json": "922c950c94001996229cf93cbdcc6d6dbc2822df6ba1d20b9d4287c87b901773"
+    }
+  },
+  "normalization": {
+    "version": "1",
+    "h1_population_pipeline": "N0"
+  },
+  "embedding_models": [
+    {
+      "name": "sentence-transformers/all-MiniLM-L6-v2",
+      "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+    },
+    {
+      "name": "BAAI/bge-base-en-v1.5",
+      "revision": "a5beb1e3e68b9ab74eb54cfd186867f64f240e1a"
+    }
+  ],
+  "input_template": "{name}: {description}",
+  "input_template_hash": "f63db4e62cb3f74eae721d3f53710c2476a053699cd4d96380c80eb464e4cf45",
+  "thresholds": {
+    "cosine": 0.8,
+    "jaccard": 0.5,
+    "h1_min_rate_percent": 50.0,
+    "h2_wilcoxon_alpha": 0.01,
+    "h2_spearman_max_rho": -0.9,
+    "h2_spearman_float_tolerance": 1e-09
+  },
+  "notes": [
+    "The >= 3 seeds convention does not apply: nothing is trained or sampled and the pipeline is deterministic given pinned model revisions. The robustness axes are 2 embedding models x 5 SGD-X variants.",
+    "No novelty level is assigned anywhere in this run (ADR-004)."
+  ]
+}

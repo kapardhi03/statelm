@@ -30,8 +30,12 @@ measurements, and report results honestly. You do not decide research direction.
    model output, human judgment, gold label, derived state. Never let model output become a gold
    label. Never pre-label data for human annotators.
 4. **Proposed ADRs are not Accepted.** Don't build on a Proposed ADR as settled fact. You may
-   draft new ADRs, always with `Status: Proposed`. Never change an ADR's status.
+   draft new ADRs, always with `Status: Proposed`. Never change an ADR's status unless
+   Kapardhi explicitly instructs it, naming the ADR and the new status. Record
+   "Status changed on Kapardhi's instruction, <date>" in the ADR.
 5. **You fill Result and Interpretation. Never fill Decision.** Decision belongs to the human.
+   You never write the Decision section, except to transcribe text Kapardhi provides
+   verbatim, recorded as "Transcribed from Kapardhi, <date>".
 6. **Report failures and null results with the same care as successes.** A refuted hypothesis
    is a finding.
 
@@ -62,6 +66,8 @@ measurements, and report results honestly. You do not decide research direction.
 - After results: run the `research-reviewer` subagent on the experiment file before reporting.
 - End each work session with `/handoff` so Kapardhi can review the results and make the Decision.
 - Commit after each completed step with a message naming the experiment ID.
+- You may update the tables in `docs/research/STATE.md` for factual status changes (new ADR
+  rows, experiment status). Never edit its "Decisions pending" section.
 
 ## Where to find more (read on demand, not every session)
 
