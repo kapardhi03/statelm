@@ -5,8 +5,8 @@
   `experiments/EXP-002/`, runs `runs/EXP-002/`, 134 tests, two review passes recorded.
 - Dataset pinned to `dstc8-schema-guided-dialogue` @ `e852981`; 18 schema files in
   `data/raw/sgd/<commit>/`, SHA-256 per file in each run config.
-- ADR-004 Accepted on instruction; ADR-005 drafted Proposed; Decision and amendment transcribed;
-  arXiv:2110.06800v3 quoted in `literature.md`; ADR-status rule and CLAUDE.md rule 5 refined.
+- ADR-004 Accepted, ADR-005 Proposed, Decision and amendment transcribed, arXiv:2110.06800v3
+  quoted in `literature.md`, ADR-status rule and CLAUDE.md rule 5 refined.
 
 ## Results (numbers only)
 Models `all-MiniLM-L6-v2` @ `1110a243`, `bge-base-en-v1.5` @ `a5beb1e3`, seed 0. Deterministic
@@ -36,8 +36,8 @@ given pinned revisions, so no seed spread; axes are 2 encoders x 5 variants.
   position, since SGD-X renames every service (`Alarm_1` -> `Alarm_11`).
 - No instruction prefix for either encoder, on the grounds that the task is symmetric.
 - N2 singularization is rule-based with an explicit exception list; secondary only.
-- Run-id `YYYYMMDDTHHMMSSZ-<git-short-sha>`; `.gitignore` exceptions for `sanity_check.json` and
-  `per_slot.jsonl`; deleted the 619 MB clone after copying; filled `<date>` with 2026-10-01.
+- Run-id `YYYYMMDDTHHMMSSZ-<sha>`; tracked `sanity_check.json` and `per_slot.jsonl`; deleted the
+  619 MB clone after copying; filled `<date>` with 2026-10-01.
 
 ## Things that look wrong or weak
 - H2's condition (b) holds only through the float tolerance; a bare comparison fails under both
@@ -46,16 +46,16 @@ given pinned revisions, so no seed spread; axes are 2 encoders x 5 variants.
   nearest train field, not measured here, and ADR-005 generalizes to that untested relation.
 - H1's cutoff sits below the cosine of a same-slot paraphrase under MiniLM (41.9% at v1).
 - The 160 slots are treated as independent; they are nested in 21 services.
-- No interval was pre-registered on any deciding number.
-- Encoder contamination unaddressed: SGD public since 2019, SGD-X since 2021.
+- No interval pre-registered on any deciding number; encoder contamination unaddressed (SGD
+  public since 2019, SGD-X since 2021).
 - Commit `7fc8825` bundled a CLAUDE.md rule change with a threshold a verdict depends on.
 
 ## Decisions needed (human)
 - D5: accept / modify / reject ADR-005.
 - Whether H2's "Decision informed" line should be narrowed, since it names the
   nearest-train-field covariate that was not measured.
-- Whether H1 is worth re-registering with a calibrated cutoff; ADR-005 as drafted forbids its
-  current form, so that is a new experiment, not an edit.
+- Whether to re-register H1 with a calibrated cutoff; ADR-005 forbids its current form, so that
+  is a new experiment.
 - Whether PR #1 comes out of draft.
 
 ## Proposed next step
