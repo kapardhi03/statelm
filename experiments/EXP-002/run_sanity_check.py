@@ -184,8 +184,8 @@ def main() -> int:
             "cosine": thresholds.COSINE_THRESHOLD,
             "jaccard": thresholds.JACCARD_THRESHOLD,
             "h1_min_rate_percent": thresholds.H1_MIN_RATE,
-            "h2_c1_max_exact_rate_percent": thresholds.H2_C1_MAX_EXACT_RATE,
-            "h2_c2_min_retained_percent": thresholds.H2_C2_MIN_RETAINED,
+            "h2_wilcoxon_alpha": thresholds.H2_WILCOXON_ALPHA,
+            "h2_spearman_max_rho": thresholds.H2_SPEARMAN_MAX,
         },
         "notes": [
             "The gate uses no embedding model; input_template and its hash are recorded for "

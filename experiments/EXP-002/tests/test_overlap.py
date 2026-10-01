@@ -198,5 +198,9 @@ class TestBands:
         assert thresholds.COSINE_THRESHOLD == 0.8
         assert thresholds.JACCARD_THRESHOLD == 0.5
         assert thresholds.H1_MIN_RATE == 50.0
-        assert thresholds.H2_C1_MAX_EXACT_RATE == 70.0
-        assert thresholds.H2_C2_MIN_RETAINED == 80.0
+        assert thresholds.H2_WILCOXON_ALPHA == 0.01
+        assert thresholds.H2_SPEARMAN_MAX == -0.9
+        assert thresholds.EMBEDDING_MODELS == (
+            "sentence-transformers/all-MiniLM-L6-v2",
+            "BAAI/bge-base-en-v1.5",
+        )

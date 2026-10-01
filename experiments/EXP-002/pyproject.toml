@@ -3,7 +3,11 @@ name = "exp002-schema-novelty-audit"
 version = "0.1.0"
 description = "EXP-002: schema novelty audit on SGD / SGD-X"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "sentence-transformers>=3.0",
+]
 
 [dependency-groups]
 dev = ["pytest>=8.0"]

@@ -74,6 +74,16 @@ Blocked by: nothing
 - **2026-10-01.** ADR-004 moved from Proposed to Accepted on Kapardhi's instruction, so this
   record now cites it as settled rather than proposed.
 
+- **2026-10-01, pre-run implementation note on H2 condition (b).** The rule as written is
+  "Spearman rho <= -0.9, which allows at most one adjacent inversion". Those two clauses agree in
+  exact arithmetic but not in floating point: with n = 5 a single adjacent inversion gives
+  rho = -0.9 exactly on paper, and -0.8999999999999998 when computed, which is 2.2e-16 **above**
+  the bound. A bare `rho <= -0.9` would therefore reject the one case the rule explicitly admits.
+  Condition (b) is evaluated as `rho <= -0.9 + 1e-9`, which honours the written rule rather than
+  loosening it: the next configuration, two adjacent inversions, gives rho = -0.8 and is still
+  rejected by a margin of 0.1. Recorded before any H2 data existed and pinned by a test that
+  asserts the hazard directly, in `thresholds.spearman_meets_bound`.
+
 ## Hypothesis
 
 **Gate (pre-condition, not a hypothesis).** The SGD-X exact-name overlap figures reproduce inside
