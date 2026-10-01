@@ -40,7 +40,7 @@ Nothing may be built on a Proposed ADR as if it were Accepted.
 |---|---|---|---|
 | EXP-000 | Label feasibility (abstention agreement) | Planned | D3 |
 | EXP-001 | Headroom probe (frontier vs small) | Planned | EXP-000 |
-| EXP-002 | Schema novelty audit on SGD / SGD-X | Running | nothing |
+| EXP-002 | Schema novelty audit on SGD / SGD-X | Done (awaiting decision) | nothing |
 
 ## Where things live
 

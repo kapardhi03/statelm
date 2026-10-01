@@ -1,6 +1,6 @@
 # EXP-002: Schema novelty audit on SGD / SGD-X
 
-Status: Running
+Status: Done (awaiting decision)
 Owner: Kapardhi
 Created: 2026-10-01
 Revised: 2026-10-01 (pre-run, see Change log)
@@ -268,13 +268,22 @@ annotations are read at any point. StateLM's own `data/splits/test/` is untouche
 
 ## Result
 
-**Step 1 gate only. H1 and H2 have not been run.** The experiment record stays at Running.
+All of Steps 0 to 3 have run. **Gate PASS, H1 REFUTED, H2 SUPPORTED under both models.**
+
+### Pre-registration check
+
+No threshold was changed after seeing the result it judges. Commit times against run ids:
+the H2 refutation rule landed in `7fc8825` at 17:52:45, the code carrying it and the float
+tolerance in `df17cad` at 17:58:04, and the audit ran at 17:58:11 and again at 18:00:31. Every
+number in `config.json.thresholds` matches `thresholds.py` at the commit the run records.
+
+### Step 1 gate: PASS
 
 Run `20261001T172749Z-63641d3`, code commit `63641d3` with a clean tree, seed 0, dataset
 commit `e852981ae34990f4358979625854259302feaa78`. Config, per-item evidence and log in
 `runs/EXP-002/20261001T172749Z-63641d3/`.
 
-### Gate: PASS
+#### Gate figures
 
 | Measure (N0, instances) | Matched / total | Rate | Band | SGD-X paper | In band |
 |---|---|---|---|---|---|
@@ -285,7 +294,7 @@ Populations: 26 train services, 21 test services, of which 15 unseen and 6 seen.
 instances and 53 train intent instances. 116 unseen-service slot instances across 96 unique
 names; 28 unseen-service intent instances across 27 unique names.
 
-### Secondary, non-gating
+#### Secondary, non-gating
 
 | Kind | Pipeline | Unit | Matched / total | Rate |
 |---|---|---|---|---|
@@ -312,7 +321,58 @@ rather than from the run artifacts, whose `evidence` block holds the N0 cells on
 `Trains_1/to`, normalizes to the empty string under N2; no train slot name does, so it produced
 no spurious match in this run.
 
+### Steps 2 and 3: H1 and H2
+
+Run `20261001T180031Z-746c803`, code commit `746c803` with a clean tree, seed 0, same dataset
+commit. Models, pinned by resolved commit sha and recorded in `config.json`:
+`sentence-transformers/all-MiniLM-L6-v2` @ `1110a243fdf4706b3f48f1d95db1a4f5529b4d41` and
+`BAAI/bge-base-en-v1.5` @ `a5beb1e3e68b9ab74eb54cfd186867f64f240e1a`. An earlier run of the same
+code path, `20261001T175811Z-df17cad`, produced identical means and identical verdicts; it is
+kept rather than deleted, and is superseded only because it stored Spearman rho rounded to six
+decimal places, which hid the quantity that decides H2.
+
+All five SGD-X variants passed the structural validation: 21 test services in the original
+order, every variant service name equal to its original plus the variant index, matching slot
+counts throughout.
+
+#### H1: REFUTED
+
+5 of 41 = **12.20%** of the H1 population clear cosine 0.8 under both models, against a
+pre-registered threshold of >= 50%. Search space 215 train `(service, slot)` instances.
+
+| Model | Clears 0.8 | Mean nearest cosine | p10 / p50 / p90 |
+|---|---|---|---|
+| all-MiniLM-L6-v2 | 12.20% (5/41) | 0.6131 | 0.423 / 0.593 / 0.805 |
+| bge-base-en-v1.5 | 41.46% (17/41) | 0.7747 | 0.689 / 0.781 / 0.856 |
+
+Both models are individually below the 50% threshold. Nearest train slot by Jaccard clears
+0.5 for 39.02%. Model agreement: top-1 identity 56.10%, Cohen's kappa on the 0.8 decision 0.328.
+
+#### H2: SUPPORTED under both models
+
+160 slot pairs per variant, the full test population, paired 1:1 with their own originals.
+
+| Model | v1 | v2 | v3 | v4 | v5 | (a) Wilcoxon p | (b) rho | Inversions | Strictly decreasing |
+|---|---|---|---|---|---|---|---|---|---|
+| all-MiniLM-L6-v2 | 0.8012 | 0.7752 | 0.7384 | 0.7346 | 0.7351 | 5.53e-11 | -0.8999999999999998 | 1 | no |
+| bge-base-en-v1.5 | 0.8819 | 0.8617 | 0.8421 | 0.8320 | 0.8359 | 4.98e-14 | -0.8999999999999998 | 1 | no |
+
+Condition (a) holds decisively under both models. Condition (b) holds in both cases **through
+the pre-run float tolerance and not without it**: both models land on exactly one adjacent
+inversion, v4 to v5, so raw rho is -0.8999999999999998 and
+`would_hold_without_float_tolerance` is `false` for both. The inversions are small: +0.000483
+for MiniLM and +0.003926 for BGE. Neither model produces strictly decreasing means, so the
+replaced rule would have refuted H2 under both.
+
+#### Exploratory, post-hoc, deciding nothing
+
+75 matched instances across 55 distinct shared names. Most frequent: `phone_number` (4
+instances, 4 unseen services, 9 train services), then `address`, `city`, `genre`, `location`
+and `price` at 3 instances each.
+
 ## Interpretation
+
+### Step 1 gate
 
 **What the gate establishes.** One reading of each published statistic lands inside its
 pre-registered band: 64.66% against a published 65% for slots, 71.43% against a published 71%
@@ -353,11 +413,107 @@ are literally present in train, which is the condition EXP-002 exists to quantif
    here. It gives a floor, not a measure of novelty. The 41 non-matching slots are not thereby
    novel: measuring them is H1's job and it has not run.
 
-**What this result does not license.** It says nothing about H1 or H2, which are unmeasured. It
-says nothing about whether any slot is semantically novel, only whether its name string occurs
-in train. It is not evidence for or against ADR-004, which is about how novelty levels are
-assigned, not about how much overlap SGD has. Nothing here contradicts any row in
-`docs/research/literature.md`; the SGD-X row is the figure being reproduced.
+### H1: refuted, and robustly in direction
+
+**What it shows.** Among the 41 unseen-service slots whose names do not appear in train, only
+12.20% have a nearest train slot at cosine >= 0.8 under both models, against a pre-registered
+50%. The conjunction rule is not what decided it: both models fall below 50% on their own,
+at 12.20% and 41.46%. So the slots that survive the exact-name filter are, on this evidence,
+not mostly semantic near-duplicates of train fields.
+
+**What that means for the decision it informs.** The benchmark motivation cannot claim, on this
+evidence, that SGD's unseen split overstates *semantic* novelty beyond SGD-X's lexical finding.
+The lexical finding stands and is ours to cite: 64.66% of unseen-service slot names are literally
+present in train. The residue is a different matter, and H1 predicted it would also be
+redundant. It is not. The defensible claim is therefore narrower than the one H1 was written to
+support: SGD's "unseen" label is lexically leaky, and we have no evidence that what remains after
+removing the exact matches is semantically redundant too.
+
+**Threats, in order of how much they matter.**
+
+1. **A single absolute cosine threshold is not comparable across models, and this is the largest
+   problem with H1 as designed.** BGE's similarity scale sits systematically higher than
+   MiniLM's: mean nearest cosine 0.7747 against 0.6131, p10 0.689 against 0.423, and in H2 its
+   variant means run 0.83 to 0.88 where MiniLM's run 0.73 to 0.80. A fixed 0.8 therefore encodes
+   a different stringency per model, and the conjunction is pinned by the lower-scaled one:
+   MiniLM's 5 clearing slots are a subset of BGE's 17, which is exactly why the both-models rate
+   equals MiniLM's. The direction of the refutation survives this; its magnitude (12% against
+   42%) does not, and no threshold calibrated per model was pre-registered.
+2. **Small population.** n = 41, so one slot moves the rate by 2.44 points. BGE, the more
+   permissive model, is four slots short of the threshold. The refutation is not a rounding
+   artifact, but for that model it is not a wide margin either.
+3. **The nearest train slot is not a stable object across models.** Top-1 identity agreement is
+   56.10% and Cohen's kappa on the 0.8 decision is 0.328. The two models often disagree about
+   which train field is closest, which bears directly on any later use of "nearest train field"
+   as a per-item covariate.
+4. **"Both models" is a weak independence claim.** Both are English web-trained sentence
+   encoders, as the earlier review noted. Their disagreement here makes that point sharper
+   rather than softer: two models of the same family already diverge this much.
+
+### H2: supported, at the exact boundary of its rule
+
+**What it shows.** Under both models, cosine to a slot's own original falls from v1 to v5, and
+both conditions hold. Condition (a) is decisive: the one-sided paired Wilcoxon puts v5 below v1
+at p = 5.5e-11 and 5.0e-14 over 160 pairs. Condition (b) holds, but only just, and only through
+the float tolerance: both models land on exactly one adjacent inversion, at the same place
+(v4 to v5), so raw rho is -0.8999999999999998 and the bare comparison fails. The rule as written
+admits exactly one adjacent inversion, and the data landed on exactly that case.
+
+**The pre-registration question a reader should ask, answered.** H2's verdict depends on two
+decisions that both favour support: replacing strict monotonicity, and tolerating the float
+boundary. Neither was made after seeing an H2 number. The rule change is committed in `7fc8825`
+at 17:52:45 with its reason (SGD-X Table 1's own non-monotone surface statistic) recorded at the
+time; the tolerance is in `df17cad` at 17:58:04 with a test asserting the hazard; the first H2
+number exists at 17:58:11. The defence is the commit order, not the argument, and the artifacts
+record `would_hold_without_float_tolerance: false` so the dependency is visible rather than
+buried. Under the replaced rule, H2 would have been refuted under both models.
+
+**What that means for the decision it informs.** Embedding similarity is usable as a *coarse*
+covariate for ADR-004's stratified reporting and not as a fine-grained one. It separates v1 from
+v5 decisively, and it cannot order v4 against v5 at all: it inverts them under both models, by
+0.0005 and 0.0039. Stratifying reported results by distance-from-original is supported; treating
+per-variant cosine as a reliable ordering of adjacent variants is not.
+
+**The cross-model pattern is the more useful finding.** The two models agree closely on
+*ordering* (identical rho, the same inversion in the same place) while disagreeing sharply on
+*absolute* values (H1: 12% against 42% at the same cutoff). For ADR-004 that distinction is
+actionable: a covariate used as a rank is reproducible across these two encoders, a covariate
+used against a fixed cutoff is not.
+
+**Threats.**
+
+1. **The cosine conflates two axes the construction kept apart.** The embedding input is
+   `"{name}: {description}"` and SGD-X paraphrases both, while the paper ordered variants by
+   Levenshtein on names and Jaccard on descriptions *separately*. A single cosine cannot say
+   which axis drives the trend, or which one causes the v4/v5 inversion.
+2. **160 pairs is a census, not a sample.** The p-values describe this population of test
+   schemas. They do not license an inference to other schemas, and nothing here has been
+   measured on a second dataset.
+3. **The v4/v5 inversion may be an artifact of the source construction.** The paper selected 5
+   paraphrases at random where more than 5 existed, so adjacent variants need not be separated
+   by a consistent margin. We cannot check that from the released files.
+4. **Variant train schemas were not read.** H2 pairs variant test slots against their own
+   originals, so the post-publication `sgd_x` fix in the pinned commit touches files this run
+   did read. The fix concerned intents; H2 measures slots, and no intent figure is computed here.
+
+### Exploratory, post-hoc
+
+Nothing in that section tests anything. It shows the shared vocabulary is thin and generic:
+55 distinct names behind 75 instances, topped by `phone_number`, `address`, `city`, `genre`,
+`location`, `price`. That is consistent with the overlap reflecting ordinary field naming rather
+than anything specific to SGD's split, and it is not evidence for it. The contrast condition
+that could settle it was deliberately not built after the fact.
+
+### What these results do not license
+
+H1's refutation does not say the 41 slots are novel in any absolute sense; it says they are not
+near-duplicates of train fields under two specific encoders at one specific uncalibrated cutoff.
+H2's support does not say cosine is a good covariate, only that it tracks the construction
+ordering coarsely under both models, and it does not license using cosine to assign or order
+novelty levels, which ADR-004 forbids regardless of any measurement. The gate says nothing about
+semantic novelty at all. Nothing in this experiment speaks to whether SGD's unseen split is hard
+for a model, because no model was asked to do the task. Nothing here contradicts any row in
+`docs/research/literature.md`.
 
 **Required caveat.** "Novel relative to SGD-train" must never be reported as "unseen by the
 model". This experiment compares SGD train schemas against SGD test schemas. It says nothing
@@ -446,4 +602,4 @@ condition for the 64.66%, is addressed only in the weak sense that an explorator
 frequency breakdown now exists; a designed-in-advance contrast remains unbuilt.
 
 ## Decision
-(pending, human)
+(pending human review)
