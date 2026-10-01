@@ -145,8 +145,10 @@ either model.
 - **All five variants are L1 by construction** (ADR-004): human-written, manually vetted
   crowdsourced paraphrases, quoted in `literature.md`. Nothing in this experiment selects,
   excludes or relabels a variant by a measurement.
-- **Unresolved conflict with ADR-004, surfaced by the second review and left for the
-  researcher.** ADR-004's rule is "paraphrase of a schema present in **train** -> L1", and it
+- **Conflict with ADR-004, surfaced by the second review and since resolved by the dated
+  amendment under Decision**, which rules that only the 44 seen-service pairs are L1 by
+  construction and that paraphrases of test-only services receive no novelty level. The conflict
+  as it stood: ADR-004's rule is "paraphrase of a schema present in **train** -> L1", and it
   calls SGD-X variants "candidate L1 material". The population implemented here is every slot of
   every test service, which is 44 slot pairs from the 6 services that are in train and 116 from
   the 15 that are not. So 72.5% of the pairs are paraphrases of schemas absent from train, whose
@@ -765,10 +767,12 @@ hygiene; it should have been three commits.
 
 ### Open for the researcher, from the second pass
 
-1. **Which population H2 should be registered on.** The seen-service restriction was removed
-   without being flagged, and the verdict depends on it: supported on 160 pairs, refuted on the
-   44 that ADR-004 calls L1. Options are to re-register H2 on the 44, to keep 160 and drop the L1
-   framing, or to report both. Not a decision to make here.
+1. **Which population H2 should be registered on.** *Answered by the dated amendment under
+   Decision: only the 44 seen-service pairs are L1 by construction, paraphrases of test-only
+   services receive no novelty level and are not used as leveled benchmark material, and the H2
+   verdict is unaffected.* As it stood: the seen-service restriction was removed without being
+   flagged, and the verdict depends on it, supported on 160 pairs and refuted on the 44 that
+   ADR-004 calls L1.
 2. **H2's "Decision informed" line.** It claims the ADR-004 covariate, which is defined against
    the nearest train field and was not measured. The wording is the researcher's.
 3. **Whether H1 is worth re-registering with a calibrated cutoff.** Under MiniLM the 0.8 bar is
@@ -793,3 +797,12 @@ coarse covariate only: within-model ranks or strata, at least two encoders, no
 absolute cutoffs. Recorded as ADR-005 (Proposed).
 
 All five SGD-X variants are usable L1 material by construction (ADR-004).
+
+### Amendment
+
+Transcribed from Kapardhi, 2026-10-01.
+
+Amendment, 2026-10-01: The final sentence overstated. Under ADR-004, only SGD-X
+paraphrases of services present in train/schema.json (44 of 160 pairs per variant)
+are L1 by construction. Paraphrases of test-only services receive no novelty level and
+are not used as leveled benchmark material. The H2 verdict is unaffected.

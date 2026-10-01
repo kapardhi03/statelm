@@ -22,6 +22,7 @@ Detail lives in the linked files, not here.
 - D2. Contribution ordering: proposed benchmark-first, model-second (ADR-001)
 - D3. Real data source and second annotator for EXP-000
 - D4. Accept / modify / reject ADR-002 (ledger) and ADR-003 (typed abstention)
+- D5. Accept / modify / reject ADR-005 (similarity covariate reporting)
 
 ## ADRs
 
