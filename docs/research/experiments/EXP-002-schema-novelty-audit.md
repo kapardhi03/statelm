@@ -5,8 +5,9 @@ Owner: Kapardhi
 Created: 2026-10-01
 Revised: 2026-10-01 (pre-run, see Change log)
 Decision informed:
-- H1: whether SGD can supply L2 (new-field) items, or we must construct our own.
-- H2: whether SGD-X is valid L1 material.
+- H1: whether the benchmark motivation can claim SGD's unseen split overstates semantic novelty,
+  beyond SGD-X's lexical finding.
+- H2: whether embedding similarity is a valid covariate for ADR-004's stratified reporting.
 Blocked by: nothing
 
 ## Change log
@@ -18,8 +19,8 @@ Blocked by: nothing
   arithmetic, also near matches under the cosine measure, so a gate asserting ~65% exact matches
   over the same population left no realistic path to a <20% result. (The qualifier matters: the
   embedding input carries each slot's description, so identical names do not strictly guarantee
-  cosine >= 0.8. The original wording claimed arithmetic it did not have.) Replaced by H1 and H2, which are evaluated on populations the gate does not already
-  determine. At the time of this change no run had been executed, no metric had been computed,
+  cosine >= 0.8. The original wording claimed arithmetic it did not have.) Replaced by H1 and H2,
+  which are evaluated on populations the gate does not already determine. At the time of this change no run had been executed, no metric had been computed,
   and `experiments/EXP-002/` did not exist.
 - **2026-10-01, same revision.** Step 4 (proposed L0 / L1 / L2 bin assignment) dropped entirely.
   This experiment emits no novelty-level labels. Similarity is reported as a per-item covariate
@@ -36,6 +37,29 @@ Blocked by: nothing
   0.8; O4, the nearest-neighbor search space is all train `(service, slot)` instances. At the time
   of this change there was still no run, no computed metric, and no experiment code.
 
+- **2026-10-01, after the Step 1 gate result was seen.** Four changes by Kapardhi, made with the
+  gate numbers (64.66% slots, 71.43% intents) already in view. The gate itself is untouched: no
+  threshold, population or measurement it used has changed, and it has not been re-run.
+  1. **The SGD-X paper's own wording is now quoted** in `literature.md`: the sentence defining
+     the 65% / 71% figures, the three statements establishing the v1-v5 ordering, and Table 1.
+     This changes no EXP-002 number. It settles one open question in the gate's favour without
+     the gate bearing on it: the paper does not state its unit, and only the pre-registered
+     instance reading reproduces both figures.
+  2. **H1's "Decision informed" rewritten** to "whether the benchmark motivation can claim SGD's
+     unseen split overstates semantic novelty, beyond SGD-X's lexical finding." H1's population,
+     measurement and thresholds are unchanged and H1 has not run, so this changes what an unrun
+     result will be used to argue, not what will be measured. The gate measures exact-name
+     overlap and says nothing about semantic novelty, so it cannot inform this.
+  3. **H2 replaced entirely**, now that ADR-004 is accepted: the old H2 selected L1 material by
+     measurement, which ADR-004 forbids. The old H2 had not run. Its thresholds (<= 70% exact
+     match, >= 80% retained) are retired rather than moved, because the new H2 measures a
+     different quantity, on a different population, for a different decision. The gate read only
+     original SGD schemas and no SGD-X file, so it bears on neither version.
+  4. **An exploratory section added** for the frequency of the shared slot names behind the
+     64.66%. Unlike the other three, this one *is* prompted by the gate result. That is exactly
+     why it carries no hypothesis and no threshold and is labelled exploratory wherever it
+     appears: a statistic chosen after seeing the number it describes cannot test anything.
+
 ## Hypothesis
 
 **Gate (pre-condition, not a hypothesis).** The SGD-X exact-name overlap figures reproduce inside
@@ -46,11 +70,12 @@ evaluated and no similarity work is done.
 have **no exact name match** in train, a majority (>= 50%) have a nearest train slot at
 cosine >= 0.8 under **both** embedding models. Refuted if < 50%.
 
-**H2 (SGD-X novelty is surface-level), evaluated separately for each of v1-v5.** For SGD-X variant
-slots of **seen** services compared against **original** train, the exact-name match rate falls to
-<= 70%, where the original test schemas match at 100%, while >= 80% of variant slots keep
-cosine >= 0.8 to their own original slot under both models. A variant is refuted if either
-condition fails. Variants that pass both are usable L1 material.
+**H2 (covariate validity), evaluated across all five SGD-X variants.** All five variants are L1
+**by construction** under ADR-004: human-validated crowdsourced paraphrases of schemas present in
+train. No variant is selected, excluded or relabelled by any measurement. H2 asks whether
+embedding similarity tracks that construction ordering: the mean cosine of variant slots to their
+own original slot decreases monotonically from v1 to v5, under **both** embedding models. Refuted
+if the ordering is violated under either model.
 
 ## Setup
 
@@ -91,20 +116,27 @@ condition fails. Variants that pass both are usable L1 material.
   Its SHA-256 is recorded in the run config under `input_template_hash`.
 - Pooling and any required instruction prefix follow each model card. Vectors are L2-normalized.
 
-### SGD-X comparison direction and population
-- H2 population: slots of **seen** services in the variant test schemas, matching ADR-004's L1,
-  a paraphrase of a schema that is present in train.
-- Variant slot names are compared against **original** train slot names, matching the SGD-X
-  protocol (train on SGD, test on variants).
-- Condition 2 additionally pairs each variant slot with its own original slot, a 1:1 mapping by
-  `(service_name, position in that service's slot list)`.
-- The same two conditions are computed on unseen-service slots and reported as secondary. They
-  decide nothing.
-- Validation before H2 is computed, failing loudly rather than mismatching silently: each variant
-  must carry the same service names, the same slot count per service, and the same slot order as
-  the original schemas. If any differs, the 1:1 mapping is invalid and the run stops.
-- The 100% exact-match baseline for original seen-service slots is computed, not assumed. If it
-  is not 100%, that is reported as a finding about the schema files rather than absorbed silently.
+### SGD-X variants: construction status, pairing, and validation
+- **All five variants are L1 by construction** (ADR-004): human-validated crowdsourced
+  paraphrases of schemas present in train. Nothing in this experiment selects, excludes or
+  relabels a variant by a measurement.
+- The paper's ordering claim, quoted in `literature.md`, is that v1 is closest to the original
+  and v5 farthest, with paraphrases sorted by increasing Levenshtein distance on names and
+  increasing Jaccard distance on descriptions. That ordering is established on **surface**
+  metrics; H2 asks whether it survives in embedding space, which construction does not guarantee.
+- H2 population: every slot of every service in each variant's test schema, paired 1:1 with its
+  own original slot. No filtering.
+- **Pairing key.** SGD-X renames services: a variant's `service_name` is the original name with
+  the variant index appended (`Alarm_1` -> `Alarm_11` in v1, `Alarm_15` in v5), and the same
+  applies to its train schemas. The key is therefore `(original service_name, position in that
+  service's slot list)`, with the original name recovered by stripping the suffix. An earlier
+  draft keyed on `(service_name, position)` directly, which would have paired nothing at all.
+- **Validation before H2 is computed**, failing loudly rather than mismatching silently: for each
+  variant, the service list must have the same length and order as the original, every variant
+  `service_name` must equal its original name with the variant index appended, and every service
+  must carry the same slot count. If any check fails the run stops. Checked structurally on the
+  pinned commit while this section was written: all five variants hold 21 test services in the
+  original order with matching slot and intent counts per service, and the suffix rule holds.
 
 ### Code and outputs
 - Entry points: `experiments/EXP-002/run_sanity_check.py` (gate) and
@@ -152,16 +184,21 @@ names and 65% of slot names exactly match train names.
 - Reported alongside: per-model rates, the full nearest-neighbor cosine distribution, and the
   % clearing Jaccard >= 0.5.
 
-### H2, one verdict per variant, v1 to v5, with no mean and no all-five requirement
-- Population: seen-service slots, N0, primary unit.
-- Condition 1 holds for a variant if the exact-name match rate of its slot names against original
-  train slot names is **<= 70%**.
-- Condition 2 holds for a variant if **>= 80%** of its slots keep cosine >= 0.8 to their own
-  original slot under both models.
-- A variant is supported only if both conditions hold, and refuted if either fails. Variants that
-  pass are usable L1 material (decision rule set by Kapardhi, 2026-10-01).
-- Reported alongside, non-deciding: the same two conditions on unseen-service slots, per-variant
-  distributions rather than only summary rates, and the computed original-schema baseline rate.
+### H2, covariate validity across all five variants
+- Population: every slot of every service in each variant's test schema, paired 1:1 with its own
+  original slot. Nothing is filtered by a measurement.
+- Primary: the mean cosine to the paired original slot, per variant, under each embedding model.
+  **Supported** if those five means are strictly decreasing from v1 to v5 under both models;
+  **refuted** if the ordering is violated under either model.
+- Secondary: Spearman correlation between variant index and mean cosine, per model.
+- Reported alongside, non-deciding: the per-variant cosine distributions rather than only the
+  means, and the paired per-slot cosines in `per_slot.jsonl`.
+- Documented prior, from the Table 1 figures quoted in `literature.md`: the paper's own surface
+  statistic (% of test slot names seen in train) is **not** monotone across variants (13%, 14%,
+  5%, 6%, 2%, with v2 above v1 and v4 above v3). A strict monotonicity test on a mean can
+  therefore fail even where the construction ordering holds in its own metric. A refutation would
+  say that embedding cosine does not track the construction order, which is the question, not
+  that the variants are misordered.
 
 ### Embedding-model agreement (reported for H1 and H2, not gating)
 - Primary: top-1 identity agreement rate, the share of slots where both models pick the same
@@ -170,8 +207,26 @@ names and 65% of slot names exactly match train names.
 
 ### Not emitted
 No L0 / L1 / L2 / L4 assignment, and no novelty-level label of any kind, appears in
-`metrics.json`, `per_slot.jsonl`, or the Result section. Similarity is a covariate (ADR-004,
-Proposed). H2's verdicts say which variants are usable L1 material; they do not label any item.
+`metrics.json`, `per_slot.jsonl`, or the Result section. Similarity is a covariate (ADR-004).
+H2 assigns nothing either: the variants' L1 status comes from how they were built, and H2 only
+asks whether the covariate tracks it.
+
+## Exploratory, post-hoc: frequency of the shared slot names
+
+**Exploratory.** Added after the Step 1 gate result was seen. No hypothesis, no threshold, no
+verdict. Nothing in this section tests anything, and no number from it may be reported as support
+for or against H1, H2, or any ADR.
+
+What it computes, for the 75 matched unseen-service slot instances: how often each shared name
+occurs, how many distinct unseen services carry it, and how many distinct train services carry it.
+The output is a frequency table, labelled exploratory in `metrics.json`, in any figure, and in any
+write-up that uses it.
+
+Why it exists: the matched names are visibly dominated by generic field vocabulary (`price`,
+`date`, `time`, `city`, `address`, `phone_number`, `location`), which raises the question of
+whether the 64.66% reflects SGD's split or ordinary English field naming. That question needs a
+contrast condition designed in advance. This section describes the shape of the overlap; it does
+not answer that question, and it was chosen after seeing the result it describes.
 
 ## Leakage check
 
@@ -220,22 +275,23 @@ Normalization observations, for the record: N1 moves no rate for either kind, be
 names are already lowercase snake_case and intent names are consistently CamelCase on both
 sides. Exactly one slot matches under N2 but not N0: 76 - 75 = one, and because normalization is
 applied to both sides the N0 matches are a subset of the N2 matches. That slot is
-`Buses_3/to_city`, normalizing to "city" against train's `city`, established by a separate
-check rather than from the run artifacts, whose `evidence` block holds the N0 cells only. One name, `Trains_1/to`, normalizes to the empty string under N2; no
-train slot name does, so it produced no spurious match in this run.
+`Buses_3/to_city`, normalizing to "city" against train's `city`, established by a separate check
+rather than from the run artifacts, whose `evidence` block holds the N0 cells only. One name,
+`Trains_1/to`, normalizes to the empty string under N2; no train slot name does, so it produced
+no spurious match in this run.
 
 ## Interpretation
 
 **What the gate establishes.** One reading of each published statistic lands inside its
 pre-registered band: 64.66% against a published 65% for slots, 71.43% against a published 71%
 for intents. The agreement should not be quoted more tightly than that, because both published
-figures are whole percents and could stand for anything in a half-point either way. The reading
-itself is ours: the definition the gate implements is the one recorded in `literature.md`, not a
-quotation of the paper's own operationalization, which is still not in this repo. What the gate
+figures are whole percents and could stand for anything in a half-point either way. The paper's
+own sentence is now quoted in `literature.md`, and it does not state its unit, so the reading is
+still ours. What has changed is that the evidence now favours it: the pre-registered instance
+reading reproduces both figures, while the unique-name reading reproduces neither. What the gate
 licenses is narrow: the pipeline loads the right files, partitions services as specified, and
-counts instances correctly, so the machinery H1 and H2 will reuse works to the extent this
-tests it.
-On SGD's own published labels, roughly two thirds of the slot names in services marked unseen
+counts instances correctly, so the machinery H1 and H2 will reuse works to the extent this tests
+it. On SGD's own published labels, roughly two thirds of the slot names in services marked unseen
 are literally present in train, which is the condition EXP-002 exists to quantify.
 
 **Threats to validity, in order of how much they matter.**
@@ -246,8 +302,11 @@ are literally present in train, which is the condition EXP-002 exists to quantif
    two commits before the run, so the verdict stands as pre-registered. (An earlier draft of this
    section cited a "Q1" that appears nowhere in the repo; the decision was real but the citation
    pointed at nothing.) The gap is substantive rather than cosmetic: the slot names that repeat
-   across unseen services are disproportionately the ones that match train. Any later claim
-   about "how much of SGD's unseen set is really unseen" has to name its unit.
+   across unseen services are disproportionately the ones that match train. Quoting the paper
+   softens this without removing it: its sentence is ambiguous on the unit, and only the
+   pre-registered reading reproduces both published figures, so the choice is now evidenced
+   rather than merely declared. The unique-name reading would still fail the band, so any later
+   claim about "how much of SGD's unseen set is really unseen" has to name its unit.
 2. Resolved by checking, and recorded because an earlier draft of this section got it wrong.
    That draft inferred from the pinned commit's title ("sgdx-intent-bug") that the files behind
    the intent figure had changed after publication. The file history says otherwise:
@@ -342,11 +401,17 @@ makes condition 1 harder, not easier. The underlying observation still stands as
 worth recording, in the other direction: a paraphrase that renames a slot onto another train
 slot's name looks un-paraphrased to condition 1, which makes that condition conservative.
 
-### Not done, needs a decision
+### Closed after the review
 
-The review's cheapest fix also asks for SGD-X's own definition of its 65% / 71% statistic to be
-quoted in `literature.md`. The definition there was supplied by the researcher rather than
-quoted from the paper, so closing this means fetching arXiv 2110.06800, which is his call.
+The review's remaining cheapest-fix item, quoting SGD-X's own definition of its 65% / 71%
+statistic, is done: arXiv:2110.06800v3 was fetched and the sentence, the ordering statements and
+Table 1 are quoted in `literature.md`. The paper turns out not to specify the unit, and only the
+pre-registered instance reading reproduces both figures.
+
+Its first open item is resolved by ADR-004 being accepted and H2 being replaced: nothing in this
+experiment now selects benchmark material by a measurement. Its third item, the missing contrast
+condition for the 64.66%, is addressed only in the weak sense that an exploratory, post-hoc
+frequency breakdown now exists; a designed-in-advance contrast remains unbuilt.
 
 ## Decision
 (pending, human)
