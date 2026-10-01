@@ -1,8 +1,9 @@
 # ADR-004: Novelty levels are assigned by construction, not by similarity thresholds
 
-Status: Proposed
+Status: Accepted
 Date: 2026-10-01
 Supersedes: none
+Status changed on Kapardhi's instruction, 2026-10-01 (was Proposed).
 
 ## Decision
 A benchmark item's novelty level is assigned by **how the item was constructed**, recorded as

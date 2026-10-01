@@ -22,7 +22,6 @@ Detail lives in the linked files, not here.
 - D2. Contribution ordering: proposed benchmark-first, model-second (ADR-001)
 - D3. Real data source and second annotator for EXP-000
 - D4. Accept / modify / reject ADR-002 (ledger) and ADR-003 (typed abstention)
-- D5. Accept / modify / reject ADR-004 (novelty by construction)
 
 ## ADRs
 
@@ -31,7 +30,7 @@ Detail lives in the linked files, not here.
 | ADR-001 | Interaction-scoped, benchmark-first claim | Proposed |
 | ADR-002 | Temporal memory is a deterministic ledger | Proposed |
 | ADR-003 | Typed abstention, distinct from NO-OP | Proposed |
-| ADR-004 | Novelty levels by construction, not thresholds | Proposed |
+| ADR-004 | Novelty levels by construction, not thresholds | Accepted |
 
 Nothing may be built on a Proposed ADR as if it were Accepted.
 

@@ -30,7 +30,9 @@ measurements, and report results honestly. You do not decide research direction.
    model output, human judgment, gold label, derived state. Never let model output become a gold
    label. Never pre-label data for human annotators.
 4. **Proposed ADRs are not Accepted.** Don't build on a Proposed ADR as settled fact. You may
-   draft new ADRs, always with `Status: Proposed`. Never change an ADR's status.
+   draft new ADRs, always with `Status: Proposed`. Never change an ADR's status unless
+   Kapardhi explicitly instructs it, naming the ADR and the new status. Record
+   "Status changed on Kapardhi's instruction, <date>" in the ADR.
 5. **You fill Result and Interpretation. Never fill Decision.** Decision belongs to the human.
 6. **Report failures and null results with the same care as successes.** A refuted hypothesis
    is a finding.

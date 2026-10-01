@@ -61,6 +61,19 @@ Blocked by: nothing
      why it carries no hypothesis and no threshold and is labelled exploratory wherever it
      appears: a statistic chosen after seeing the number it describes cannot test anything.
 
+- **2026-10-01, pre-run, prompted by SGD-X Table 1 and by no H2 data.** H2's refutation rule
+  changed by Kapardhi. Strict monotonicity of the five per-variant means is replaced by two
+  conditions that must both hold under both embedding models: a one-sided paired Wilcoxon
+  signed-rank test on per-slot cosine, v5 below v1, at p < 0.01; and Spearman rho between variant
+  index and mean cosine <= -0.9, which tolerates at most one adjacent inversion. What prompted it
+  was the paper's own Table 1, quoted in `literature.md`, where the % of test slot names seen in
+  train runs 13, 14, 5, 6, 2 across v1-v5 and so is itself non-monotone. No H2 measurement
+  existed when this changed: neither embedding model had been loaded, `per_slot.jsonl` did not
+  exist, and no cosine had been computed. Strict monotonicity is kept as a reported,
+  non-deciding output, so the stricter reading stays visible in the results.
+- **2026-10-01.** ADR-004 moved from Proposed to Accepted on Kapardhi's instruction, so this
+  record now cites it as settled rather than proposed.
+
 ## Hypothesis
 
 **Gate (pre-condition, not a hypothesis).** The SGD-X exact-name overlap figures reproduce inside
@@ -74,9 +87,10 @@ cosine >= 0.8 under **both** embedding models. Refuted if < 50%.
 **H2 (covariate validity), evaluated across all five SGD-X variants.** All five variants are L1
 **by construction** under ADR-004: human-validated crowdsourced paraphrases of schemas present in
 train. No variant is selected, excluded or relabelled by any measurement. H2 asks whether
-embedding similarity tracks that construction ordering: the mean cosine of variant slots to their
-own original slot decreases monotonically from v1 to v5, under **both** embedding models. Refuted
-if the ordering is violated under either model.
+embedding similarity tracks that construction ordering: cosine to a slot's own original slot
+falls from v1 to v5, tested per slot and across variants, under **both** embedding models.
+Supported only if both conditions in Metric hold under both models; refuted if either fails under
+either model.
 
 ## Setup
 
@@ -188,12 +202,19 @@ names and 65% of slot names exactly match train names.
 ### H2, covariate validity across all five variants
 - Population: every slot of every service in each variant's test schema, paired 1:1 with its own
   original slot. Nothing is filtered by a measurement.
-- Primary: the mean cosine to the paired original slot, per variant, under each embedding model.
-  **Supported** if those five means are strictly decreasing from v1 to v5 under both models;
-  **refuted** if the ordering is violated under either model.
-- Secondary: Spearman correlation between variant index and mean cosine, per model.
-- Reported alongside, non-deciding: the per-variant cosine distributions rather than only the
-  means, and the paired per-slot cosines in `per_slot.jsonl`.
+- H2 is **supported** only if both conditions below hold under **both** embedding models, and
+  **refuted** if either fails under either model:
+  - **(a) v5 sits below v1, per slot.** One-sided paired Wilcoxon signed-rank test across slots
+    on the cosine of each slot to its own original, v5 against v1, alternative "v5 is lower".
+    Holds at **p < 0.01**.
+  - **(b) the trend is near-monotone.** Spearman rho between variant index (1 to 5) and
+    per-variant mean cosine is **<= -0.9**. The bound is inclusive and exact rather than
+    approximate: with n = 5, a perfectly decreasing order gives rho = -1.0 and a single adjacent
+    inversion gives rho = exactly -0.9, so "<= -0.9" admits at most one adjacent inversion.
+- Reported, non-deciding: the per-variant cosine distributions rather than only the means, the
+  strict-monotonicity check (whether the five means are strictly decreasing) which was the
+  previous deciding rule, the Wilcoxon statistic alongside its p-value, and the paired per-slot
+  cosines in `per_slot.jsonl`.
 - Documented prior, from the Table 1 figures quoted in `literature.md`: the paper's own surface
   statistic (% of test slot names seen in train) is **not** monotone across variants (13%, 14%,
   5%, 6%, 2%, with v2 above v1 and v4 above v3). A strict monotonicity test on a mean can
