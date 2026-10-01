@@ -3,8 +3,7 @@
 ## Done
 - EXP-002 Steps 0-3: record `docs/research/experiments/EXP-002-schema-novelty-audit.md`, code
   `experiments/EXP-002/`, runs `runs/EXP-002/`, 134 tests, two review passes recorded.
-- Dataset pinned to `dstc8-schema-guided-dialogue` @ `e852981`; 18 schema files in
-  `data/raw/sgd/<commit>/`, SHA-256 per file in each run config.
+- Dataset pinned to `dstc8-schema-guided-dialogue` @ `e852981`; 18 schema files, hashed per run.
 - ADR-004 Accepted, ADR-005 Proposed, Decision and amendment transcribed, arXiv:2110.06800v3
   quoted in `literature.md`, ADR-status rule and CLAUDE.md rule 5 refined.
 
