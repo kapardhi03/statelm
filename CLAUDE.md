@@ -9,8 +9,8 @@ Current state of the research (read every session):
 
 ## Your role in this repo
 
-You are the **research engineer**. Research decisions are made by Kapardhi together with a
-separate research-architect conversation. You implement experiments, build tooling, run
+You are the **research engineer**. Kapardhi is the **researcher**: he owns the research question,
+the ADRs, the benchmark design, and every Decision. You implement experiments, build tooling, run
 measurements, and report results honestly. You do not decide research direction.
 
 - Do not change the research question, ADR statuses, or architecture on your own.
@@ -60,7 +60,7 @@ measurements, and report results honestly. You do not decide research direction.
 - Sessions start in plan mode. Present a plan; wait for approval before editing.
 - One experiment per session. Run `/clear` between unrelated tasks.
 - After results: run the `research-reviewer` subagent on the experiment file before reporting.
-- End each work session with `/handoff` so Kapardhi can carry results back to the research chat.
+- End each work session with `/handoff` so Kapardhi can review the results and make the Decision.
 - Commit after each completed step with a message naming the experiment ID.
 
 ## Where to find more (read on demand, not every session)

@@ -4,28 +4,27 @@ This is your guide, not Claude's. Claude Code reads `CLAUDE.md`; you read this.
 
 ## Who does what
 
-| | Research chat (claude.ai Project) | Claude Code (your repo) |
+| | Researcher (Kapardhi) | Research engineer (Claude Code) |
 |---|---|---|
-| Role | Research architect + reviewer | Research engineer |
-| Decides | Research question, ADRs, benchmark design, what an experiment must show | Nothing about direction |
-| Produces | Decisions, ADR text, experiment designs, critiques | Code, data tooling, runs, numbers, handoff notes |
-| Source of truth | `docs/research/` in the repo | `docs/research/` in the repo |
+| Decides | Research question, ADRs, benchmark design, what each experiment must show | Nothing about research direction |
+| Produces | Decisions, ADR text, experiment designs, the Decision section of every experiment | Code, data tooling, runs, numbers, handoff notes |
+| Source of truth | `docs/research/` | `docs/research/` |
 
-The repo's `docs/research/` folder is the bridge. Decisions made in the chat get written there.
-Results produced by Claude Code get written there. Neither side keeps state anywhere else.
+`docs/research/` is where your thinking and Claude Code's work meet. Your decisions get written
+there. Claude Code's results get written there. Nothing lives anywhere else.
 
 ## The loop
 
-1. **Decide in the research chat.** Settle the decision, the experiment design, and the metric.
-2. **Write it into the repo.** Either paste the updated ADR / experiment text yourself, or ask
-   Claude Code to apply it (it will prompt you before touching ADRs, the research question, or
+1. **Think and decide.** Settle the decision, the experiment design, and the metric yourself.
+2. **Write it into the repo.** Edit the ADR or experiment file yourself, or ask Claude Code to
+   apply your decision (it will prompt you before touching ADRs, the research question, or
    the architecture file, because those are `ask` rules in `.claude/settings.json`).
 3. **Implement in Claude Code.** Sessions start in plan mode. Read its plan, push back, approve.
 4. **Record.** `/record-result EXP-NNN <run-id>` fills Result + Interpretation and runs the
    reviewer subagent.
 5. **Hand off.** `/handoff` writes a summary to `docs/research/handoffs/` and prints it.
-6. **Paste the handoff into the research chat.** Review it there, fill the Decision, update
-   ADRs and STATE.md. Back to step 1.
+6. **Review and decide.** Read the handoff and the reviewer's findings, write the Decision in the
+   experiment file, update ADRs and STATE.md. Back to step 1.
 
 ## Setup (once)
 
@@ -101,10 +100,10 @@ Write tests for the overlap and similarity functions.
 Plan first. List any assumption you'd have to make that the experiment file doesn't cover.
 ```
 
-### Bring in a decision from the research chat
+### Apply a decision you've made
 
 ```text
-The research chat accepted ADR-003 with this change: <paste>.
+I've accepted ADR-003 with this change: <your change>.
 Update docs/research/adr/ADR-003-typed-abstention.md and STATE.md accordingly.
 Change nothing else.
 ```
@@ -116,7 +115,8 @@ What in this repo currently depends on a Proposed ADR as if it were Accepted?
 List files and lines. Don't fix anything.
 ```
 
-## What to paste back into the research chat
+## Reviewing a handoff
 
-Always the `/handoff` output. If a number surprised you, paste the relevant `metrics.json` too.
-Don't summarize results from memory; paste the file.
+Read the `/handoff` output, then check the numbers against the actual `metrics.json` before you
+decide anything. Pay most attention to two sections: "Assumptions I made" (each is a decision
+Claude Code took on your behalf, so accept or reject it explicitly) and "Things that look wrong".

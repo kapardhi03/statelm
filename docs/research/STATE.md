@@ -16,7 +16,7 @@ Detail lives in the linked files, not here.
 | 5. Baselines | Not started |
 | 6+. Architecture, training, eval | Not started |
 
-## Decisions pending (human)
+## Decisions pending (Kapardhi)
 
 - D1. "Small" bound: proposed ≤4B primary, size curve at ~1B / ~4B / ~8B
 - D2. Contribution ordering: proposed benchmark-first, model-second (ADR-001)
