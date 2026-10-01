@@ -212,11 +212,16 @@ def run_h2(embedders, original, variants) -> tuple[dict, list[dict]]:
                 "holds": cond_a,
             },
             "condition_b_spearman_index_vs_mean": {
-                "rho": round(rho, 6),
+                "rho": rho,
+                "rho_6dp": round(rho, 6),
                 "p_value": rho_p,
                 "max_rho": thresholds.H2_SPEARMAN_MAX,
                 "float_tolerance": thresholds.H2_SPEARMAN_TOLERANCE,
                 "holds": cond_b,
+                # Recorded because at the boundary this differs from `holds`: one adjacent
+                # inversion is rho = -0.9 in exact arithmetic but -0.8999999999999998 computed.
+                "would_hold_without_float_tolerance": bool(rho <= thresholds.H2_SPEARMAN_MAX),
+                "adjacent_inversions": measures.adjacent_inversions(means),
             },
             "supported": cond_a and cond_b,
             "reported_non_deciding": {

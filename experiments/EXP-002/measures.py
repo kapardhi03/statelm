@@ -19,6 +19,16 @@ def strictly_decreasing(values: Sequence[float]) -> bool:
     return all(b < a for a, b in zip(vals, vals[1:]))
 
 
+def adjacent_inversions(values: Sequence[float]) -> int:
+    """Count adjacent pairs that go up instead of down.
+
+    Reported with H2 because it is the quantity its Spearman bound is written in terms of:
+    with n = 5, zero inversions give rho = -1.0 and one gives rho = -0.9.
+    """
+    vals = list(values)
+    return sum(1 for a, b in zip(vals, vals[1:]) if b > a)
+
+
 def spearman_against_index(means: Sequence[float]) -> tuple[float, float]:
     """Spearman rho and p-value between position (1..n) and the given means.
 

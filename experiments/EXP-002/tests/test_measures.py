@@ -28,6 +28,28 @@ class TestStrictlyDecreasing:
         assert measures.strictly_decreasing(values) is expected
 
 
+class TestAdjacentInversions:
+    @pytest.mark.parametrize(
+        "values,expected",
+        [
+            ([0.9, 0.8, 0.7, 0.6, 0.5], 0),
+            ([0.9, 0.8, 0.7, 0.5, 0.6], 1),
+            ([0.9, 0.7, 0.8, 0.5, 0.6], 2),
+            ([0.5, 0.6, 0.7, 0.8, 0.9], 4),
+            ([0.8, 0.8], 0),  # a plateau is not an inversion
+        ],
+    )
+    def test_counts(self, values, expected):
+        assert measures.adjacent_inversions(values) == expected
+
+    def test_one_inversion_is_the_boundary_case(self):
+        values = [0.9, 0.8, 0.7, 0.5, 0.6]
+        rho, _ = measures.spearman_against_index(values)
+        assert measures.adjacent_inversions(values) == 1
+        assert rho == pytest.approx(-0.9)
+        assert thresholds.spearman_meets_bound(rho)
+
+
 class TestSpearmanAgainstIndex:
     def test_perfectly_decreasing_gives_minus_one(self):
         rho, _ = measures.spearman_against_index([0.9, 0.8, 0.7, 0.6, 0.5])
