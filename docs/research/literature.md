@@ -36,6 +36,22 @@ name occurring in several unseen services counts once or once per service. EXP-0
 (64.66% and 71.43%); the unique-name reading reproduces neither (57.29% and 70.37%). The
 ambiguity is the paper's, the choice was ours and pre-registered, and the evidence favours it.
 
+### How the paraphrases were produced (Dataset Construction)
+
+> For SGD-X, we crowdsourced paraphrases across 400+ authors from Amazon Mechanical Turk. We
+> chose crowdsourcing over automatic paraphrasing methods because we found that automatic
+> methods were often semantically inaccurate and provided insufficient linguistic diversity
+
+> At the end of the collection and vetting phase, we had at least 5 paraphrases for every name
+> and description. When there were more than 5, we selected 5 at random.
+
+> Designing the tasks, collecting data, manually vetting responses, and composing the variants
+> took approximately 1 month.
+
+This is what supports calling the variants human-written and human-vetted. Note the random
+selection among surplus paraphrases: adjacent variants need not be separated by a consistent
+margin, which bears on EXP-002's H2.
+
 ### Variant ordering, v1 to v5 (Composing Schema Variants)
 
 > We placed paraphrases into schema variants such that variants increasingly diverge from the

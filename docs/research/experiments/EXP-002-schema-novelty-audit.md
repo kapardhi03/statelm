@@ -142,9 +142,18 @@ either model.
 - Pooling and any required instruction prefix follow each model card. Vectors are L2-normalized.
 
 ### SGD-X variants: construction status, pairing, and validation
-- **All five variants are L1 by construction** (ADR-004): human-validated crowdsourced
-  paraphrases of schemas present in train. Nothing in this experiment selects, excludes or
-  relabels a variant by a measurement.
+- **All five variants are L1 by construction** (ADR-004): human-written, manually vetted
+  crowdsourced paraphrases, quoted in `literature.md`. Nothing in this experiment selects,
+  excludes or relabels a variant by a measurement.
+- **Unresolved conflict with ADR-004, surfaced by the second review and left for the
+  researcher.** ADR-004's rule is "paraphrase of a schema present in **train** -> L1", and it
+  calls SGD-X variants "candidate L1 material". The population implemented here is every slot of
+  every test service, which is 44 slot pairs from the 6 services that are in train and 116 from
+  the 15 that are not. So 72.5% of the pairs are paraphrases of schemas absent from train, whose
+  construction label is undefined under ADR-004 rather than L1. An earlier version of H2 was
+  restricted to seen-service slots for exactly this reason; the replacement did not restate a
+  population and the implementation widened it without flagging the change. See the diagnostic
+  in Result and the open item in Review.
 - The paper's ordering claim, quoted in `literature.md`, is that v1 is closest to the original
   and v5 farthest, with paraphrases sorted by increasing Levenshtein distance on names and
   increasing Jaccard distance on descriptions. That ordering is established on **surface**
@@ -159,9 +168,12 @@ either model.
 - **Validation before H2 is computed**, failing loudly rather than mismatching silently: for each
   variant, the service list must have the same length and order as the original, every variant
   `service_name` must equal its original name with the variant index appended, and every service
-  must carry the same slot count. If any check fails the run stops. Checked structurally on the
-  pinned commit while this section was written: all five variants hold 21 test services in the
-  original order with matching slot and intent counts per service, and the suffix rule holds.
+  must carry the same slot count. If any check fails the run stops. The run's check covers those
+  three things and not intent counts, which H2 does not use; intent counts were confirmed to
+  match separately, outside the run, when this section was written. The validation checks slot
+  counts, not that position j of a variant is a paraphrase of position j of the original; spot
+  checks in `per_slot.jsonl` (`alarm_time` -> `clock_time_of_alarm`, `to_station` ->
+  `arrival_station_name`) show the correspondence holds in fact.
 
 ### Code and outputs
 - Entry points: `experiments/EXP-002/run_sanity_check.py` (gate) and
@@ -328,8 +340,12 @@ commit. Models, pinned by resolved commit sha and recorded in `config.json`:
 `sentence-transformers/all-MiniLM-L6-v2` @ `1110a243fdf4706b3f48f1d95db1a4f5529b4d41` and
 `BAAI/bge-base-en-v1.5` @ `a5beb1e3e68b9ab74eb54cfd186867f64f240e1a`. An earlier run of the same
 code path, `20261001T175811Z-df17cad`, produced identical means and identical verdicts; it is
-kept rather than deleted, and is superseded only because it stored Spearman rho rounded to six
-decimal places, which hid the quantity that decides H2.
+kept rather than deleted. It is superseded because it stored Spearman rho rounded to six decimal
+places, which printed as exactly -0.9 and hid the quantity that decides H2, and also because it
+lacks `would_hold_without_float_tolerance`, `rho_6dp` and `adjacent_inversions`. An earlier draft
+of this paragraph said "only because it stored rho rounded", which understated what the second
+run added: that commit landed after the first H2 numbers were visible, and what it added was
+disclosure.
 
 All five SGD-X variants passed the structural validation: 21 test services in the original
 order, every variant service name equal to its original plus the variant index, matching slot
@@ -345,8 +361,12 @@ pre-registered threshold of >= 50%. Search space 215 train `(service, slot)` ins
 | all-MiniLM-L6-v2 | 12.20% (5/41) | 0.6131 | 0.423 / 0.593 / 0.805 |
 | bge-base-en-v1.5 | 41.46% (17/41) | 0.7747 | 0.689 / 0.781 / 0.856 |
 
-Both models are individually below the 50% threshold. Nearest train slot by Jaccard clears
+Both point estimates sit below the 50% threshold, but they are not equally far from it. Wilson
+95% intervals, computed post-hoc because no interval was pre-registered: MiniLM
+[5.3%, 25.5%], BGE **[27.8%, 56.6%]**, which covers 50%. Nearest train slot by Jaccard clears
 0.5 for 39.02%. Model agreement: top-1 identity 56.10%, Cohen's kappa on the 0.8 decision 0.328.
+The both-models rate equals MiniLM's exactly, so MiniLM's 5 clearing slots are a subset of
+BGE's 17.
 
 #### H2: SUPPORTED under both models
 
@@ -362,7 +382,40 @@ the pre-run float tolerance and not without it**: both models land on exactly on
 inversion, v4 to v5, so raw rho is -0.8999999999999998 and
 `would_hold_without_float_tolerance` is `false` for both. The inversions are small: +0.000483
 for MiniLM and +0.003926 for BGE. Neither model produces strictly decreasing means, so the
-replaced rule would have refuted H2 under both.
+replaced rule would have refuted H2 under both. Wilcoxon statistics, which the Metric section
+lists as reported: 2653.0 for MiniLM and 2072.0 for BGE.
+
+Per-variant distributions, also promised in Metric and not only as means (p10 / p50 / p90):
+
+| Model | v1 | v2 | v3 | v4 | v5 |
+|---|---|---|---|---|---|
+| all-MiniLM-L6-v2 | .670/.816/.920 | .644/.804/.887 | .607/.749/.877 | .577/.744/.868 | .576/.747/.887 |
+| bge-base-en-v1.5 | .820/.890/.943 | .795/.869/.925 | .760/.852/.913 | .744/.840/.912 | .742/.845/.916 |
+
+#### Post-hoc diagnostics, deciding nothing
+
+Two reference figures computed after the verdicts, from this run's own `per_slot.jsonl`. Neither
+was pre-registered, neither changes any verdict, and neither may be quoted as a test.
+
+**1. H2 restricted to the 44 seen-service pairs**, the only ones that are L1 under ADR-004's
+rule. The verdict **reverses**:
+
+| Model | v1 | v2 | v3 | v4 | v5 | (a) p | (b) rho | Verdict on this population |
+|---|---|---|---|---|---|---|---|---|
+| all-MiniLM-L6-v2 | 0.7760 | 0.7503 | 0.7018 | 0.7001 | 0.7184 | 0.0027 | -0.7 | REFUTED |
+| bge-base-en-v1.5 | 0.8789 | 0.8523 | 0.8298 | 0.8223 | 0.8335 | 9.45e-05 | -0.7 | REFUTED |
+
+Condition (a) still holds on this population; condition (b) fails under both models. Note the
+mechanism: `adjacent_inversions` is 1 in both cases, but v5 rises above both v4 and v3, so the
+displacement spans two rank positions and Spearman reads -0.7 rather than -0.9.
+
+**2. A calibration reference for H1's 0.8 cutoff.** H2's pairs are known same-slot paraphrases,
+so their cosines say what the cutoff means in each model's geometry:
+
+| Model | v1 paraphrases below 0.8 | v5 paraphrases below 0.8 |
+|---|---|---|
+| all-MiniLM-L6-v2 | 67/160 = 41.9% | 111/160 = 69.4% |
+| bge-base-en-v1.5 | 9/160 = 5.6% | 42/160 = 26.2% |
 
 #### Exploratory, post-hoc, deciding nothing
 
@@ -413,13 +466,25 @@ are literally present in train, which is the condition EXP-002 exists to quantif
    here. It gives a floor, not a measure of novelty. The 41 non-matching slots are not thereby
    novel: measuring them is H1's job and it has not run.
 
-### H1: refuted, and robustly in direction
+### H1: refuted under the pre-registered rule, and carried by one model
 
-**What it shows.** Among the 41 unseen-service slots whose names do not appear in train, only
-12.20% have a nearest train slot at cosine >= 0.8 under both models, against a pre-registered
-50%. The conjunction rule is not what decided it: both models fall below 50% on their own,
-at 12.20% and 41.46%. So the slots that survive the exact-name filter are, on this evidence,
-not mostly semantic near-duplicates of train fields.
+**What it shows.** Among the 41 unseen-service slots whose names do not appear in train, 12.20%
+have a nearest train slot at cosine >= 0.8 under both models, against a pre-registered 50%. H1
+is refuted under its rule as written. An earlier draft of this section called the refutation
+"robust in direction" on the grounds that both models fall below 50% individually; the second
+review was right that this overstates it, and it is withdrawn. The split verdict is:
+
+- **MiniLM refutes H1 decisively**: 5/41, Wilson 95% [5.3%, 25.5%], nowhere near the threshold.
+- **BGE does not refute H1; it fails to support it**: 17/41 = 41.46%, four items short, Wilson
+  95% [27.8%, 56.6%], an interval that covers 50%. At n = 41 its point estimate is not
+  distinguishable from the threshold.
+- The headline 12.20% **is MiniLM's number**. The conjunction's rate equals it exactly because
+  MiniLM's clearing set is a subset of BGE's, so 12.20% must never be quoted without saying it
+  is the lower-scaled encoder's figure.
+
+So the finding is: the slots surviving the exact-name filter are not mostly semantic
+near-duplicates of train fields under the stricter-scaled encoder, and the more permissive
+encoder leaves the question open.
 
 **What that means for the decision it informs.** The benchmark motivation cannot claim, on this
 evidence, that SGD's unseen split overstates *semantic* novelty beyond SGD-X's lexical finding.
@@ -431,14 +496,19 @@ removing the exact matches is semantically redundant too.
 
 **Threats, in order of how much they matter.**
 
-1. **A single absolute cosine threshold is not comparable across models, and this is the largest
-   problem with H1 as designed.** BGE's similarity scale sits systematically higher than
-   MiniLM's: mean nearest cosine 0.7747 against 0.6131, p10 0.689 against 0.423, and in H2 its
-   variant means run 0.83 to 0.88 where MiniLM's run 0.73 to 0.80. A fixed 0.8 therefore encodes
-   a different stringency per model, and the conjunction is pinned by the lower-scaled one:
-   MiniLM's 5 clearing slots are a subset of BGE's 17, which is exactly why the both-models rate
-   equals MiniLM's. The direction of the refutation survives this; its magnitude (12% against
-   42%) does not, and no threshold calibrated per model was pre-registered.
+1. **The 0.8 cutoff is uncalibrated, and under MiniLM it is stricter than a genuine paraphrase
+   of the same slot.** This is the largest problem with H1 as designed, and the run contains its
+   own reference distribution. H2's pairs are known same-slot paraphrases, and under MiniLM
+   41.9% of the closest ones (v1) and 69.4% of the most distant (v5) fall **below** 0.8; under
+   BGE the same figures are 5.6% and 26.2%. So H1 asked whether a majority of merely *similar*
+   slots clear a bar that identity-preserving rewordings only half clear under the model that
+   pins the conjunction. That is close to unachievable by construction, which is the mirror image
+   of the unfalsifiability problem the Change log records for the original H1.
+   The scale difference is systematic: mean nearest cosine 0.7747 against 0.6131, p10 0.689
+   against 0.423, and in H2 BGE's variant means run 0.83 to 0.88 where MiniLM's run 0.73 to 0.80.
+   What does not survive is not merely the magnitude but, under BGE, the **verdict**: its median
+   nearest cosine is 0.781, so a cutoff of 0.75, no more arbitrary than 0.8, would put it above
+   50%. No per-model calibration was pre-registered, and none should be introduced now.
 2. **Small population.** n = 41, so one slot moves the rate by 2.44 points. BGE, the more
    permissive model, is four slots short of the threshold. The refutation is not a rounding
    artifact, but for that model it is not a wide margin either.
@@ -461,18 +531,41 @@ admits exactly one adjacent inversion, and the data landed on exactly that case.
 
 **The pre-registration question a reader should ask, answered.** H2's verdict depends on two
 decisions that both favour support: replacing strict monotonicity, and tolerating the float
-boundary. Neither was made after seeing an H2 number. The rule change is committed in `7fc8825`
-at 17:52:45 with its reason (SGD-X Table 1's own non-monotone surface statistic) recorded at the
-time; the tolerance is in `df17cad` at 17:58:04 with a test asserting the hazard; the first H2
-number exists at 17:58:11. The defence is the commit order, not the argument, and the artifacts
-record `would_hold_without_float_tolerance: false` so the dependency is visible rather than
-buried. Under the replaced rule, H2 would have been refuted under both models.
+boundary. Neither was made after seeing an H2 number. The strongest evidence is not the commit
+log but the artifacts: the superseded run's `metrics.json`, written at 17:58:11, already records
+`"float_tolerance": 1e-09`, so the tolerance was in the executing code at the first H2 run and
+was not retrofitted. The hazard test uses synthetic values and is data-independent. And the
+substantive defence stands on its own: `rho <= -0.9 + 1e-9` restores an inclusive `<= -0.9`
+exactly, and a 1e-9 slack against the 0.1 gap to the next configuration cannot admit anything
+the written bound did not already include. An earlier draft of this paragraph said "the defence
+is the commit order, not the argument"; that was backwards, and the second review was right to
+invert it. Commit times (`7fc8825` 17:52:45, `df17cad` 17:58:04, runs at 17:58:11 and 18:00:31)
+are self-reported metadata from one clock and one actor, so they are the weaker half. Under the
+replaced rule, H2 would have been refuted under both models.
 
-**What that means for the decision it informs.** Embedding similarity is usable as a *coarse*
-covariate for ADR-004's stratified reporting and not as a fine-grained one. It separates v1 from
-v5 decisively, and it cannot order v4 against v5 at all: it inverts them under both models, by
-0.0005 and 0.0039. Stratifying reported results by distance-from-original is supported; treating
-per-variant cosine as a reliable ordering of adjacent variants is not.
+**What H2 actually measured, which is narrower than its stated decision.** H2 computes the cosine
+of each variant slot to **its own original test slot**. ADR-004 defines the covariate as
+"embedding similarity to the nearest **train** field". These are different quantities, and no
+variant-against-train comparison exists in this run: `config.json.files_read` contains no variant
+train schema. So H2 validates cosine as a measure of *paraphrase distance from a slot's own
+original*, and it does not test the nearest-train-field covariate that ADR-004 stratifies by. The
+"Decision informed" line claims more than the measurement supports, and correcting it is the
+researcher's call, not something to be quietly reworded here.
+
+**The population is also narrower than the L1 premise.** 116 of the 160 pairs are paraphrases of
+test services absent from train, which ADR-004's rule does not make L1. On the 44 pairs that are
+L1 under that rule, **H2 reverses: refuted under both models**, rho = -0.7, with condition (a)
+still holding. So H2's supported verdict is specific to a population three quarters of which sits
+outside the premise the hypothesis states. That diagnostic is post-hoc and decides nothing by
+itself; which population H2 should have been registered on is an open item for the researcher.
+
+**What can be said about the covariate, with those limits.** On the full test population,
+distance from a slot's own original tracks the construction order coarsely and not finely: v1
+against v5 is decisive, and v4 against v5 inverts under both models by 0.0005 and 0.0039. The
+rule's gloss "at most one adjacent inversion" equals rho = -0.9 only when the inversion is a pure
+swap of neighbouring ranks, which is what happened here; the 44-pair diagnostic shows a single
+inversion spanning two rank positions reads -0.7 instead, so "one inversion" and "rho = -0.9" are
+not interchangeable.
 
 **The cross-model pattern is the more useful finding.** The two models agree closely on
 *ordering* (identical rho, the same inversion in the same place) while disagreeing sharply on
@@ -495,14 +588,29 @@ used against a fixed cutoff is not.
 4. **Variant train schemas were not read.** H2 pairs variant test slots against their own
    originals, so the post-publication `sgd_x` fix in the pinned commit touches files this run
    did read. The fix concerned intents; H2 measures slots, and no intent figure is computed here.
+5. **The 160 slots are treated as independent and are not.** They are nested in 21 services and
+   were paraphrased per schema element, so the Wilcoxon's effective sample size is smaller than
+   its nominal one. The p-values are extreme enough that the direction is unlikely to be an
+   artifact of this, but no clustered or service-level test was pre-registered or run.
+6. **No interval was pre-registered on any deciding number.** H1's verdict turns on a proportion
+   at n = 41 and H2's condition (b) on adjacent mean gaps of 0.0005 to 0.004 against a per-slot
+   spread of roughly 0.11 from p10 to p90. The Wilson intervals in Result are post-hoc, and no
+   standard error or bootstrap was computed for the H2 means. A gap three orders of magnitude
+   below the spread it is drawn from should not be read as a measured difference.
+7. **Encoder contamination is unaddressed, and it is the channel that could move these numbers.**
+   Every figure in Steps 2 and 3 is encoder geometry. SGD has been public since 2019 and SGD-X
+   since 2021, so both model families may have seen these schemas in pretraining. The required
+   caveat below covers the task model; it does not cover the measurement instruments.
 
 ### Exploratory, post-hoc
 
-Nothing in that section tests anything. It shows the shared vocabulary is thin and generic:
-55 distinct names behind 75 instances, topped by `phone_number`, `address`, `city`, `genre`,
-`location`, `price`. That is consistent with the overlap reflecting ordinary field naming rather
-than anything specific to SGD's split, and it is not evidence for it. The contrast condition
-that could settle it was deliberately not built after the fact.
+Nothing in that section tests anything, and no direction should be read off it. It describes
+the shape of the overlap: 55 distinct names behind 75 instances, topped by `phone_number`,
+`address`, `city`, `genre`, `location`, `price`. An earlier draft added that this "is consistent
+with" the overlap reflecting ordinary field naming; that sentence is removed, because a
+post-hoc description cannot support a direction even with a retraction attached. Whether generic
+field naming explains the 64.66% is open, and the contrast condition that could settle it was
+deliberately not built after the fact.
 
 ### What these results do not license
 
@@ -600,6 +708,72 @@ Its first open item is resolved by ADR-004 being accepted and H2 being replaced:
 experiment now selects benchmark material by a measurement. Its third item, the missing contrast
 condition for the 64.66%, is addressed only in the weak sense that an exploratory, post-hoc
 frequency breakdown now exists; a designed-in-advance contrast remains unbuilt.
+
+### Second pass, 2026-10-01, after Steps 2 and 3
+
+`research-reviewer` on the full record. Verdict: **Sound with caveats** for the gate and H1,
+**Not interpretable as stated** for H2. Four checks failed and all four were real; every fix
+below is prose, and no verdict, threshold or measurement was changed.
+
+**Its most serious finding, confirmed against the data.** H2's supported verdict was presented as
+licensing embedding similarity as ADR-004's covariate, but it measured similarity to each slot's
+own *test* original rather than to the nearest *train* field, which is what ADR-004 defines; and
+116 of its 160 pairs are paraphrases of services absent from train, so ADR-004's rule does not
+make them L1. Verified: 44 seen-service pairs, 116 unseen-service pairs, 72.5%. Restricted to the
+44 that are L1, **H2 reverses to refuted under both models** (rho = -0.7). Recorded as a post-hoc
+diagnostic in Result and as an open item below.
+
+**Other failures, all fixed in prose.**
+
+- *Claim scope.* "Refuted, and robustly in direction" overstated H1; withdrawn for a split
+  verdict naming BGE's Wilson interval [27.8%, 56.6%], which covers 50%.
+- *Baseline validity.* The 0.8 cutoff had no reference distribution, and the run contained one
+  that contradicts it: under MiniLM, 41.9% of known same-slot paraphrases at v1 and 69.4% at v5
+  fall below 0.8. H1's bar was stricter than a genuine paraphrase under the model that pins the
+  conjunction. Now recorded as threat 1 with the numbers.
+- *Statistical adequacy.* No interval was pre-registered on any deciding number, and H2's
+  condition (b) is adjudicated by gaps three orders of magnitude below the spread they come from.
+  Added as threats 5 and 6, with the Wilson intervals marked post-hoc.
+- *Contamination.* The required caveat covers the task model, not the encoders. SGD has been
+  public since 2019 and SGD-X since 2021, and every Step 2-3 number is encoder geometry. Added
+  as threat 7.
+- The claim that the earlier run was superseded "only because" of rounding was false; it also
+  gained three disclosure fields, in a commit made after the first numbers were visible.
+- "The defence is the commit order, not the argument" was backwards. The argument is the sound
+  defence; commit metadata from one clock and one actor is the weaker half. Inverted, and the
+  stronger artifact-side proof is now cited: the superseded run's `metrics.json`, written at
+  17:58:11, already records `float_tolerance: 1e-09`.
+- Setup claimed the run's validation checks intent counts; it checks service count, the suffix
+  rule and slot counts. Corrected, with the separate intent check attributed to where it happened.
+- The Wilcoxon statistics and the per-variant distributions, both promised in Metric, were only
+  in `metrics.json`. Now in Result.
+- One inferential sentence in the exploratory subsection was removed rather than retracted
+  in place.
+
+**What it verified independently.** Every number in Result reconciles exactly with
+`metrics.json`, including all ten H2 means, both raw rho values, the inversion counts, the
+quantiles, the agreement figures and the exploratory table's sum. It re-derived Cohen's kappa by
+hand, confirmed the superseded run has identical means, converted the reflog epochs by hand to
+check the claimed commit times, and confirmed the arithmetic that one adjacent rank swap gives
+rho = -0.9 exactly while two give -0.8. It found the Wilcoxon correctly oriented and pinned by a
+test that would fail if inverted, and the tie-breaking deterministic.
+
+**Governance finding, accepted.** Commit `7fc8825` bundled the H2 threshold change with accepting
+ADR-004 and with editing CLAUDE.md's ADR-status rule. All three were instructed, but bundling a
+rule change that loosens a constraint on me with a threshold a verdict depends on is poor
+hygiene; it should have been three commits.
+
+### Open for the researcher, from the second pass
+
+1. **Which population H2 should be registered on.** The seen-service restriction was removed
+   without being flagged, and the verdict depends on it: supported on 160 pairs, refuted on the
+   44 that ADR-004 calls L1. Options are to re-register H2 on the 44, to keep 160 and drop the L1
+   framing, or to report both. Not a decision to make here.
+2. **H2's "Decision informed" line.** It claims the ADR-004 covariate, which is defined against
+   the nearest train field and was not measured. The wording is the researcher's.
+3. **Whether H1 is worth re-registering with a calibrated cutoff.** Under MiniLM the 0.8 bar is
+   stricter than a same-slot paraphrase, so the refutation is partly structural. No threshold
+   should be changed on this record; this would be a new experiment.
 
 ## Decision
 (pending human review)
