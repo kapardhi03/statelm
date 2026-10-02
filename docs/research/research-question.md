@@ -64,6 +64,10 @@ Report lexical overlap and embedding similarity to the nearest training field fo
 - **ABSTAIN:ambiguous:** several readings ("around 40", lakhs or thousands?).
 - **ABSTAIN:conflicting:** incompatible evidence, no explicit correction.
 - **Unresolved:** hedged statements ("might stretch to 45"). Tentative value or abstain?
+  EXP-000 uses rule (a) provisionally, pending its results: HEDGED records the tentative
+  value in the value column ("might stretch to 45" -> label HEDGED, value 45). Kapardhi's
+  instruction, 2026-10-02. This fixes an operational rule so annotation can proceed; it
+  does not resolve the question.
 
 ### "Over time"
 Two separate capabilities:
