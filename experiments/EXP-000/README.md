@@ -1,11 +1,13 @@
 # EXP-000 local data tools
 
-Two scripts, both run **on your machine, never in a Claude session**:
+Three scripts, all run **on your machine, never in a Claude session**:
 
 - `extract.py` pulls conversations out of the ARTHRYX PostgreSQL database into
   `data/raw/arthryx_messages.csv`.
 - `scrub.py` turns that CSV (or any CSV / XLSX / JSON export) into scrubbed JSONL, plus two
   reports.
+- `sample_items.py` samples annotation items from the scrubbed JSONL and writes one annotation
+  sheet per annotator, with empty label columns.
 
 Claude never connects to the database and never sees message content.
 
@@ -46,6 +48,11 @@ uv run python extract.py --extract --config extract.yaml
 # 4. Scrub them. columns.yaml already matches step 3's CSV, so no edits are needed.
 uv run python scrub.py --input ../../data/raw --output ../../data/scrubbed/EXP-000 \
                        --columns columns.yaml --check
+
+# 5. Copy fields.example.yaml to fields.yaml, put YOUR field list in it, then sample the items.
+uv run python sample_items.py --input ../../data/scrubbed/EXP-000 \
+                              --output ../../data/scrubbed/EXP-000/annotation \
+                              --fields fields.yaml --n-items 80 --seed 0
 ```
 
 ## extract.py: pulling conversations out of PostgreSQL
@@ -145,7 +152,7 @@ category by a distance. The audit report exists precisely because you have to be
 ```bash
 cd experiments/EXP-000
 uv sync                      # PyYAML, openpyxl, psycopg; pytest for the tests
-uv run pytest                # 156 tests, all on fabricated data, no network, no database
+uv run pytest                # 216 tests, all on fabricated data, no network, no database
 
 # 1. Look before you write
 uv run python scrub.py --input ../../data/raw/arthryx \
@@ -287,3 +294,109 @@ It also refuses to run when input and output nest, which would let a run read it
 - Timestamps are preserved in full, as you asked. Exact timestamps plus message content are
   re-identifying in combination, so the output stays as sensitive as the input in that respect —
   which is why `data/scrubbed/` is gitignored too.
+
+## sample_items.py: items and annotation sheets
+
+Reads the scrubbed JSONL, samples turns, and writes one sheet per annotator with the `label`,
+`value` and `notes` columns **empty**. Runs on your machine, like everything else here: it reads
+conversation text, so it never runs in a Claude session.
+
+```bash
+cp fields.example.yaml fields.yaml     # then put your own field list in it
+uv run python sample_items.py --input ../../data/scrubbed/EXP-000 \
+                              --output ../../data/scrubbed/EXP-000/annotation \
+                              --fields fields.yaml --n-items 80 --seed 0
+```
+
+| Option | Default | What it does |
+|---|---|---|
+| `--fields` | required | `fields.yaml`; no fallback, see below |
+| `--n-items` | 80 | Target `(field, turn)` items, trimmed down to a whole number of turns |
+| `--seed` | 0 | Seeds both the quota draws and the random top-up |
+| `--context-turns` | 6 | Preceding turns shown with each item |
+| `--annotators` | `annotator_1,annotator_2` | One identical sheet per name |
+
+### `fields.yaml` is required, and that is a decision for you
+
+One item is a `(field, turn)` pair, so the sampler cannot run without knowing which fields are
+being tracked. There is no agreed field list anywhere in `docs/research/` — Stage 3 (data model)
+has not started — and inventing one would be writing benchmark design. So the file is a required
+input and `fields.example.yaml` contains **placeholders, not a proposal**. Its header says so.
+
+The field count multiplies the turn count: four fields and `--n-items 80` gives 20 turns.
+
+### Two rules from the experiment record, and how the code keeps them
+
+**1. No pre-labelling, no suggested labels, no acting as an annotator.**
+
+Turns are sampled with cue lists (`cues.py`) that look for corrections ("actually", "I meant"),
+hedges ("around", "depends", "might") and stretches with three or more distinct speakers. Those
+cues decide what gets *sampled*. They never reach the sheet. An annotator who could see that a
+turn "matched a hedge cue" would be primed toward HEDGED, so the stratum that caused a turn to be
+drawn is written to `manifest.json`, which the researcher reads and annotators do not. The
+manifest carries a `do_not_show_to_annotators` key saying exactly that.
+
+Four tests hold the line: the label columns are empty in every row, the header is exactly
+`SHEET_COLUMNS` with no stratum or cue column, no string from the label vocabulary appears
+anywhere in the sheet file, and the words "hedge" and "stratum" do not either.
+
+Precision of the cue lists therefore does not matter much. A false match costs a slightly less
+enriched sample; it cannot corrupt a label.
+
+**2. Pilot items must not enter the eventual test split.**
+
+`pilot_items.json` records every sampled turn by conversation id and turn index, ids only, no
+text, so these turns can be excluded when the real splits are frozen.
+
+### Enrichment quotas are targets, not guarantees
+
+Defaults: 25% corrections, 25% hedges, 20% multi-speaker, the rest drawn at random. Each quota is
+filled first, then the sample is topped up randomly.
+
+A corpus with few corrections cannot be made to have more. When a quota cannot be filled the
+shortfall is **printed and written to the manifest**, never silently absorbed, because an
+under-enriched sample changes what EXP-000's agreement numbers mean.
+
+### What it writes
+
+```
+<output>/
+  sheet_annotator_1.csv       identical sheets, empty label columns
+  sheet_annotator_2.csv
+  manifest.json               settings, enrichment report, per-turn strata. RESEARCHER ONLY.
+  pilot_items.json            sampled turn ids, for test-split exclusion
+  labels_reference.txt        the label vocabulary
+```
+
+`labels_reference.txt` is the vocabulary only. The annotation **guideline** is a human document
+that you write and approve; the file says so, and says to label nothing without it.
+
+### Two interpretations you should check
+
+- **"Multi-speaker turn"** is read as *a turn whose context window holds three or more distinct
+  speakers*, since a turn has exactly one speaker of its own. The record does not define it.
+- **Items trim on a turn boundary**, so `--n-items 80` with 4 fields gives exactly 20 turns and
+  no turn is half-labelled. The alternative, cutting mid-turn to hit 80 exactly, would ask an
+  annotator about some fields of a turn and not others.
+
+Passing a single `--annotators` name works and prints a reminder of what the record says the
+fallback then is: intra-annotator agreement, relabelled after at least a week, blind to the first
+labels, and reported as intra-, not inter-annotator. Whether there is a second annotator is D3,
+still open, and not something this script settles.
+
+### The same two guarantees as the scrubber, each under test
+
+It reads client text, so it carries them too: it **makes no network call**, and it **never
+modifies the input** (the scrubbed tree is hashed before and after a full run). Writes go through
+the same containment check, and an output directory nested inside the input is refused.
+
+### Limits
+
+- Sampling is over turns, not conversations, so one talkative conversation can contribute several
+  items. With `--n-items 80` and a 100-conversation corpus that is unlikely to matter; with a
+  small corpus, check the manifest's `turn_strata` for clustering.
+- A turn with no text is skipped. A turn whose *context* is empty (the first turn of a
+  conversation) is not, and arguably should be judged as insufficient-information rather than
+  sampled; that is a guideline question, not a sampler one.
+- The cue lists are English and Indian-English only, and they are literal substrings. A
+  correction phrased without a cue word is sampled only by the random top-up.
