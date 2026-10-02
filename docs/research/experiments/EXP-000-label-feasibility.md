@@ -4,7 +4,7 @@ Status: Planned
 Owner: Kapardhi
 Created: 2026-10-01
 Decision informed: ADR-003 (keep, merge, or redefine abstention types)
-Blocked by: D3 (data source and second annotator)
+Blocked by: guideline approval (Kapardhi)
 
 ## Hypothesis
 Two independent human annotators agree on NO-OP vs value vs ABSTAIN type at κ ≥ 0.6 per
@@ -13,7 +13,16 @@ abstention type. Refuted if any abstention type falls below 0.6.
 ## Setup
 - 60–100 (field, turn) items from realistic sales conversations, enriched for corrections,
   hedges, and multi-speaker turns.
-- Two annotators label independently, without discussion, using a written guideline.
+- **Inter-annotator design**, two annotators, referred to only as **Annotator A** and
+  **Annotator B**. No personal name appears in any annotation artifact: not the sheets,
+  the manifest, the disagreement list or the metrics. Which person is which letter is
+  not recorded in this repository.
+- Both sheets hold the same items, each in its own seeded order, recorded in the
+  sampler's manifest. Neither annotator can anchor on the other's sequence, and items
+  are paired by item id rather than by row.
+- They label independently, without discussion until both sheets are complete, using a
+  written guideline (`EXP-000-annotation-guideline.md`).
+- Agreement is computed in inter mode: `agreement.py --sheets sheet_A.csv sheet_B.csv`.
 - Labels: NO-OP / VALUE(v) / ABSTAIN:insufficient / ABSTAIN:ambiguous / ABSTAIN:conflicting /
   HEDGED (kept separate to learn how people treat hedges).
 
@@ -54,6 +63,14 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
 
 ### Change log
 - 2026-10-02: measurement choices above pre-registered by Kapardhi. No sheets labelled yet.
+- 2026-10-02: D3 resolved. Conversations are available from the ARTHRYX database; a second
+  annotator is identified (Annotator B); the design is inter-annotator. The remaining blocker
+  is approval of the annotation guideline.
+- 2026-10-02: the three guideline boundary rules settled by Kapardhi and recorded in
+  `EXP-000-annotation-guideline.md` §3. One of them bears on a measurement: approximations are
+  VALUEs ("around 40 lakhs" -> VALUE `~40 lakhs`), so value agreement treats an approximation
+  marker as part of the value. `~40 lakhs` and `around 40 lakhs` agree; neither agrees with
+  `40 lakhs`. Pre-registered before any sheet is labelled.
 
 ## Leakage check
 Items used here are pilot items and must not enter the eventual test split.

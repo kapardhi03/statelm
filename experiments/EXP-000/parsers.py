@@ -16,6 +16,11 @@ REQUIRED_FIELDS = ("conversation_id", "speaker", "timestamp", "text")
 OPTIONAL_FIELDS = ("role",)
 SUPPORTED_SUFFIXES = {".csv", ".xlsx", ".json"}
 
+#: Sidecars that live beside an export but are not one. extract.py writes
+#: `<output>.meta.json` next to its CSV, in the same `data/raw/` tree the scrubber scans, so
+#: without this the scrubber would try to read the run's own counts as a conversation export.
+IGNORED_NAME_SUFFIXES = (".meta.json",)
+
 
 class ColumnMapError(Exception):
     pass
@@ -135,7 +140,10 @@ def discover(input_dir: str | Path) -> list[Path]:
         raise ColumnMapError(f"{root} is not a directory")
     return sorted(
         p for p in root.rglob("*")
-        if p.is_file() and p.suffix.lower() in SUPPORTED_SUFFIXES and not p.name.startswith("~$")
+        if p.is_file()
+        and p.suffix.lower() in SUPPORTED_SUFFIXES
+        and not p.name.startswith("~$")
+        and not p.name.lower().endswith(IGNORED_NAME_SUFFIXES)
     )
 
 

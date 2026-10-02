@@ -78,13 +78,13 @@ class TestNoPreLabelling:
     def test_label_columns_are_empty(self, workspace):
         source, fields, out = workspace
         run(source, out, fields)
-        for row in read_sheet(out / "sheet_annotator_1.csv"):
+        for row in read_sheet(out / "sheet_A.csv"):
             assert row["label"] == "" and row["value"] == "" and row["notes"] == ""
 
     def test_the_sheet_carries_no_stratum_or_cue(self, workspace):
         source, fields, out = workspace
         run(source, out, fields)
-        header = read_sheet(out / "sheet_annotator_1.csv")[0].keys()
+        header = read_sheet(out / "sheet_A.csv")[0].keys()
         assert set(header) == set(sample_items.SHEET_COLUMNS)
         for forbidden in ("strata", "stratum", "cue", "hedge", "correction", "suggested"):
             assert forbidden not in {h.lower() for h in header}
@@ -92,7 +92,7 @@ class TestNoPreLabelling:
     def test_no_cue_word_list_leaks_into_the_sheet_file(self, workspace):
         source, fields, out = workspace
         run(source, out, fields)
-        body = (out / "sheet_annotator_1.csv").read_text(encoding="utf-8")
+        body = (out / "sheet_A.csv").read_text(encoding="utf-8")
         # "around" and "actually" appear in the conversation text, which is correct; the words
         # must not appear as a column, flag or annotation added by the tool.
         assert "hedge" not in body.lower() and "stratum" not in body.lower()
@@ -110,7 +110,7 @@ class TestSheets:
     def test_one_row_per_field_times_turn(self, workspace):
         source, fields, out = workspace
         _, output = run(source, out, fields, "--n-items", "12")
-        rows = read_sheet(out / "sheet_annotator_1.csv")
+        rows = read_sheet(out / "sheet_A.csv")
         assert len(rows) == 12
         assert len({r["field"] for r in rows}) == 2
         assert len({(r["conversation_id"], r["turn_index"]) for r in rows}) == 6
@@ -118,7 +118,7 @@ class TestSheets:
     def test_trimming_happens_on_a_turn_boundary(self, workspace):
         source, fields, out = workspace
         run(source, out, fields, "--n-items", "9")  # 9 // 2 fields = 4 turns -> 8 items
-        rows = read_sheet(out / "sheet_annotator_1.csv")
+        rows = read_sheet(out / "sheet_A.csv")
         counts = {}
         for row in rows:
             counts.setdefault((row["conversation_id"], row["turn_index"]), 0)
@@ -128,25 +128,28 @@ class TestSheets:
     def test_context_is_shown_and_precedes_the_turn(self, workspace):
         source, fields, out = workspace
         run(source, out, fields)
-        rows = read_sheet(out / "sheet_annotator_1.csv")
+        rows = read_sheet(out / "sheet_A.csv")
         with_context = [r for r in rows if r["context"]]
         assert with_context
         row = with_context[0]
         assert "SPEAKER_" in row["context"]
         assert row["turn_text"] not in row["context"]
 
-    def test_each_annotator_gets_an_identical_sheet(self, workspace):
+    def test_each_annotator_gets_the_same_items(self, workspace):
+        """Same items, same content per item. The *order* differs by design: see
+        TestInterAnnotatorSheetOrder."""
         source, fields, out = workspace
         run(source, out, fields)
-        one = read_sheet(out / "sheet_annotator_1.csv")
-        two = read_sheet(out / "sheet_annotator_2.csv")
-        assert [r["item_id"] for r in one] == [r["item_id"] for r in two]
-        assert one == two
+        one = read_sheet(out / "sheet_A.csv")
+        two = read_sheet(out / "sheet_B.csv")
+        assert {r["item_id"] for r in one} == {r["item_id"] for r in two}
+        by_id = lambda rows: sorted(rows, key=lambda r: r["item_id"])
+        assert by_id(one) == by_id(two)
 
     def test_item_ids_are_unique_and_joinable(self, workspace):
         source, fields, out = workspace
         run(source, out, fields)
-        ids = [r["item_id"] for r in read_sheet(out / "sheet_annotator_1.csv")]
+        ids = [r["item_id"] for r in read_sheet(out / "sheet_A.csv")]
         assert len(ids) == len(set(ids))
         assert all(id_.count("#") == 2 for id_ in ids)
 
@@ -169,7 +172,7 @@ class TestSampling:
         picks = []
         for _ in range(2):
             run(source, out, fields, "--n-items", "8", "--seed", "3")
-            picks.append([r["item_id"] for r in read_sheet(out / "sheet_annotator_1.csv")])
+            picks.append([r["item_id"] for r in read_sheet(out / "sheet_A.csv")])
         assert picks[0] == picks[1]
 
     def test_a_different_seed_can_select_differently(self, workspace):
@@ -177,7 +180,7 @@ class TestSampling:
         seen = set()
         for seed in range(6):
             run(source, out, fields, "--n-items", "4", "--seed", str(seed))
-            seen.add(tuple(r["item_id"] for r in read_sheet(out / "sheet_annotator_1.csv")))
+            seen.add(tuple(r["item_id"] for r in read_sheet(out / "sheet_A.csv")))
         assert len(seen) > 1
 
     def test_enrichment_reaches_the_cue_strata(self, workspace):
@@ -252,7 +255,7 @@ class TestInputsAndGuards:
         fields = tmp_path / "fields.yaml"
         fields.write_text(FIELDS, encoding="utf-8")
         run(source, tmp_path / "annotation", fields)
-        rows = read_sheet(tmp_path / "annotation" / "sheet_annotator_1.csv")
+        rows = read_sheet(tmp_path / "annotation" / "sheet_A.csv")
         assert all(r["turn_text"].strip() for r in rows)
 
 
@@ -268,7 +271,7 @@ class TestLabelReference:
     def test_no_label_leaks_into_the_sheet(self, workspace):
         source, fields, out = workspace
         run(source, out, fields)
-        body = (out / "sheet_annotator_1.csv").read_text(encoding="utf-8")
+        body = (out / "sheet_A.csv").read_text(encoding="utf-8")
         for label in sample_items.LABEL_VOCABULARY:
             assert label not in body
 
@@ -303,3 +306,101 @@ class TestLocalToolGuarantees:
         run(source, out, fields)
         assert fingerprint() == before
         assert before
+
+
+class TestInterAnnotatorSheetOrder:
+    """Each annotator gets the same items in their own seeded order."""
+
+    def test_the_default_annotators_are_letters_not_names(self):
+        assert sample_items.DEFAULT_ANNOTATORS == ("A", "B")
+
+    def test_annotators_can_be_space_separated(self, workspace):
+        source, fields, out = workspace
+        run(source, out, fields, "--annotators", "A", "B")
+        assert (out / "sheet_A.csv").exists() and (out / "sheet_B.csv").exists()
+
+    def test_annotators_can_still_be_comma_separated(self, workspace):
+        source, fields, out = workspace
+        run(source, out, fields, "--annotators", "A,B")
+        assert (out / "sheet_A.csv").exists() and (out / "sheet_B.csv").exists()
+
+    def test_a_repeated_annotator_is_an_error(self, workspace):
+        source, fields, out = workspace
+        with pytest.raises(sample_items.SamplerError, match="repeats a name"):
+            run(source, out, fields, "--annotators", "A", "A")
+
+    def test_both_sheets_hold_the_same_items(self, workspace):
+        source, fields, out = workspace
+        run(source, out, fields, "--annotators", "A", "B")
+        a = [row["item_id"] for row in read_sheet(out / "sheet_A.csv")]
+        b = [row["item_id"] for row in read_sheet(out / "sheet_B.csv")]
+        assert set(a) == set(b)
+        assert len(a) == len(b) == len(set(a))
+
+    def test_but_in_different_orders(self, workspace):
+        source, fields, out = workspace
+        run(source, out, fields, "--annotators", "A", "B")
+        a = [row["item_id"] for row in read_sheet(out / "sheet_A.csv")]
+        b = [row["item_id"] for row in read_sheet(out / "sheet_B.csv")]
+        assert a != b
+
+    def test_the_order_is_recorded_in_the_manifest(self, workspace):
+        source, fields, out = workspace
+        run(source, out, fields, "--annotators", "A", "B")
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        order = manifest["sheet_order"]
+        a = [row["item_id"] for row in read_sheet(out / "sheet_A.csv")]
+        assert order["item_order"]["A"] == a
+        assert order["orders_distinct"] is True
+        assert set(order["seeds"]) == {"A", "B"}
+
+    def test_the_same_seed_reproduces_both_orders(self, workspace, tmp_path):
+        source, fields, out = workspace
+        run(source, out, fields, "--annotators", "A", "B", "--seed", "3")
+        first = [row["item_id"] for row in read_sheet(out / "sheet_A.csv")]
+        second_out = tmp_path / "again"
+        run(source, second_out, fields, "--annotators", "A", "B", "--seed", "3")
+        assert [row["item_id"] for row in read_sheet(second_out / "sheet_A.csv")] == first
+
+    def test_a_different_seed_gives_a_different_order(self, workspace, tmp_path):
+        source, fields, out = workspace
+        run(source, out, fields, "--annotators", "A", "B", "--seed", "3")
+        first = [row["item_id"] for row in read_sheet(out / "sheet_A.csv")]
+        other = tmp_path / "other"
+        run(source, other, fields, "--annotators", "A", "B", "--seed", "4")
+        assert [row["item_id"] for row in read_sheet(other / "sheet_A.csv")] != first
+
+    def test_adding_an_annotator_does_not_disturb_the_others(self, workspace, tmp_path):
+        """The per-annotator seed is derived from the name, not from draw order."""
+        source, fields, out = workspace
+        run(source, out, fields, "--annotators", "A", "B")
+        a_before = [row["item_id"] for row in read_sheet(out / "sheet_A.csv")]
+        three = tmp_path / "three"
+        run(source, three, fields, "--annotators", "A", "B", "C")
+        assert [row["item_id"] for row in read_sheet(three / "sheet_A.csv")] == a_before
+
+    def test_one_item_cannot_be_permuted_and_says_so(self, tmp_path):
+        """With a single item every order is the same order, so the run reports it."""
+        source = write_conversations(tmp_path / "scrubbed", count=1)
+        for path in source.glob("*.jsonl"):
+            first = path.read_text(encoding="utf-8").splitlines()[0]
+            path.write_text(first + "\n", encoding="utf-8")
+        fields = tmp_path / "one.yaml"
+        fields.write_text("fields:\n  - name: budget\n", encoding="utf-8")
+        code, output = run(source, tmp_path / "out", fields, "--annotators", "A", "B",
+                           "--n-items", "1")
+        assert code == 0
+        manifest = json.loads((tmp_path / "out" / "manifest.json").read_text(encoding="utf-8"))
+        assert manifest["sheet_order"]["orders_distinct"] is False
+        assert "does not exist" in manifest["sheet_order"]["note"]
+        assert "WARNING" in output
+
+    def test_no_personal_name_appears_in_any_annotation_artifact(self, workspace):
+        """A, B and nothing else. Which person is which letter is not recorded here."""
+        source, fields, out = workspace
+        run(source, out, fields, "--annotators", "A", "B")
+        for path in sorted(out.iterdir()):
+            if path.is_file():
+                body = path.read_text(encoding="utf-8")
+                assert "Kapardhi" not in body, path.name
+                assert "kapardhi" not in body.lower(), path.name

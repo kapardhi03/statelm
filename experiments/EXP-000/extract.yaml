@@ -1,0 +1,62 @@
+# EXP-000 extractor config for the ARTHRYX database.
+#
+# Written from the --inspect output of public.messages, which has: id, conversation,
+# builder_id, direction, kind, body, intent, language, created_at, media_id, media_mime, meta.
+#
+# Run:
+#   uv run python extract.py --extract --config extract.yaml \
+#       --tenant-column builder_id \
+#       --role-note "agent = seller side. Outbound includes the bot and any human takeover; this schema cannot distinguish them (meta is excluded)."
+sources:
+  - table: public.messages
+
+    columns:
+      conversation_id: conversation
+      timestamp: created_at
+      text: body
+      # This table has no sender-name column, so both speaker fields come from `direction`.
+      # `speaker` is deliberately NOT builder_id: that identifies the client business and is
+      # the consent key, and carrying it into the scrubbed text output is the wrong direction
+      # of travel. A side benefit of the schema: there are no sender names to redact.
+      speaker: direction
+      speaker_role: direction
+
+    # agent = seller side. Outbound includes the bot and any human takeover; this schema
+    # cannot distinguish them (meta is excluded). Kapardhi's decision, 2026-10-02.
+    role_map:
+      inbound: customer
+      outbound: agent
+
+    # Every kind present in the data must appear in exactly one of the three lists below. A
+    # kind with no disposition fails the run rather than being guessed at, because an
+    # unclassified kind may carry content nobody has decided about.
+    #
+    # The placeholder substitution happens in SQL, in a CASE over this column, so the body of
+    # a media row is never transmitted to the extractor at all. "Never read or copy the
+    # original body for these rows" is therefore a property of the query.
+    #
+    # The [media: ...] form keeps these distinguishable from the scrubber's own tokens
+    # ([PERSON_1], [PHONE_1]): an annotator can tell "this was a voice note" from "this was
+    # redacted". Kapardhi's decision, 2026-10-02.
+    kinds:
+      column: kind
+      text: [text]
+      placeholder:
+        audio: "[media: voice note]"
+        image: "[media: image]"
+        video: "[media: video]"
+        document: "[media: document]"
+        unsupported: "[media: unsupported]"
+        contacts: "[media: contact card]"
+      drop: [reaction, sticker]
+
+    # Never selected, never named in any statement. A test asserts that over every statement
+    # the extract issues.
+    #   intent      a model prediction. Rule 3 of CLAUDE.md keeps model output distinct from
+    #               human judgment and gold labels, and a prediction sitting in the same table
+    #               as the text must not reach an annotator's sheet.
+    #   meta        raw JSON, likely to contain PII.
+    #   language    not needed, and a per-message attribute the experiment does not model.
+    #   media_id    identifiers for content this extract deliberately does not take.
+    #   media_mime
+    exclude: [intent, meta, language, media_id, media_mime]

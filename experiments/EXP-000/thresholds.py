@@ -61,6 +61,15 @@ VALUE_NORMALIZATION_PRIMARY = "strict"
 VALUE_NORMALIZATION_SECONDARY = "number_aware"
 VALUE_NORMALIZATIONS = (VALUE_NORMALIZATION_PRIMARY, VALUE_NORMALIZATION_SECONDARY)
 
+#: Approximation markers. These change the *value*, so the number-aware pass records them as a
+#: canonical flag rather than dropping them: "~40 lakhs" and "around 40 lakhs" are the same
+#: value, and neither is "40 lakhs". Commitment words ("maybe", "might", "probably") are
+#: deliberately absent, because under Kapardhi's Q1 decision of 2026-10-02 they change the
+#: LABEL to HEDGED rather than the value, and should not appear in a VALUE at all.
+APPROXIMATION_MARKERS = (
+    "~", "around", "approx", "approximately", "about", "roughly", "circa", "ca", "ish",
+)
+
 #: Magnitude words the number-aware pass understands, as multipliers. "l" and "lac" are the
 #: Indian-English spellings of lakh. Source: the pilot field list's budget field.
 MAGNITUDES = {

@@ -6,13 +6,21 @@ Two normalizations, reported separately and never merged:
   punctuation. Nothing else. "40-45 lakhs" and "40 to 45 lakhs" are *different* values under
   this rule, which is the point: it is a lower bound on value agreement that cannot flatter the
   annotators.
-- **number_aware** (secondary): the numbers in the value, with Indian magnitude words resolved,
-  compared alongside whatever words are left over. "40-45 lakhs", "40 to 45 lakhs" and
-  "40-45 L" all reduce to the same thing. Decided by Kapardhi, 2026-10-02 (Q4).
+- **number_aware** (secondary): the numbers in the value, with Indian magnitude words resolved
+  and approximation recorded as a flag, compared alongside whatever words are left over.
+  "40-45 lakhs", "40 to 45 lakhs" and "40-45 L" all reduce to the same thing. Decided by
+  Kapardhi, 2026-10-02 (Q4).
 
-What number_aware deliberately does NOT do: drop hedge words. "around 40 lakhs" and "40 lakhs"
-stay different, because HEDGED is a label of its own and collapsing them here would hide the
-distinction the experiment is trying to measure.
+**Approximation changes the value; commitment changes the label.** That split follows Kapardhi's
+Q1 decision of 2026-10-02, which makes "around 40 lakhs" a VALUE of "~40 lakhs" rather than a
+HEDGED turn. So the markers in `thresholds.APPROXIMATION_MARKERS` ("~", "around", "roughly", ...)
+collapse to one canonical flag: "~40 lakhs" and "around 40 lakhs" are the same value, and
+**neither is "40 lakhs"**. Commitment words ("maybe", "might", "probably") are not markers; they
+belong to HEDGED and should never appear in a VALUE, so if one does it registers as a difference.
+
+Getting this wrong is silent in both directions. Dropping the "~" as punctuation would make an
+approximation equal to an exact figure, which flatters the annotators; leaving "around" as an
+ordinary leftover word would make one value in two notations read as a disagreement.
 
 What it can get wrong: the residual words are compared as a set of tokens, so "3BHK flat" and
 "3 bedroom flat" are correctly different, but a value whose meaning lives in word order is not
@@ -33,6 +41,10 @@ _DASHES = "‐‑‒–—―−"
 _CURRENCY = ("₹", "rs.", "rs", "inr", "rupees", "rupee")
 _RANGE_WORDS = ("to",)
 
+#: Word-shaped approximation markers, and the symbol forms handled before tokenizing.
+_APPROX_WORDS = tuple(m for m in thresholds.APPROXIMATION_MARKERS if m.isalpha())
+_APPROX_SYMBOLS = tuple(m for m in thresholds.APPROXIMATION_MARKERS if not m.isalpha())
+
 _TRAILING = " \t\r\n.,;:!?-–—"
 _NUMBER = re.compile(r"\d+(?:\.\d+)?")
 _TOKEN = re.compile(r"\d+(?:\.\d+)?|[a-z]+")
@@ -49,8 +61,8 @@ def _strip_digit_commas(text: str) -> str:
     return re.sub(r"(?<=\d),(?=\d)", "", text)
 
 
-def canonical_numbers(text: str) -> tuple[tuple[float, ...], tuple[str, ...]] | None:
-    """Split a value into (numbers with magnitudes resolved, leftover words).
+def canonical_numbers(text: str) -> tuple[tuple[float, ...], tuple[str, ...], bool] | None:
+    """Split a value into (numbers with magnitudes resolved, leftover words, approximate).
 
     Returns None when the value has no number in it, which is the signal to fall back to the
     strict comparison.
@@ -58,6 +70,9 @@ def canonical_numbers(text: str) -> tuple[tuple[float, ...], tuple[str, ...]] | 
     A magnitude word that appears once applies to every number in the value, so "40-45 lakhs"
     reads as 40 lakh to 45 lakh rather than 40 to 4,500,000. A value that spells out its own
     magnitudes ("40 lakhs to 1 crore") gets each applied where it stands.
+
+    `approximate` is True when the value carries any approximation marker, in symbol or word
+    form. It is part of the value, not noise: see the module docstring.
     """
     prepared = normalize_strict(text)
     for dash in _DASHES:
@@ -66,6 +81,7 @@ def canonical_numbers(text: str) -> tuple[tuple[float, ...], tuple[str, ...]] | 
     if not _NUMBER.search(prepared):
         return None
 
+    approximate = any(symbol in prepared for symbol in _APPROX_SYMBOLS)
     tokens = _TOKEN.findall(prepared)
     numbers: list[list] = []          # [value, multiplier or None]
     leftover: list[str] = []
@@ -80,6 +96,9 @@ def canonical_numbers(text: str) -> tuple[tuple[float, ...], tuple[str, ...]] | 
             if numbers and numbers[-1][1] is None:
                 numbers[-1][1] = multiplier
             continue
+        if token in _APPROX_WORDS:
+            approximate = True
+            continue
         if token in _CURRENCY or token in _RANGE_WORDS:
             continue
         leftover.append(token)
@@ -92,7 +111,7 @@ def canonical_numbers(text: str) -> tuple[tuple[float, ...], tuple[str, ...]] | 
                 entry[1] = only
 
     resolved = tuple(value * (multiplier or 1) for value, multiplier in numbers)
-    return resolved, tuple(sorted(leftover))
+    return resolved, tuple(sorted(leftover)), approximate
 
 
 def normalize_number_aware(text: str) -> str:
@@ -100,9 +119,9 @@ def normalize_number_aware(text: str) -> str:
     parsed = canonical_numbers(text)
     if parsed is None:
         return f"text:{normalize_strict(text)}"
-    numbers, leftover = parsed
+    numbers, leftover, approximate = parsed
     rendered = "|".join(f"{value:.6g}" for value in numbers)
-    return f"num:{rendered}|words:{' '.join(leftover)}"
+    return f"num:{rendered}|approx:{int(approximate)}|words:{' '.join(leftover)}"
 
 
 #: Keyed by the names in thresholds.VALUE_NORMALIZATIONS so callers cannot invent a third.

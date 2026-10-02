@@ -54,10 +54,19 @@ uv run python scrub.py --input ../../data/raw --output ../../data/scrubbed/EXP-0
 # 5. Sample the annotation items. fields.yaml holds the five pilot fields already.
 uv run python sample_items.py --input ../../data/scrubbed/EXP-000 \
                               --output ../../data/scrubbed/EXP-000/annotation \
-                              --fields fields.yaml --n-items 80 --seed 0
+                              --fields fields.yaml --n-items 80 --seed 0 \
+                              --annotators A B
 
-# 6. The annotators fill the label / value / notes columns. Then measure agreement.
-uv run python agreement.py --sheets sheet_annotator_1.csv sheet_annotator_2.csv
+# 6. Annotators A and B fill the label / value / notes columns. Then measure agreement.
+uv run python agreement.py --sheets sheet_A.csv sheet_B.csv
+```
+
+Step 3 takes the role note and the tenant check for the ARTHRYX schema:
+
+```bash
+uv run python extract.py --extract --config extract.yaml \
+    --tenant-column builder_id \
+    --role-note "agent = seller side. Outbound includes the bot and any human takeover; this schema cannot distinguish them (meta is excluded)."
 ```
 
 ## extract.py: pulling conversations out of PostgreSQL
@@ -128,6 +137,110 @@ A mapped column that does not exist is an error naming it and listing what is av
 is guessed. Identifiers in the SQL are the catalog's own spelling, looked up before use, so a value
 from the config never reaches the query as free text.
 
+### `kinds:` — what happens to a non-text message
+
+`public.messages` carries more than text: audio, image, video, document, contacts, unsupported,
+sticker and reaction. Each kind needs exactly one disposition, and **a kind the config does not
+classify fails the run** rather than being guessed at, because an unclassified kind may carry
+content nobody has decided about.
+
+```yaml
+kinds:
+  column: kind
+  text: [text]
+  placeholder:
+    audio: "[media: voice note]"
+    image: "[media: image]"
+    video: "[media: video]"
+    document: "[media: document]"
+    unsupported: "[media: unsupported]"
+    contacts: "[media: contact card]"
+  drop: [reaction, sticker]
+```
+
+**The substitution happens in SQL, not Python.** The SELECT is a `CASE` over the kind column
+that returns the body only for a text kind and a bound placeholder string otherwise, so a media
+row's body is **never transmitted to this process at all**. "Never read or copy the original
+body for these rows" is therefore a property of the query rather than a promise about what the
+code does with a value it already holds. A test asserts it on the statements, not on the output:
+asserting on the output would pass either way.
+
+The `[media: ...]` form keeps these distinguishable from the scrubber's `[PERSON_1]`-style
+tokens. Both mean the annotator cannot see the content; they differ in why, and the guideline
+says so. A test runs the scrubber's detectors over every placeholder to confirm none of them
+looks like PII.
+
+An empty `body` on a **text** row is dropped as a non-message. A placeholder row legitimately has
+no body, so the check is scoped to the text kinds.
+
+### `exclude:` — columns that reach no statement
+
+```yaml
+exclude: [intent, meta, language, media_id, media_mime]
+```
+
+`intent` is a model prediction. Keeping it out is rule 3 of `CLAUDE.md`: a prediction sitting in
+the same table as the text must not reach an annotator's sheet. `meta` is raw JSON and likely to
+hold PII. `media_id` and `media_mime` identify content this extract deliberately does not take.
+
+Enforced twice. A column that is both excluded and mapped is a **config error**, which catches
+`text: intent`. And a test runs a full extract against the fake database and asserts none of the
+excluded names appears in **any statement issued**, using the statement log the fake connection
+keeps. That is a check on the SQL, not a promise about the mapping.
+
+### Eligibility, and what `--min-customer-messages` counts
+
+It counts **customer-role rows of a text kind**, nothing else. A conversation of four voice notes
+has no labellable turns and must not pass a floor that exists to guarantee four. Outbound text
+does not count either.
+
+The filters and the floor are computed from one aggregate query, with the same `WHERE` clause the
+extract uses. That matters: if the kind filter applied only to the extract, conversations would be
+*selected* on counts including rows the extract then drops.
+
+### Timestamps, and the ordering bug this closes
+
+The extractor reads `created_at`'s type from `information_schema` rather than assuming it. A
+temporal column sorts correctly as itself; a **text** column is cast with `::timestamptz`.
+
+Without that cast there was a silent corruption waiting. The SQL said `ORDER BY conversation,
+created_at` while `write_csv` merged the per-source streams with `heapq.merge` keyed on the
+*parsed* ISO value, and `heapq.merge` assumes each input is already sorted by that key. With a
+text column holding mixed formats, SQL sorts lexically, the merge assumes chronological, and the
+CSV comes out misordered — and `turn_index` in the annotation items comes straight from this
+order.
+
+Three guards now, because the cast itself can only be verified against real PostgreSQL:
+
+1. Every row's timestamp must parse. One that does not **fails the run**; previously it became
+   an empty string and sorted to the front of its conversation.
+2. Each stream is asserted non-decreasing in the merge key as it is consumed, so a disagreement
+   between the SQL ordering and the Python key fails instead of writing a bad CSV.
+3. A test forces that disagreement and checks the guard fires.
+
+### `--tenant-column`: a check, not a filter
+
+`builder_id` has one value in the ARTHRYX database, and EXP-000's consent assumption is
+single-tenant. `--tenant-column builder_id` records the distinct values and their counts in the
+metadata and **refuses the run if there is more than one**, rather than silently narrowing to one
+tenant. If a second ever appears, that is a consent question, not a query to fix.
+
+### The metadata sidecar
+
+`--extract` writes `<output>.meta.json` beside the CSV: rows by kind, each kind's disposition,
+placeholder counts per kind and the total, dropped counts, the role map and the role note
+verbatim, the eligibility rule and how many conversations passed it, the timestamp column's
+declared type and order expression, the excluded columns, the tenant values, and the seed.
+
+Everything in it is an aggregate, so it is safe to copy into `runs/EXP-000/`. It lives in
+`data/raw/` because that is the one tree this script may write, and it is gitignored with the CSV
+it describes.
+
+> It also found a bug on the way in. `scrub.py` scans `data/raw/` for `.csv`, `.xlsx` and
+> `.json` inputs, so the new sidecar was picked up as a conversation export and the scrubber
+> failed on it. The existing cross-tool test caught that immediately; `parsers.discover` now
+> skips `*.meta.json`, with its own tests.
+
 ### What the extractor guarantees, each covered by a test
 
 1. **Read-only.** `SET default_transaction_read_only = on` is the first statement on the
@@ -157,7 +270,7 @@ category by a distance. The audit report exists precisely because you have to be
 ```bash
 cd experiments/EXP-000
 uv sync                      # PyYAML, openpyxl, psycopg; pytest for the tests
-uv run pytest                # 334 tests, all on fabricated data, no network, no database
+uv run pytest                # 399 tests, all on fabricated data, no network, no database
 
 # 1. Look before you write
 uv run python scrub.py --input ../../data/raw/arthryx \
@@ -318,7 +431,7 @@ uv run python sample_items.py --input ../../data/scrubbed/EXP-000 \
 | `--n-items` | 80 | Target `(field, turn)` items, trimmed down to a whole number of turns |
 | `--seed` | 0 | Seeds both the quota draws and the random top-up |
 | `--context-turns` | 6 | Preceding turns shown with each item |
-| `--annotators` | `annotator_1,annotator_2` | One identical sheet per name |
+| `--annotators` | `A B` | One sheet per name, space- or comma-separated |
 
 ### `fields.yaml`: the five pilot fields
 
@@ -333,6 +446,28 @@ ever want a different list; `--fields` is still required, with no fallback, so a
 the list it used.
 
 The field count multiplies the turn count: five fields and `--n-items 80` gives 16 turns.
+
+### Two annotators, two orders, one item set
+
+EXP-000 is an inter-annotator design with two annotators named only **A** and **B**. No personal
+name goes into a sheet, the manifest or any other annotation artifact; which person is which
+letter is deliberately not recorded in this repository.
+
+`--annotators A B` writes `sheet_A.csv` and `sheet_B.csv`. Both hold **the same items**, each in
+**its own seeded order**, so neither annotator can anchor on the other's sequence and a
+disagreement cannot be an artefact of both having read the items in the same run-up. The
+per-annotator seed is derived from the run seed and the annotator's name, so one `--seed`
+reproduces both orders, and adding a third annotator does not disturb A's or B's.
+
+The orders are recorded in `manifest.json`. Items pair up by `item_id`, never by row, so
+`agreement.py` is unaffected by the shuffle — and a test asserts that every number it reports is
+byte-identical whether the sheets arrive shuffled or in order. With a single item no distinct
+permutation exists; the run reports that rather than pretending.
+
+One cost worth knowing: an item-level shuffle scatters a turn's five fields across the sheet, so
+the annotator re-reads the same context up to five times and cannot tell that two items share a
+turn. Shuffling whole turn blocks instead would meet the same goal more cheaply; this is
+item-level because that is what was specified.
 
 ### Two rules from the experiment record, and how the code keeps them
 
@@ -370,9 +505,10 @@ under-enriched sample changes what EXP-000's agreement numbers mean.
 
 ```
 <output>/
-  sheet_annotator_1.csv       identical sheets, empty label columns
-  sheet_annotator_2.csv
-  manifest.json               settings, enrichment report, per-turn strata. RESEARCHER ONLY.
+  sheet_A.csv                 the same items, in A's own seeded order, empty label columns
+  sheet_B.csv                 the same items, in B's own seeded order
+  manifest.json               settings, enrichment, per-turn strata, both sheet orders.
+                              RESEARCHER ONLY.
   pilot_items.json            sampled turn ids, for test-split exclusion
   labels_reference.txt        the label vocabulary
 ```
