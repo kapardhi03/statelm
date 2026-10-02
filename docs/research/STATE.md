@@ -44,11 +44,14 @@ Nothing may be built on a Proposed ADR as if it were Accepted.
 | EXP-001 | Headroom probe (frontier vs small) | Planned | EXP-000 |
 | EXP-002 | Schema novelty audit on SGD / SGD-X | Done | nothing |
 
+## Tooling
+
+Genesis (Ayush's genesis-kit. - https://github.com/ayush488-glitch/genesis-kit) adoption
+deferred to Stage 4, when spec-bound engineering begins (ledger Apply, benchmark
+construction, eval harness). Adopt with `genesis adopt .` read-only first; existing
+docs/research/ is ingested as evidence, not rewritten. HumanLayer not used.
+
 ## Where things live
 
-- Research question, definitions, hypotheses: `docs/research/research-question.md`
-- Prior work and what it means for us: `docs/research/literature.md`
-- Current agreed architecture (Mermaid): `docs/research/architecture.md`
-- Knowns, unknowns, risks, research clusters: `docs/research/knowns-unknowns.md`
-- ADRs: `docs/research/adr/`
-- Experiment records: `docs/research/experiments/`
+All under `docs/research/`: `research-question.md` (question, definitions, hypotheses),
+`literature.md` (prior work), `architecture.md`, `knowns-unknowns.md`, `adr/`, `experiments/`.

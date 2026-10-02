@@ -1,18 +1,22 @@
-# ADR-005: Embedding similarity is reported as a calibrated, coarse covariate
+# ADR-005: Embedding similarity is reported as a calibrated, continuous covariate
 
 Status: Proposed
 Date: 2026-10-01
-Revised: 2026-10-02
+Revised: 2026-10-02 (twice)
 Supersedes: none
 
 ## Decision
-Embedding similarity is reported as a **within-model rank or stratum**, computed with **at least
-two encoders**, and **never compared against an absolute cutoff**.
+Embedding similarity is reported **only as a continuous covariate**, as within-model ranks,
+computed with **at least two encoders**, and **never compared against an absolute cutoff**.
 
-- **Granularity: at most two strata, or a continuous covariate. No finer strata**, and no
-  conclusion is drawn from adjacent strata.
+- **It never defines a group, stratum or boundary.** Any grouping comes from construction
+  (ADR-004). **No conclusion is drawn from similarity differences between adjacent construction
+  levels.**
 - **Calibration: each encoder is calibrated on known same-meaning pairs before its similarity is
-  interpreted**, and the calibration is reported alongside the figure it qualifies.
+  interpreted**, and the calibration is reported alongside the figure it qualifies. The pairs come
+  from L1 construction itself, each L1 paraphrase paired with its source field, so every
+  constructed benchmark carries its own calibration set. For an external dataset with no such
+  pairs, the covariate is not reported.
 
 Calibration interprets an encoder's scale; it does not license a cutoff. Knowing that same-meaning
 pairs sit at a given level under one encoder says what a number means there, and it still does not
@@ -33,17 +37,22 @@ EXP-002 measured similarity two ways and the results diverge on scale while agre
 - **Ranks survive a change of encoder where cutoffs do not.** In H2 both encoders produced the
   same Spearman rho to the digit, with the inversion in the same place, while their absolute
   means sat 0.08 to 0.10 apart.
-- **Fine granularity is not supported, and is fragile to more than encoder choice.** v4 and v5
-  inverted under both encoders, by 0.000483 and 0.003926, against a per-slot p10-p90 spread of
-  roughly 0.11. The post-hoc 44-pair diagnostic (below) moved the same five-point statistic from
-  rho = -0.9 to -0.7 on a different population of the same data, reversing the verdict. A
-  statistic that moves that far on a population change should not carry per-stratum conclusions.
+- **Adjacent construction levels are not separable by similarity.** v4 and v5 inverted under both
+  encoders, by 0.000483 and 0.003926, against a per-slot p10-p90 spread of roughly 0.11. The
+  post-hoc 44-pair diagnostic (below) moved the same five-point statistic from rho = -0.9 to -0.7
+  on a different population of the same data, reversing the verdict. A statistic that moves that
+  far on a population change cannot carry a conclusion about neighbouring levels.
+- **A similarity boundary is a cutoff in different clothes**, which is why similarity now defines
+  no group at all. An earlier version of this ADR allowed up to two similarity-defined strata; a
+  median split would have satisfied it while reintroducing exactly the uncalibrated bar the
+  no-cutoff rule exists to forbid.
 
 ## Assumptions
-- Known same-meaning pairs exist for each dataset the covariate is used on. True for SGD-X, whose
-  variants are paraphrases of the same slot. **Not established anywhere else**, and this ADR gives
-  no procedure for obtaining them, so it can block use of the covariate on a dataset that has none.
-- Two strata are enough for the claims the benchmark makes. Untested.
+- Calibration pairs come from L1 construction, so a benchmark with L1 items has them by
+  construction. A benchmark with no L1 items has none, and the covariate is then unreportable.
+- **The calibration set and the L1 items it qualifies are the same pairs.** For reporting on L1
+  items the calibration is therefore not independent of what it describes; for L2 and L4 items it
+  is drawn from a different subset. This is a real circularity, narrow in scope, and unresolved.
 - Rank stability observed on paraphrase distance carries over to other similarity relations,
   including similarity to the nearest train field, which EXP-002 did not measure.
 - Two encoders suffice to catch an encoder-specific artifact. Weakly tested: EXP-002's two are
@@ -51,8 +60,8 @@ EXP-002 measured similarity two ways and the results diverge on scale while agre
   0.328.
 
 ## Alternatives
-- **Finer strata with intervals.** More informative if the strata are separable. EXP-002 is
-  evidence they are not, at five levels, under either encoder.
+- **Similarity-defined strata, of any number.** Rejected: any boundary drawn on similarity is a
+  cutoff, and EXP-002 is evidence that neighbouring levels are not separable in any case.
 - **Per-encoder calibrated cutoffs.** Partly adopted and partly rejected: calibration is now
   required, thresholding on it is still forbidden. Allowing the cutoff back would need an
   experiment showing a calibrated bar is stable across encoders.
@@ -62,15 +71,13 @@ EXP-002 measured similarity two ways and the results diverge on scale while agre
   agreement study first.
 
 ## Failure modes
-- **Two strata may be too coarse to show a real effect**, so a null result under this rule can be
-  a reporting artifact rather than a finding. That is a cost of the rule, not an argument against
-  reporting it.
-- **"At most two strata" invites a median split**, which is a cutoff wearing different clothes.
-  This ADR does not settle where a stratum boundary may come from, and that gap should close
-  before strata appear in a claim.
-- **Calibration inherits its pairs' construction.** Same-meaning pairs define sameness by how
-  they were built, so the calibration carries that definition's biases into every figure it
-  qualifies.
+- **A continuous covariate has no headline number**, so a reader may impose a threshold mentally
+  where the ADR forbids one in print. The calibration reported alongside is the only defence.
+- **A benchmark with no L1 items loses the covariate entirely**, which removes it silently from
+  exactly the material (L2, L4) where novelty claims are strongest.
+- **Calibration inherits its pairs' construction**, and on L1 items it is drawn from those same
+  pairs. Same-meaning pairs define sameness by how they were built, so the calibration carries
+  that definition's biases into every figure it qualifies.
 - **Ranks hide magnitude** by design: two items adjacent in rank can be far apart in similarity.
 - **Agreement for the wrong reason.** Encoders of one family can agree through a shared bias.
   "At least two" is a floor, and different families should be preferred.
@@ -81,11 +88,13 @@ EXP-002 measured similarity two ways and the results diverge on scale while agre
 - Easier: a reported covariate survives a change of encoder; no number rests on an uncalibrated
   bar; a figure arrives with the evidence for what its scale means.
 - Harder: every similarity figure needs at least two encoder runs plus a calibration set.
-- **Two hypothesis forms already used in EXP-002 are not reusable under this ADR.** H1's shape, a
-  proportion clearing a cosine threshold, is forbidden by the no-cutoff rule. H2's shape, a
-  five-point ordering test across strata, is forbidden by the two-strata rule. Future hypotheses
-  about similarity have to be written as a continuous covariate, a two-stratum contrast, or a
-  paired comparison.
+- **H1's shape is not reusable:** a proportion clearing a cosine threshold is what the no-cutoff
+  rule forbids.
+- **H2's shape is partly reusable.** Comparisons across construction-defined groups are allowed,
+  so a v1-against-v5 contrast stays in scope and its Wilcoxon result stands. Inference from
+  adjacent groups is not allowed, so the five-point monotonicity test and the v4-against-v5
+  comparison are out. Future hypotheses about similarity are written as a continuous covariate, a
+  contrast across construction-defined groups, or a paired comparison.
 
 ## Evidence
 - **EXP-002 H1**, run `20261001T180031Z-746c803`: 12.20% against 41.46% at the same cutoff, and
