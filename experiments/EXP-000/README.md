@@ -1,7 +1,13 @@
-# EXP-000 PII scrubber
+# EXP-000 local data tools
 
-`scrub.py` turns your CSV / XLSX / JSON conversation exports into scrubbed JSONL, plus two
-reports. **You run it on your machine. It never runs in a Claude session.**
+Two scripts, both run **on your machine, never in a Claude session**:
+
+- `extract.py` pulls conversations out of the ARTHRYX PostgreSQL database into
+  `data/raw/arthryx_messages.csv`.
+- `scrub.py` turns that CSV (or any CSV / XLSX / JSON export) into scrubbed JSONL, plus two
+  reports.
+
+Claude never connects to the database and never sees message content.
 
 ## The privacy rule this tool exists to serve
 
@@ -22,6 +28,105 @@ additionally denies the `Read` and `Edit` tools on `./data/raw/**` and `./data/s
 > would still work. Closing that would mean denying Bash patterns too, which is a broader change
 > to how the session can work in this repo — say the word if you want it.
 
+## The run order
+
+```bash
+cd experiments/EXP-000
+uv sync
+
+# 1. Look at the schema. Prints table, column, type and row count. No row values.
+uv run python extract.py --inspect
+
+# 2. Copy extract.example.yaml to extract.yaml and fill in the mapping from that output.
+#    Paste the --inspect output into the Claude session and the mapping can be written for you.
+
+# 3. Pull the conversations.
+uv run python extract.py --extract --config extract.yaml
+
+# 4. Scrub them. columns.yaml already matches step 3's CSV, so no edits are needed.
+uv run python scrub.py --input ../../data/raw --output ../../data/scrubbed/EXP-000 \
+                       --columns columns.yaml --check
+```
+
+## extract.py: pulling conversations out of PostgreSQL
+
+### DATABASE_URL, ideally for a read-only user
+
+Credentials come from the `DATABASE_URL` environment variable and **nowhere else**. No file in
+the repo is consulted, nothing is hardcoded, and the URL is never printed, logged or written to
+any output. `extract.py` writes no run config at all, so there is nothing that could record it.
+
+Create a user that cannot write even if something goes wrong:
+
+```sql
+CREATE ROLE statelm_ro LOGIN PASSWORD 'choose-something-long';
+GRANT CONNECT ON DATABASE arthryx TO statelm_ro;
+GRANT USAGE ON SCHEMA public TO statelm_ro;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO statelm_ro;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO statelm_ro;
+ALTER ROLE statelm_ro SET default_transaction_read_only = on;
+```
+
+Then export it for that shell only, not in a file:
+
+```bash
+export DATABASE_URL='postgresql://statelm_ro:choose-something-long@localhost:5432/arthryx'
+```
+
+A read-only role is defence in depth, not the only defence: the script also sets
+`default_transaction_read_only = on` as its first statement and refuses to issue anything that is
+not a `SELECT`.
+
+### `--inspect`
+
+Prints `schema.table (n rows)` and each column with its type, for tables whose name or column
+shape looks conversational. `--all-tables` widens it when the heuristic misses yours.
+
+It **cannot** print a row value, and not because of a filter: in this mode no statement selects a
+column from a user table. The only queries are against `information_schema` and `count(*)`. A test
+asserts exactly that over every statement the mode issues, which is why the output is safe to
+paste into a Claude session.
+
+### `--extract --config extract.yaml`
+
+Writes `data/raw/arthryx_messages.csv` with exactly five columns —
+`conversation_id, speaker, speaker_role, timestamp, text` — one row per message, ordered by
+conversation then timestamp. Terminal output is counts only: conversations, messages, per-role
+counts, date range.
+
+| Option | Default | What it does |
+|---|---|---|
+| `--n-conversations` | 100 | How many conversations to sample |
+| `--seed` | 0 | Seeds the sampling |
+| `--min-customer-messages` | 4 | Skips trivial one-line chats |
+| `--since` / `--until` | none | Inclusive lower, exclusive upper bound on timestamp |
+| `--output` | `arthryx_messages.csv` | Relative to `data/raw/`; anywhere else is refused |
+
+Sampling happens **in Python** with `random.Random(seed)`, not with SQL `ORDER BY random()`, so the
+same seed selects the same conversations across runs and server versions. That matters because
+EXP-000's pilot items have to be identifiable later and kept out of the eventual test split.
+
+`extract.yaml` takes a list of `sources`, each naming one table and mapping the five fields, with
+an optional `role_map` onto `bot` / `agent` / `customer`. Several same-shaped tables can be listed
+and are merged in order. **For data spread across joined tables, make a view in PostgreSQL and
+point at the view** — a join DSL in YAML would be a worse config language and a much larger SQL
+surface to audit.
+
+A mapped column that does not exist is an error naming it and listing what is available. Nothing
+is guessed. Identifiers in the SQL are the catalog's own spelling, looked up before use, so a value
+from the config never reaches the query as free text.
+
+### What the extractor guarantees, each covered by a test
+
+1. **Read-only.** `SET default_transaction_read_only = on` is the first statement on the
+   connection, and the driver's own read-only flag is set too.
+2. **SELECT only.** Every later statement goes through a gate that raises on anything else.
+3. **No row values anywhere but the CSV.** Messages stream from a cursor straight into the CSV
+   writer; no function in the extract path returns or accumulates message text.
+4. **Writes only to `data/raw/`.** Any other output path is refused before a connection is used.
+5. **Credentials from `DATABASE_URL` only**, never from a repo file, never printed. A test asserts
+   a password-bearing URL appears nowhere in the output.
+
 ## What this is, and what it is not
 
 It is a **first-pass redactor that makes your spot-check tractable.** It is **not** a guarantee of
@@ -32,14 +137,15 @@ references) are caught reliably. Names are caught **only when they appear in the
 speaker roster** — a third party named in passing is not detected. Addresses are the weakest
 category by a distance. The audit report exists precisely because you have to be the final check.
 
-## Install and run
+## scrub.py: install and run
+
+`columns.yaml` is committed and already matches `extract.py`'s CSV. Only edit it, or copy
+`columns.example.yaml`, if you are scrubbing some other export.
 
 ```bash
 cd experiments/EXP-000
-uv sync                      # PyYAML + openpyxl, pytest for the tests
-uv run pytest                # 89 tests, all on fabricated data, no network
-
-cp columns.example.yaml columns.yaml && $EDITOR columns.yaml
+uv sync                      # PyYAML, openpyxl, psycopg; pytest for the tests
+uv run pytest                # 156 tests, all on fabricated data, no network, no database
 
 # 1. Look before you write
 uv run python scrub.py --input ../../data/raw/arthryx \
