@@ -1,0 +1,7 @@
+# Copy to columns.yaml and set each value to the column name in YOUR export.
+# conversation_id, speaker, timestamp and text are required; role is optional.
+conversation_id: conv_id
+speaker: from
+timestamp: sent_at
+text: body
+# role: speaker_role
