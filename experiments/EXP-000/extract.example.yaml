@@ -1,0 +1,17 @@
+# Copy to extract.yaml and fill in from the --inspect output.
+# Every field below is required; a column that does not exist is an error, not a guess.
+# For data spread across joined tables, create a view in PostgreSQL and point at the view.
+sources:
+  - table: public.messages
+    columns:
+      conversation_id: conversation_id
+      speaker: sender_name
+      speaker_role: sender_type
+      timestamp: created_at
+      text: body
+    # Optional. Maps the values in your speaker_role column onto bot / agent / customer.
+    # Unmapped values pass through unchanged and show up in the per-role counts.
+    role_map:
+      user: customer
+      staff: agent
+      automation: bot

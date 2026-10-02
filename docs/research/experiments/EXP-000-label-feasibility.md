@@ -22,6 +22,7 @@ abstention type. Refuted if any abstention type falls below 0.6.
 - Agreement script: Cohen's κ per category, confusion matrix, list of disagreements
 - Draft of the annotation guideline (human edits and approves it)
 - PII scrubber (scrub.py), run locally by Kapardhi
+- Conversation extractor (extract.py), run locally by Kapardhi
 
 ### What Claude Code must not do
 - Pre-label items, suggest labels, or act as an annotator. Model judgment and human judgment

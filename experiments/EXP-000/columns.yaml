@@ -1,0 +1,6 @@
+# Matches the CSV written by extract.py. scrub.py runs on it with no edits.
+conversation_id: conversation_id
+speaker: speaker
+timestamp: timestamp
+text: text
+role: speaker_role
