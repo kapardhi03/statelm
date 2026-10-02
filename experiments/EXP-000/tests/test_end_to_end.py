@@ -211,12 +211,30 @@ class TestModes:
         run(source, out, columns)
         assert rows_of(out, "conv_001.jsonl")[0]["text"] == "ping [PHONE_1] and [EMAIL_1]"
 
-    def test_address_clauses_can_be_switched_off(self, workspace):
+    def test_localities_survive_by_default_and_premise_numbers_do_not(self, workspace):
         _, source, columns, out = workspace
-        run(source, out, columns, "--no-address-clauses")
+        run(source, out, columns)
         text = " ".join(r["text"] for r in rows_of(out, "conv_001.jsonl"))
-        assert "MG Road" in text          # clause rule off
-        assert "560001" not in text       # pincode still goes
+        assert "MG Road" in text          # a road is state, not an identifier
+        assert "Flat [ADDRESS_" in text   # the flat number went
+        assert "560001" not in text       # pincode went
+
+    def test_address_clauses_are_opt_in(self, workspace):
+        _, source, columns, out = workspace
+        run(source, out, columns, "--address-clauses")
+        text = " ".join(r["text"] for r in rows_of(out, "conv_001.jsonl"))
+        assert "MG Road" not in text      # the blunt rule, only when asked for
+
+    def test_a_property_preference_is_not_touched(self, tmp_path):
+        source = tmp_path / "raw"
+        fixtures.write_csv(source / "a.csv", [
+            {"conv_id": "P", "from": "Asha", "sent_at": "2025-01-01 00:00:00",
+             "body": "3BHK flat near Gachibowli, budget 80 lakhs", "speaker_role": "customer"}])
+        columns = fixtures.write_columns(tmp_path / "c.yaml")
+        out = tmp_path / "out"
+        run(source, out, columns)
+        assert rows_of(out, "conv_001.jsonl")[0]["text"] == (
+            "3BHK flat near Gachibowli, budget 80 lakhs")
 
     def test_all_three_formats_produce_the_same_scrubbed_text(self, tmp_path):
         columns = fixtures.write_columns(tmp_path / "c.yaml")

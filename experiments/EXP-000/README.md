@@ -14,9 +14,13 @@ never requested, scrubbed or not.
 ignored, verified against `git check-ignore` in `tests/test_gitignore.py`, which includes a
 negative control so the check can actually fail.
 
-> The rule itself currently lives here and in the EXP-000 record's "may build" list. If you want
-> it binding on future sessions regardless of which files they touch, it belongs in
-> `.claude/rules/` — say so and I'll add it. That's a repo convention, so it's your call.
+The rule is also written into `.claude/rules/data-privacy.md`, which carries no `paths`
+frontmatter and so loads in every session regardless of which files it touches. `.claude/settings.json`
+additionally denies the `Read` and `Edit` tools on `./data/raw/**` and `./data/scrubbed/**`.
+
+> One gap worth knowing: a `deny` on `Read` and `Edit` does not cover `Bash`, so `cat data/raw/...`
+> would still work. Closing that would mean denying Bash patterns too, which is a broader change
+> to how the session can work in this repo — say the word if you want it.
 
 ## What this is, and what it is not
 
@@ -130,7 +134,7 @@ ordinal for the same person.
 | PHONE | Indian mobile with or without `+91`/`0`, any separators; `+cc` international | high |
 | AMOUNT | **preserved** unless within 60 characters of an account identifier | by design |
 | PERSON | speaker roster only, full name and name parts | **misses third parties** |
-| ADDRESS | pincodes always; keyword-anchored clauses by default | **lowest** |
+| ADDRESS | pincodes and premise numbers (`Flat 402`, `H.No 3-4-12`, `Plot 17`); locality clauses opt-in | narrow by design |
 
 ### Why bare amounts are kept
 
@@ -139,12 +143,20 @@ and "might stretch to 45". A scrubber that redacted amounts would delete the exa
 experiment measures. So an amount is redacted **only** when it sits next to an account identifier —
 the "payment of X to account Y" case. `--amount-window` changes the distance.
 
-### The address rule is blunt
+### Addresses: narrow by default, blunt only on request
 
-Pincode matching is precise. The keyword rule runs from a word like `flat`, `road` or `sector` to
-the next comma or period, which can remove ordinary sentence text — and in a property conversation
-a location may be the content you want. Every such removal is in the audit report so you can see
-exactly what went. `--no-address-clauses` restricts the rule to pincodes only.
+**Default:** pincodes, plus premise designators after a keyword — `Flat 402`, `Flat No 402`,
+`Flat 4B`, `H.No 3-4-12`, `House No 12`, `Plot 17`, `Door No 5`, `Villa 9`. Only the designator is
+redacted, so the property type survives: `Flat 402, Sai Residency` becomes
+`Flat [ADDRESS_1], Sai Residency`.
+
+A locality or a road is **left alone**, because in a property conversation it is the state being
+tracked rather than an identifier. `3BHK flat near Gachibowli, budget 80 lakhs` passes through
+untouched, and there is a test that says so.
+
+**Opt-in, with `--address-clauses`:** the old rule, running from a locality keyword (`road`,
+`nagar`, `sector`, `landmark`, `opposite` and the rest) to the next comma or period. It removes
+ordinary sentence text and it will eat location preferences. Every hit is in the audit report.
 
 ## The three guarantees, each covered by a test
 
@@ -160,7 +172,9 @@ It also refuses to run when input and output nest, which would let a run read it
 ## Known limits
 
 - Roster-only names. No NER, by decision.
-- Addresses are heuristic and the clause rule is destructive; read the audit.
+- Addresses are heuristic. The default catches premise numbers and pincodes and deliberately
+  leaves localities alone; a street address written without a premise keyword is missed.
+  `--address-clauses` trades that for a rule that also removes ordinary text.
 - `--check` re-scans the output for structured identifiers. It cannot find a missed **name**.
 - A 12-digit account number beginning `91` followed by 6–9 reads as a phone. Both readings redact
   the value; only the category label differs.

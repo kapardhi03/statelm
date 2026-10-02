@@ -7,8 +7,9 @@ when it sits within `amount_window` characters of an account identifier, which i
 "amount with account info" case.
 
 Known limits, stated here because the README promises them:
-- ADDRESS is the weakest category. Pincodes are precise; keyword-anchored clauses are a blunt
-  instrument and every one is logged so the operator can see exactly what was removed.
+- ADDRESS defaults to pincodes and premise numbers only. Localities and roads are left alone,
+  because in a property conversation they are the state being tracked. The blunt
+  locality-clause rule is opt-in and every one of its hits is logged.
 - PERSON is roster-only. A third party named in passing is not detected.
 """
 
@@ -45,6 +46,14 @@ _AMOUNT = re.compile(
     r"(?:(?:₹|rs\.?|inr)\s*[\d,]+(?:\.\d+)?(?:\s*(?:lakhs?|lacs?|crores?|cr|k|thousand|mn))?"
     r"|[\d,]+(?:\.\d+)?\s*(?:lakhs?|lacs?|crores?|cr|k|thousand|mn)\b)", re.I)
 _PINCODE = re.compile(r"(?<!\d)[1-9]\d{5}(?!\d)")
+#: A premise keyword followed by a designator containing a digit: "Flat 402", "H.No 3-4-12",
+#: "Plot 17", "Door No 5". Only the designator is redacted, so the property type survives:
+#: "flat" and "plot" are state the benchmark tracks. The lookahead requires a digit, which is
+#: what keeps "flat near Gachibowli" from matching.
+_PREMISE = re.compile(
+    r"(?<![-\w])(?:flat|apartment|apt|villa|plot|shop|unit|door|house|h\.?\s*no\.?|d\.?\s*no\.?)"
+    r"\s*(?:no\.?|number|#|:)?\s*"
+    r"((?=[\w/-]*\d)\w+(?:[-/]\w+)*)", re.I)
 _ADDRESS_KEYWORD = re.compile(
     r"\b(flat|plot|door|house\s*no|h\.?no|road|rd|street|st|lane|nagar|colony|sector|block|"
     r"apartment|apt|tower|society|layout|cross|main|pincode|pin\s*code|landmark|opposite|opp)\b",
@@ -152,14 +161,20 @@ def find_amounts(text: str) -> list[Span]:
     return [_span(text, m.start(), m.end(), "AMOUNT") for m in _AMOUNT.finditer(text)]
 
 
-def find_addresses(text: str, *, clauses: bool = True) -> list[Span]:
-    """Pincodes always; keyword-anchored clauses when `clauses` is on.
+def find_addresses(text: str, *, clauses: bool = False) -> list[Span]:
+    """Pincodes and premise numbers by default; locality clauses only when asked.
 
-    The clause rule runs from the keyword to the next comma, semicolon, period or newline. It is
-    the bluntest rule in this module and can remove ordinary text, which is why every hit is
-    written to the audit report.
+    The default is deliberately narrow. In a property conversation a locality or a road is the
+    state being tracked, not an identifier: "3BHK flat near Gachibowli" is a location preference
+    and survives untouched, while the "402" in "Flat 402, Sai Residency" does not.
+
+    `clauses` turns on the opt-in rule, which runs from a locality keyword (road, nagar, sector,
+    landmark and the rest) to the next comma, semicolon, period or newline. It is the bluntest
+    rule in this module, it will remove ordinary text, and every hit is written to the audit
+    report so the operator can see exactly what went.
     """
     out = [_span(text, m.start(), m.end(), "ADDRESS") for m in _PINCODE.finditer(text)]
+    out += [_span(text, m.start(1), m.end(1), "ADDRESS") for m in _PREMISE.finditer(text)]
     if clauses:
         for m in _ADDRESS_KEYWORD.finditer(text):
             end = _CLAUSE_END.search(text, m.end())
@@ -190,7 +205,7 @@ def _name_variants(name: str) -> list[str]:
     return sorted({name, *parts}, key=len, reverse=True)
 
 
-def find_all(text: str, roster: Sequence[str] = (), *, address_clauses: bool = True) -> list[Span]:
+def find_all(text: str, roster: Sequence[str] = (), *, address_clauses: bool = False) -> list[Span]:
     return (
         find_at_handles(text)
         + find_ifsc(text)

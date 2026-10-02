@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 import detectors
 
 
@@ -62,16 +64,50 @@ class TestStructuredIdentifiers:
 
 
 class TestAddresses:
+    """The default is narrow on purpose: a locality is state, a premise number is an identifier."""
+
     def test_pincode_always(self):
         assert "ADDRESS" in categories("Bengaluru 560001")
 
-    def test_keyword_clause_when_enabled(self):
-        spans = detectors.find_addresses("Flat 4B, MG Road, there", clauses=True)
-        assert any(s.text.startswith("Flat") for s in spans)
+    def test_a_locality_preference_survives_untouched(self):
+        # "flat near Gachibowli" is a location preference the benchmark tracks, not PII.
+        assert redacted_text("3BHK flat near Gachibowli, budget 80 lakhs") == []
 
-    def test_clauses_can_be_switched_off(self):
-        spans = detectors.find_addresses("Flat 4B, MG Road", clauses=False)
-        assert spans == []
+    def test_a_flat_number_is_redacted_but_the_building_is_not(self):
+        got = redacted_text("Flat 402, Sai Residency")
+        assert got == [("ADDRESS", "402")]
+
+    @pytest.mark.parametrize(
+        "text,designator",
+        [
+            ("Flat 402", "402"),
+            ("Flat No 402", "402"),
+            ("Flat 4B", "4B"),
+            ("H.No 3-4-12", "3-4-12"),
+            ("House No 12", "12"),
+            ("Plot 17", "17"),
+            ("Door No 5", "5"),
+            ("Villa 9", "9"),
+        ],
+    )
+    def test_premise_designators(self, text, designator):
+        assert redacted_text(text) == [("ADDRESS", designator)]
+
+    def test_the_property_type_word_is_kept(self):
+        spans = detectors.redactions(detectors.resolve(detectors.find_all("Flat 402")))
+        assert all(s.text == "402" for s in spans)
+
+    def test_a_hyphenated_word_is_not_a_premise_keyword(self):
+        assert redacted_text("in-house 2 bedrooms") == []
+
+    def test_a_keyword_without_a_number_is_not_an_address(self):
+        assert redacted_text("looking for a plot somewhere") == []
+
+    def test_locality_clauses_are_opt_in(self):
+        without = detectors.find_addresses("Flat 4B, MG Road, there", clauses=False)
+        assert [s.text for s in without] == ["4B"]
+        with_clauses = detectors.find_addresses("Flat 4B, MG Road, there", clauses=True)
+        assert any("MG Road" in s.text or s.text.startswith("Road") for s in with_clauses)
 
 
 class TestNames:

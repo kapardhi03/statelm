@@ -3,7 +3,11 @@
     "defaultMode": "plan",
     "deny": [
       "Read(./data/splits/test/**)",
-      "Edit(./data/splits/test/**)"
+      "Edit(./data/splits/test/**)",
+      "Read(./data/raw/**)",
+      "Edit(./data/raw/**)",
+      "Read(./data/scrubbed/**)",
+      "Edit(./data/scrubbed/**)"
     ],
     "ask": [
       "Edit(./docs/research/adr/**)",

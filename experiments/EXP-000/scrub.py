@@ -176,8 +176,8 @@ def main(argv=None) -> int:
     parser.add_argument("--roles", type=Path, default=None, help="speaker,role CSV")
     parser.add_argument("--date-format", default=None, help="strptime format tried before defaults")
     parser.add_argument("--amount-window", type=int, default=detectors.AMOUNT_WINDOW)
-    parser.add_argument("--no-address-clauses", action="store_true",
-                        help="only redact pincodes, not keyword-anchored clauses")
+    parser.add_argument("--address-clauses", action="store_true",
+                        help="also redact locality keyword clauses (blunt; removes ordinary text)")
     parser.add_argument("--keep-conversation-ids", action="store_true",
                         help="use source ids as filenames; they may themselves be identifying")
     parser.add_argument("--dry-run", action="store_true", help="write nothing; print counts")
@@ -214,7 +214,7 @@ def main(argv=None) -> int:
         conversation_id = conversation_ids[src]
         rows, entries, speakers, pmap, missing, bad_ts = scrub_conversation(
             group, conversation_id,
-            address_clauses=not args.no_address_clauses,
+            address_clauses=args.address_clauses,
             amount_window=args.amount_window,
             roles_map=roles_map, date_format=args.date_format, source_hashes=source_hashes,
         )
@@ -228,7 +228,7 @@ def main(argv=None) -> int:
 
     residual = residual_scan(rows_by_conversation) if args.check else None
     settings = {
-        "address_clauses": not args.no_address_clauses,
+        "address_clauses": args.address_clauses,
         "amount_window": args.amount_window,
         "keep_conversation_ids": args.keep_conversation_ids,
         "date_format": args.date_format,
