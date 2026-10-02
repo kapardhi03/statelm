@@ -297,3 +297,75 @@ class TestScrubIntegration:
         assert "9876543210" not in text            # phone redacted
         assert "around 40 lakhs" in text           # amount preserved
         assert "Asha Rao" not in text              # roster name redacted
+
+
+class TestZeroTables:
+    """The reported bug: --all-tables used to suggest --all-tables."""
+
+    def _run(self, argv, **kwargs):
+        buffer = io.StringIO()
+        connection = {}
+
+        def connect_fn(url):
+            connection["conn"] = fakedb.FakeConnection(**kwargs)
+            return connection["conn"]
+
+        extract.main(argv, connect_fn=connect_fn, out=buffer)
+        return buffer.getvalue(), connection["conn"]
+
+    def test_no_tables_reports_database_role_and_schemas(self):
+        output, _ = self._run(["--inspect"], empty=True)
+        assert "No tables are visible to this connection." in output
+        assert "database:         arthryx_test" in output
+        assert "role:             statelm_ro" in output
+        assert "schemas searched: public" in output
+
+    def test_no_tables_hints_at_privileges_schema_and_database(self):
+        output, _ = self._run(["--inspect"], empty=True)
+        assert "GRANT USAGE ON SCHEMA" in output
+        assert "GRANT SELECT ON ALL TABLES" in output
+        assert "--schema <name>" in output
+        assert "DATABASE_URL" in output
+
+    def test_all_tables_no_longer_suggests_all_tables(self):
+        output, _ = self._run(["--inspect", "--all-tables"], empty=True)
+        assert "Re-run with --all-tables" not in output
+        assert "No tables are visible to this connection." in output
+
+    def test_the_hint_still_appears_when_tables_exist_but_none_match(self):
+        output, _ = self._run(["--inspect"], messages=[], with_invoices=True)
+        # messages table exists but is empty of rows; invoices is not conversational.
+        assert "Re-run with --all-tables" in output or "public.messages" in output
+
+    def test_no_row_values_in_the_zero_table_path(self):
+        output, _ = self._run(["--inspect"], empty=True)
+        for secret in fakedb.SECRET_TEXTS:
+            assert secret not in output
+
+
+class TestSchemaOption:
+    def _run(self, argv, **kwargs):
+        buffer = io.StringIO()
+
+        def connect_fn(url):
+            return fakedb.FakeConnection(**kwargs)
+
+        extract.main(argv, connect_fn=connect_fn, out=buffer)
+        return buffer.getvalue()
+
+    def test_naming_the_right_schema_finds_the_table(self):
+        assert "public.messages" in self._run(["--inspect", "--schema", "public"])
+
+    def test_naming_a_schema_with_nothing_in_it_reports_what_was_searched(self):
+        output = self._run(["--inspect", "--schema", "sales"])
+        assert "schemas searched: sales" in output
+        assert "No tables are visible to this connection." in output
+
+    def test_repeating_the_option_searches_both(self):
+        output = self._run(["--inspect", "--schema", "sales", "--schema", "public"])
+        assert "public.messages" in output
+
+    def test_the_default_discovers_non_system_schemas(self):
+        # No --schema: the searched list comes from information_schema.schemata.
+        output = self._run(["--inspect"], schemas=("public", "sales"))
+        assert "public.messages" in output

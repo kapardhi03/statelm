@@ -58,6 +58,30 @@ def quote_ident(name: str) -> str:
 # --------------------------------------------------------------------------- catalog
 
 
+SYSTEM_SCHEMAS = ("pg_catalog", "information_schema")
+
+
+def list_schemas(session) -> list[str]:
+    """Every non-system schema this connection can see."""
+    sql = (
+        "SELECT schema_name FROM information_schema.schemata "
+        "WHERE schema_name <> ALL(%s) "
+        "AND schema_name NOT LIKE 'pg_toast%%' AND schema_name NOT LIKE 'pg_temp%%' "
+        "ORDER BY schema_name"
+    )
+    with session.cursor() as cursor:
+        session.select(cursor, sql, (list(SYSTEM_SCHEMAS),))
+        return [row[0] for row in cursor.fetchall()]
+
+
+def connection_identity(session) -> tuple[str, str]:
+    """(database, role). Two scalars, no table data."""
+    with session.cursor() as cursor:
+        session.select(cursor, "SELECT current_database(), current_user")
+        database, role = cursor.fetchone()
+        return str(database), str(role)
+
+
 def list_columns(session, *, schemas=("public",)) -> dict[tuple[str, str], list[tuple[str, str]]]:
     """{(schema, table): [(column, type), ...]} for ordinary tables and views."""
     sql = (
@@ -92,16 +116,34 @@ def looks_conversational(table: str, columns: list[tuple[str, str]]) -> bool:
     return has(_TEXT_HINTS) and has(_TIME_HINTS) and has(_WHO_HINTS)
 
 
-def run_inspect(session, *, all_tables: bool = False, out=sys.stdout) -> list[tuple[str, str]]:
+def run_inspect(session, *, all_tables: bool = False, schemas=None,
+                out=sys.stdout) -> list[tuple[str, str]]:
     """Print structure for candidate tables. Returns the candidates, for tests."""
-    catalog = list_columns(session)
+    searched = list(schemas) if schemas else list_schemas(session)
+    catalog = list_columns(session, schemas=tuple(searched)) if searched else {}
     candidates = [
         key for key, columns in catalog.items()
         if all_tables or looks_conversational(key[1], columns)
     ]
     print("Structure only. No row values are read in this mode.\n", file=out)
+    if not catalog:
+        # Nothing is visible at all, so --all-tables would not help. Say what was actually
+        # looked at and what usually explains it.
+        database, role = connection_identity(session)
+        print("No tables are visible to this connection.", file=out)
+        print(f"    database:         {database}", file=out)
+        print(f"    role:             {role}", file=out)
+        print(f"    schemas searched: {', '.join(searched) or '(none visible)'}", file=out)
+        print(file=out)
+        print("That usually means one of:", file=out)
+        print("  - the role lacks privileges: GRANT USAGE ON SCHEMA <s> and "
+              "GRANT SELECT ON ALL TABLES IN SCHEMA <s>", file=out)
+        print("  - the tables are in another schema: try --schema <name>", file=out)
+        print("  - the tables are in another database: check the name in DATABASE_URL", file=out)
+        return []
     if not candidates:
-        print("No table looked conversational. Re-run with --all-tables.", file=out)
+        print(f"{len(catalog)} table(s) visible, none of which looked conversational. "
+              f"Re-run with --all-tables to list them all.", file=out)
         return []
     for schema, table in sorted(candidates):
         print(f"{schema}.{table}  ({row_count(session, schema, table)} rows)", file=out)
@@ -295,7 +337,8 @@ def write_csv(session, sources, resolved, conversation_ids, output: Path, *, sin
 
 def run_extract(session, args, *, allowed_root: Path | None = None, out=sys.stdout) -> dict:
     sources = load_config(args.config)
-    catalog = list_columns(session, schemas=tuple({s.schema for s in sources}))
+    wanted = tuple(args.schema) if args.schema else tuple({s.schema for s in sources})
+    catalog = list_columns(session, schemas=wanted)
     resolved = [resolve_source(source, catalog) for source in sources]
 
     counts: dict = {}
@@ -351,6 +394,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--until", default=None, help="exclusive upper bound on timestamp")
     parser.add_argument("--all-tables", action="store_true",
                         help="with --inspect, show every table, not only conversational ones")
+    parser.add_argument("--schema", action="append", default=None, metavar="NAME",
+                        help="schema to search; repeatable. Default: all non-system schemas")
     return parser
 
 
@@ -361,7 +406,7 @@ def main(argv=None, *, connect_fn=None, allowed_root=None, out=sys.stdout) -> in
         return 2
     session = dbsafety.connect(connect_fn)
     if args.inspect:
-        run_inspect(session, all_tables=args.all_tables, out=out)
+        run_inspect(session, all_tables=args.all_tables, schemas=args.schema, out=out)
     else:
         run_extract(session, args, allowed_root=allowed_root, out=out)
     return 0
