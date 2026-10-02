@@ -1,6 +1,6 @@
 # EXP-000 local data tools
 
-Three scripts, all run **on your machine, never in a Claude session**:
+Four scripts, all run **on your machine, never in a Claude session**:
 
 - `extract.py` pulls conversations out of the ARTHRYX PostgreSQL database into
   `data/raw/arthryx_messages.csv`.
@@ -8,6 +8,8 @@ Three scripts, all run **on your machine, never in a Claude session**:
   reports.
 - `sample_items.py` samples annotation items from the scrubbed JSONL and writes one annotation
   sheet per annotator, with empty label columns.
+- `agreement.py` reads the filled sheets back and reports Cohen's kappa, a confusion matrix and
+  value agreement against EXP-000's pre-registered threshold.
 
 Claude never connects to the database and never sees message content.
 
@@ -155,7 +157,7 @@ category by a distance. The audit report exists precisely because you have to be
 ```bash
 cd experiments/EXP-000
 uv sync                      # PyYAML, openpyxl, psycopg; pytest for the tests
-uv run pytest                # 216 tests, all on fabricated data, no network, no database
+uv run pytest                # 334 tests, all on fabricated data, no network, no database
 
 # 1. Look before you write
 uv run python scrub.py --input ../../data/raw/arthryx \
@@ -407,3 +409,134 @@ the same containment check, and an output directory nested inside the input is r
   sampled; that is a guideline question, not a sampler one.
 - The cue lists are English and Indian-English only, and they are literal substrings. A
   correction phrased without a cue word is sampled only by the random top-up.
+
+## agreement.py: measuring the labels
+
+Reads two filled sheets and reports Cohen's kappa overall and per category, a confusion matrix,
+and value agreement, against the threshold pre-registered in EXP-000's record.
+
+```bash
+# two annotators
+uv run python agreement.py --sheets sheet_annotator_1.csv sheet_annotator_2.csv
+
+# or one annotator's two passes
+uv run python agreement.py --passes pass_1.csv pass_2.csv
+```
+
+| Option | Default | What it does |
+|---|---|---|
+| `--sheets A B` | — | two annotators: **inter**-annotator agreement |
+| `--passes A B` | — | one annotator twice: **intra**-annotator agreement |
+| `--seed` | 0 | seeds the bootstrap |
+| `--bootstrap` | 2000 | resamples per interval |
+| `--allow-partial-overlap` | off | measure the shared items when the sheets differ, and record it |
+| `--out-root` | `runs/EXP-000` | aggregates only |
+| `--disagreements-dir` | `data/scrubbed/EXP-000` | must be inside `data/scrubbed/` |
+
+### The mode is structural, not a flag
+
+There is no `--mode` to set wrong and no default to fall back on: `--sheets` means inter, and
+`--passes` means intra. The mode appears in `metrics.json`, `config.json`, the disagreement
+file's header record and every printed line. Passing both, or neither, is refused.
+
+With `--passes` the script also prints what it **cannot** check: the record requires the relabel
+to come at least a week later and to be blind to the first labels, and neither is visible in a
+CSV. Both are yours to guarantee, and the run says so rather than implying the fallback was
+applied correctly.
+
+### A thin category is reported, never hidden
+
+Below ten items (`n_either`, the count of items *either* rater put in the category) a category
+keeps its kappa and all four counts and is marked **not interpretable**. Nothing is dropped.
+
+The consequence matters more than the rule: three items of `ABSTAIN:conflicting` that both
+annotators agreed on perfectly give a kappa of 1.000, which looks like the best result in the
+table. The script reports that kappa, marks it uninterpretable, and prints the hypothesis as
+**CANNOT BE EVALUATED** rather than "not refuted". A pre-registered threshold applied to three
+items is not evidence, and a run that quietly passed on one would be worse than a run that
+failed.
+
+### Where each kind of output goes
+
+```
+runs/EXP-000/<run-id>/
+  metrics.json      kappas, intervals, counts, confusion matrix, verdict. AGGREGATES ONLY.
+  config.json       commit, seed, sheet hashes, every pre-registered number
+
+data/scrubbed/EXP-000/
+  disagreements_<run-id>.jsonl    item ids, both labels, and both values for a value mismatch
+```
+
+The split is enforced, not just intended. `metrics.json` and `config.json` contain no item id,
+no label per item and no value; a test plants a canary string in the sheets and asserts it
+appears in neither file, and another asserts only those two files are written. The disagreement
+list carries the per-item detail and the script **refuses** to write it outside
+`data/scrubbed/`, which is gitignored.
+
+Both values are included for a value mismatch because an item id alone cannot tell you whether
+two annotators disagreed about the budget or just typed the same figure differently. That is
+exactly why the file is confined to the gitignored tree.
+
+### Value agreement, twice
+
+Label agreement alone hides value disagreements: two annotators can both say VALUE on every item,
+giving perfect label agreement, while disagreeing about half the values. So value agreement is
+reported separately over the items **both** sheets labelled VALUE, under two normalizations:
+
+| | What it sees past | "40-45 lakhs" vs "40 to 45 lakhs" |
+|---|---|---|
+| `strict` (primary) | case, whitespace, trailing punctuation | **different** |
+| `number_aware` (secondary) | the above, plus magnitude words, currency marks, range connectives and Indian digit grouping | **same** |
+
+Strict is the primary figure because it is a lower bound that cannot flatter the annotators.
+Number-aware is reported beside it, never instead of it, so the gap between the two tells you how
+much of your value disagreement is formatting. `80 lakhs` and `8000000` are the same number;
+`around 40 lakhs` and `40 lakhs` are **not** collapsed, because HEDGED is a label of its own and
+merging them would hide the thing EXP-000 is measuring.
+
+### The intervals
+
+Every kappa and both value figures carry a seeded percentile bootstrap 95% interval, computed
+twice:
+
+- **by conversation** (primary): whole conversations are resampled with replacement. This is the
+  right unit because five fields times one turn means five items sharing one conversation's
+  context, and items from one chat are not independent.
+- **by item** (secondary): items resampled as if independent. Narrower, reported for comparison.
+
+A replicate whose kappa is undefined, which happens when the category appears in neither rater's
+column of that resample, is **excluded and counted**. Above 5% undefined the interval itself is
+marked not interpretable, because it then describes only the resamples in which the category
+happened to appear. An interval that is not interpretable prints with a `*`.
+
+### What it will not do
+
+It prints a verdict against the pre-registered threshold and stops there. It does not write to
+the experiment record, and `metrics.json` says so in as many words: *"A verdict against a
+pre-registered threshold is not a Result. Result, Interpretation and Decision in the experiment
+record are a human's to fill."* A test hashes the record file before and after a run.
+
+### The pre-registered numbers
+
+All of them live in `thresholds.py`, each with its provenance, so they are auditable in one
+place and diffable on their own: the κ ≥ 0.6 threshold and the three abstention types it applies
+to (from the record), the ten-item floor, the bootstrap units and resample count, the undefined
+replicate ceiling, the two value normalizations, and HEDGED rule (a). Kapardhi settled the
+measurement choices on 2026-10-02, before any real run.
+
+One of them is not a judgement call but a bug fix. A one-vs-rest table of (2 both-in, 1 a-only,
+1 b-only, 14 both-out) has an exact kappa of 3/5, but computes as `0.5999999999999996` in binary
+floating point, so a bare `kappa >= 0.6` would report BELOW on a category that exactly meets the
+threshold. n = 18 is an ordinary size for a rare abstention type here, so this is reachable
+rather than theoretical. `meets_threshold()` carries a 1e-9 tolerance and a test pins that exact
+table, with an assertion that fails if the hazard ever disappears so the tolerance can be removed.
+
+### Known limits
+
+- A percentile bootstrap on 60-100 items with rare categories gives wide intervals, and
+  percentile intervals are rougher than BCa. The ten-item floor is the main guard against
+  over-reading a thin category; the interval is the second.
+- `number_aware` compares the leftover words as a set, so a value whose meaning depends on word
+  order is not protected. It is a secondary figure for that reason.
+- Cohen's kappa is for exactly two raters. A third annotator would need Fleiss' kappa or
+  Krippendorff's alpha, which this script does not implement.
