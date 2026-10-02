@@ -32,42 +32,121 @@ additionally denies the `Read` and `Edit` tools on `./data/raw/**` and `./data/s
 > would still work. Closing that would mean denying Bash patterns too, which is a broader change
 > to how the session can work in this repo — say the word if you want it.
 
-## The run order
+## Run book
+
+Every command below is run **from the repo root on your Mac**. `--project` points `uv` at this
+directory without changing the working directory, so every path is repo-root relative.
+
+Nothing here runs in a Claude session: steps 2 to 5 all touch client text.
+
+### 0. Once, and after any change to these tools
 
 ```bash
-cd experiments/EXP-000
-uv sync
-
-# 1. Look at the schema. Prints table, column, type and row count. No row values.
-uv run python extract.py --inspect
-
-# 2. Copy extract.example.yaml to extract.yaml and fill in the mapping from that output.
-#    Paste the --inspect output into the Claude session and the mapping can be written for you.
-
-# 3. Pull the conversations.
-uv run python extract.py --extract --config extract.yaml
-
-# 4. Scrub them. columns.yaml already matches step 3's CSV, so no edits are needed.
-uv run python scrub.py --input ../../data/raw --output ../../data/scrubbed/EXP-000 \
-                       --columns columns.yaml --check
-
-# 5. Sample the annotation items. fields.yaml holds the five pilot fields already.
-uv run python sample_items.py --input ../../data/scrubbed/EXP-000 \
-                              --output ../../data/scrubbed/EXP-000/annotation \
-                              --fields fields.yaml --n-items 80 --seed 0 \
-                              --annotators A B
-
-# 6. Annotators A and B fill the label / value / notes columns. Then measure agreement.
-uv run python agreement.py --sheets sheet_A.csv sheet_B.csv
+uv sync --project experiments/EXP-000
+uv run --project experiments/EXP-000 pytest experiments/EXP-000/tests -q   # 402, invented data
 ```
 
-Step 3 takes the role note and the tenant check for the ARTHRYX schema:
+### 1. Look at the schema (safe to paste into a Claude session)
 
 ```bash
-uv run python extract.py --extract --config extract.yaml \
+export DATABASE_URL='postgresql://statelm_ro:...@localhost:5432/arthryx'
+
+uv run --project experiments/EXP-000 python experiments/EXP-000/extract.py --inspect
+```
+
+Structure only: table, column, type, row count. In this mode no statement selects a column from
+a user table, so there is nothing in the output to redact.
+
+### 2. Extract
+
+```bash
+uv run --project experiments/EXP-000 python experiments/EXP-000/extract.py \
+    --extract --config experiments/EXP-000/extract.yaml \
     --tenant-column builder_id \
     --role-note "agent = seller side. Outbound includes the bot and any human takeover; this schema cannot distinguish them (meta is excluded)."
 ```
+
+Writes `data/raw/arthryx_messages.csv` and `data/raw/arthryx_messages.meta.json`. Terminal output
+is counts only.
+
+### 3. Scrub
+
+```bash
+# Look before writing
+uv run --project experiments/EXP-000 python experiments/EXP-000/scrub.py \
+    --input data/raw --output data/scrubbed/EXP-000 \
+    --columns experiments/EXP-000/columns.yaml --dry-run
+
+# Write, then re-scan the output for anything missed
+uv run --project experiments/EXP-000 python experiments/EXP-000/scrub.py \
+    --input data/raw --output data/scrubbed/EXP-000 \
+    --columns experiments/EXP-000/columns.yaml --check
+```
+
+Then **read `data/scrubbed/EXP-000/_audit/audit.sensitive.jsonl`**, satisfy yourself the
+redactions are right, and delete it. It holds the original text of every replacement, so it is as
+sensitive as the input.
+
+### 4. Sample the annotation items
+
+```bash
+uv run --project experiments/EXP-000 python experiments/EXP-000/sample_items.py \
+    --input data/scrubbed/EXP-000 \
+    --output data/scrubbed/EXP-000-annotation \
+    --fields experiments/EXP-000/fields.yaml \
+    --n-items 80 --seed 0 --annotators A B
+```
+
+The annotation directory is a **sibling** of the scrubbed conversations, not a subdirectory of
+them: the sampler refuses an output nested inside its input, since a run that could read its own
+output is a run that can corrupt itself. `data/scrubbed/EXP-000-annotation/` is still inside
+`data/scrubbed/`, so it is gitignored.
+
+### 5. After both sheets come back, measure agreement
+
+```bash
+uv run --project experiments/EXP-000 python experiments/EXP-000/agreement.py \
+    --sheets data/scrubbed/EXP-000-annotation/sheet_A.csv \
+             data/scrubbed/EXP-000-annotation/sheet_B.csv
+```
+
+Writes aggregates to `runs/EXP-000/<run-id>/` and the disagreement list to
+`data/scrubbed/EXP-000/`.
+
+### Before step 4: the guideline
+
+**The annotation guideline is still marked DRAFT and is EXP-000's one recorded blocker.** Nobody
+labels anything until you have approved
+`docs/research/experiments/EXP-000-annotation-guideline.md`. Both annotators need it, and
+`labels_reference.txt` alongside it.
+
+### What you keep, what you hand over, what never leaves
+
+| File | What to do with it |
+|---|---|
+| `data/raw/arthryx_messages.csv` | **Keep. Never share.** Unredacted client conversations. |
+| `data/raw/arthryx_messages.meta.json` | Keep. Counts only; safe to copy into `runs/EXP-000/`. |
+| `data/scrubbed/EXP-000/conv_*.jsonl` | **Keep. Never share.** Scrubbed is still client text. |
+| `data/scrubbed/EXP-000/summary.json` | Keep. Counts only; safe to copy into `runs/EXP-000/`. |
+| `data/scrubbed/EXP-000/_audit/audit.sensitive.jsonl` | **Read it, then delete it.** Contains unredacted PII by design. |
+| `data/scrubbed/EXP-000-annotation/sheet_A.csv` | **Yours.** You are Annotator A. |
+| `data/scrubbed/EXP-000-annotation/sheet_B.csv` | **This is the one file Annotator B gets.** Plus the approved guideline and `labels_reference.txt`. |
+| `data/scrubbed/EXP-000-annotation/manifest.json` | **Keep. Never show an annotator.** It records which cue caused each turn to be sampled, which would prime the label. |
+| `data/scrubbed/EXP-000-annotation/pilot_items.json` | Keep. The ids to exclude from the eventual test split. |
+| `data/scrubbed/EXP-000-annotation/labels_reference.txt` | Give to both annotators, with the guideline. |
+| `runs/EXP-000/<run-id>/metrics.json`, `config.json` | Keep and commit. Aggregates only. |
+| `data/scrubbed/EXP-000/disagreements_*.jsonl` | **Keep. Never commit.** Item ids, both labels, and both values for a value mismatch. |
+
+Everything under `data/raw/` and `data/scrubbed/` is gitignored, verified by
+`tests/test_gitignore.py`. `runs/**` is ignored except `metrics.json`, `config.json` and a few
+named summaries.
+
+> **One thing to be deliberate about.** `sheet_B.csv` carries scrubbed conversation text, and
+> handing it to Annotator B is the one step in this run book where that text reaches another
+> person. `.claude/rules/data-privacy.md` says client text never leaves your machine; I read that
+> rule as addressed to Claude and to the repository, which is what its bullets are about, rather
+> than to the second annotator the design requires. The consent basis for a second human reading
+> these conversations is yours to have settled, not something these tools can check.
 
 ## extract.py: pulling conversations out of PostgreSQL
 
@@ -270,7 +349,7 @@ category by a distance. The audit report exists precisely because you have to be
 ```bash
 cd experiments/EXP-000
 uv sync                      # PyYAML, openpyxl, psycopg; pytest for the tests
-uv run pytest                # 399 tests, all on fabricated data, no network, no database
+uv run pytest                # 402 tests, all on fabricated data, no network, no database
 
 # 1. Look before you write
 uv run python scrub.py --input ../../data/raw/arthryx \
@@ -421,7 +500,7 @@ conversation text, so it never runs in a Claude session.
 
 ```bash
 uv run python sample_items.py --input ../../data/scrubbed/EXP-000 \
-                              --output ../../data/scrubbed/EXP-000/annotation \
+                              --output ../../data/scrubbed/EXP-000-annotation \
                               --fields fields.yaml --n-items 80 --seed 0
 ```
 
@@ -453,21 +532,27 @@ EXP-000 is an inter-annotator design with two annotators named only **A** and **
 name goes into a sheet, the manifest or any other annotation artifact; which person is which
 letter is deliberately not recorded in this repository.
 
-`--annotators A B` writes `sheet_A.csv` and `sheet_B.csv`. Both hold **the same items**, each in
-**its own seeded order**, so neither annotator can anchor on the other's sequence and a
-disagreement cannot be an artefact of both having read the items in the same run-up. The
-per-annotator seed is derived from the run seed and the annotator's name, so one `--seed`
+`--annotators A B` writes `sheet_A.csv` and `sheet_B.csv`. Both hold **the same items**, with the
+**turn blocks in their own seeded order**, so neither annotator can anchor on the other's
+sequence and a disagreement cannot be an artefact of both having read the items in the same
+run-up.
+
+**The unit of shuffling is the turn, not the item.** A turn's five fields stay together as one
+contiguous run of rows, so the annotator reads a turn's context once and answers every question
+about it, rather than meeting the same context five times scattered through the sheet. Within a
+block the fields keep `fields.yaml`'s order for everyone; the only thing that varies between
+sheets is which turn comes next. Two tests hold that down: each turn appears as exactly one
+contiguous run, and the field order is identical across both sheets.
+
+The per-annotator seed is derived from the run seed and the annotator's name, so one `--seed`
 reproduces both orders, and adding a third annotator does not disturb A's or B's.
 
-The orders are recorded in `manifest.json`. Items pair up by `item_id`, never by row, so
-`agreement.py` is unaffected by the shuffle — and a test asserts that every number it reports is
-byte-identical whether the sheets arrive shuffled or in order. With a single item no distinct
-permutation exists; the run reports that rather than pretending.
-
-One cost worth knowing: an item-level shuffle scatters a turn's five fields across the sheet, so
-the annotator re-reads the same context up to five times and cannot tell that two items share a
-turn. Shuffling whole turn blocks instead would meet the same goal more cheaply; this is
-item-level because that is what was specified.
+The manifest records the shuffle unit, the turn count, each seed, and both the turn order and the
+item order. Items pair up by `item_id`, never by row, so `agreement.py` is unaffected by the
+shuffle — and a test asserts that every number it reports is identical whether the sheets arrive
+shuffled or in order. With one turn, or with more annotators than there are distinct
+permutations, no distinct order exists for everyone; the run reports that rather than
+pretending.
 
 ### Two rules from the experiment record, and how the code keeps them
 

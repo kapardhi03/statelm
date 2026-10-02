@@ -9,6 +9,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import itertools
 import json
 from pathlib import Path
 
@@ -309,7 +310,7 @@ class TestLocalToolGuarantees:
 
 
 class TestInterAnnotatorSheetOrder:
-    """Each annotator gets the same items in their own seeded order."""
+    """Each annotator gets the same items with the turn blocks in their own seeded order."""
 
     def test_the_default_annotators_are_letters_not_names(self):
         assert sample_items.DEFAULT_ANNOTATORS == ("A", "B")
@@ -353,6 +354,41 @@ class TestInterAnnotatorSheetOrder:
         assert order["item_order"]["A"] == a
         assert order["orders_distinct"] is True
         assert set(order["seeds"]) == {"A", "B"}
+        assert order["shuffle_unit"] == "turn"
+        assert order["turns"] == len(set(order["turn_order"]["A"]))
+
+    def test_the_turn_order_is_recorded_and_differs(self, workspace):
+        source, fields, out = workspace
+        run(source, out, fields, "--annotators", "A", "B")
+        order = json.loads((out / "manifest.json").read_text(encoding="utf-8"))["sheet_order"]
+        assert order["turn_order"]["A"] != order["turn_order"]["B"]
+        assert sorted(order["turn_order"]["A"]) == sorted(order["turn_order"]["B"])
+
+    def test_a_turns_fields_stay_together(self, workspace):
+        """The reason the unit is the turn: one context read, every question about it answered.
+
+        Each turn must appear as exactly one contiguous run of rows, not scattered.
+        """
+        source, fields, out = workspace
+        run(source, out, fields, "--annotators", "A", "B")
+        for name in ("A", "B"):
+            rows = read_sheet(out / f"sheet_{name}.csv")
+            runs = [key for key, _ in itertools.groupby(
+                rows, key=lambda r: (r["conversation_id"], r["turn_index"]))]
+            assert len(runs) == len(set(runs)), f"sheet_{name} splits a turn"
+
+    def test_the_field_order_within_a_turn_is_the_same_for_everyone(self, workspace):
+        """Only the turn order varies between sheets, so fields.yaml's order is the field order."""
+        source, fields, out = workspace
+        run(source, out, fields, "--annotators", "A", "B")
+        orders = set()
+        for name in ("A", "B"):
+            rows = read_sheet(out / f"sheet_{name}.csv")
+            for _, group in itertools.groupby(
+                    rows, key=lambda r: (r["conversation_id"], r["turn_index"])):
+                orders.add(tuple(row["field"] for row in group))
+        assert len(orders) == 1, orders
+        assert orders.pop() == ("budget", "location_preference")
 
     def test_the_same_seed_reproduces_both_orders(self, workspace, tmp_path):
         source, fields, out = workspace
@@ -379,8 +415,8 @@ class TestInterAnnotatorSheetOrder:
         run(source, three, fields, "--annotators", "A", "B", "C")
         assert [row["item_id"] for row in read_sheet(three / "sheet_A.csv")] == a_before
 
-    def test_one_item_cannot_be_permuted_and_says_so(self, tmp_path):
-        """With a single item every order is the same order, so the run reports it."""
+    def test_one_turn_cannot_be_permuted_and_says_so(self, tmp_path):
+        """With a single turn there is one order, so the run reports it rather than pretending."""
         source = write_conversations(tmp_path / "scrubbed", count=1)
         for path in source.glob("*.jsonl"):
             first = path.read_text(encoding="utf-8").splitlines()[0]
@@ -393,6 +429,7 @@ class TestInterAnnotatorSheetOrder:
         manifest = json.loads((tmp_path / "out" / "manifest.json").read_text(encoding="utf-8"))
         assert manifest["sheet_order"]["orders_distinct"] is False
         assert "does not exist" in manifest["sheet_order"]["note"]
+        assert manifest["sheet_order"]["turns"] == 1
         assert "WARNING" in output
 
     def test_no_personal_name_appears_in_any_annotation_artifact(self, workspace):

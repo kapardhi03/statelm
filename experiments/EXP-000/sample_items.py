@@ -193,39 +193,71 @@ def annotator_seed(base_seed: int, name: str, attempt: int = 0) -> int:
     return int.from_bytes(digest[:8], "big")
 
 
+def turn_key(item: dict) -> tuple[str, int]:
+    return (item["conversation_id"], item["turn_index"])
+
+
+def turn_blocks(items: list[dict]) -> dict[tuple[str, int], list[dict]]:
+    """Items grouped by turn, in the order they were built, each block keeping field order."""
+    blocks: dict[tuple[str, int], list[dict]] = {}
+    for item in items:
+        blocks.setdefault(turn_key(item), []).append(item)
+    return blocks
+
+
+#: What gets permuted. Turn blocks rather than individual items: the five fields of one turn
+#: stay together, so an annotator reads a turn's context once and answers every question about
+#: it, instead of meeting the same context five times scattered through the sheet. Kapardhi's
+#: decision, 2026-10-02.
+SHUFFLE_UNIT = "turn"
+
+
 def shuffled_orders(items: list[dict], annotators: list[str], *,
                     seed: int) -> tuple[dict[str, list[dict]], dict]:
-    """Each annotator gets the same items in their own seeded order.
+    """Each annotator gets the same items with the turn blocks in their own seeded order.
 
     Different orders mean neither annotator can anchor on the other's sequence, and a
     disagreement cannot be an artefact of both having read the items in the same run-up. The
-    item *set* is identical for everyone; only the order differs.
+    item *set* is identical for everyone; only the order of the turn blocks differs. Within a
+    block the fields keep `fields.yaml`'s order for everyone, so the only thing that varies
+    between sheets is which turn comes next.
 
-    Identical orders are re-drawn with a bumped attempt counter. With one item that is
-    impossible, so the report says so rather than the function looping.
+    Identical orders are re-drawn with a bumped attempt counter. With one turn, or with more
+    annotators than there are distinct permutations, that is impossible, so the report says so
+    rather than the function looping.
     """
+    blocks = turn_blocks(items)
+    keys = list(blocks)
     orders: dict[str, list[dict]] = {}
-    report: dict = {"seeds": {}, "collisions_redrawn": 0, "orders_distinct": True}
+    turn_orders: dict[str, list] = {}
+    report: dict = {"shuffle_unit": SHUFFLE_UNIT, "turns": len(keys), "seeds": {},
+                    "collisions_redrawn": 0, "orders_distinct": True}
+
     for name in annotators:
         for attempt in range(8):
             derived = annotator_seed(seed, name, attempt)
-            candidate = list(items)
+            candidate = list(keys)
             random.Random(derived).shuffle(candidate)
-            sequence = [item["item_id"] for item in candidate]
-            if any(sequence == [i["item_id"] for i in existing]
-                   for existing in orders.values()):
+            if any(candidate == existing for existing in turn_orders.values()):
                 report["collisions_redrawn"] += 1
                 continue
-            orders[name] = candidate
+            turn_orders[name] = candidate
+            orders[name] = [item for key in candidate for item in blocks[key]]
             report["seeds"][name] = derived
             break
         else:
+            turn_orders[name] = list(keys)
             orders[name] = list(items)
             report["seeds"][name] = annotator_seed(seed, name)
             report["orders_distinct"] = False
+
     if not report["orders_distinct"]:
-        report["note"] = ("Two sheets share an item order. With this few items a distinct "
-                          "permutation does not exist; the orders are recorded as they are.")
+        report["note"] = (
+            f"Two sheets share a turn order. With {len(keys)} turn(s) and "
+            f"{len(annotators)} annotators a distinct permutation for each does not exist; "
+            "the orders are recorded as they are.")
+    report["turn_order"] = {name: [f"{c}#{t}" for c, t in order]
+                            for name, order in turn_orders.items()}
     report["item_order"] = {name: [item["item_id"] for item in rows]
                             for name, rows in orders.items()}
     return orders, report
@@ -347,8 +379,8 @@ def main(argv=None, out=sys.stdout) -> int:
         print(f"enrichment shortfall: "
               f"{ {k: v for k, v in report['shortfall'].items() if v} }", file=out)
     print(f"sheets: {', '.join(p.name for p in sheets)} (label columns are empty)", file=out)
-    print("each sheet holds the same items in its own seeded order; the orders are in the "
-          "manifest", file=out)
+    print(f"each sheet holds the same items with the turn blocks in its own seeded order "
+          f"({order_report['turns']} turns); the orders are in the manifest", file=out)
     if not order_report["orders_distinct"]:
         print(f"WARNING: {order_report['note']}", file=out)
     print(f"wrote {root}", file=out)
