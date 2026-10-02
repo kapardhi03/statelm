@@ -7,7 +7,8 @@ Revised: 2026-10-01 (pre-run, see Change log)
 Decision informed:
 - H1: whether the benchmark motivation can claim SGD's unseen split overstates semantic novelty,
   beyond SGD-X's lexical finding.
-- H2: whether embedding similarity is a valid covariate for ADR-004's stratified reporting.
+- H2: whether embedding similarity tracks paraphrase distance (not nearest-train-field
+  similarity, which was not measured).
 Blocked by: nothing
 
 ## Change log
@@ -83,6 +84,13 @@ Blocked by: nothing
   loosening it: the next configuration, two adjacent inversions, gives rho = -0.8 and is still
   rejected by a margin of 0.1. Recorded before any H2 data existed and pinned by a test that
   asserts the hazard directly, in `thresholds.spearman_meets_bound`.
+
+- **2026-10-02, after the results, a clarification of scope and not a change of verdict.** H2's
+  "Decision informed" narrowed by Kapardhi to "whether embedding similarity tracks paraphrase
+  distance (not nearest-train-field similarity, which was not measured)". The previous wording
+  named ADR-004's covariate, which is defined against the nearest train field; H2 measured cosine
+  to each slot's own test original. No number, threshold, population or verdict changes. What
+  changes is the scope of what the existing H2 result may be used to argue.
 
 ## Hypothesis
 
@@ -551,8 +559,9 @@ of each variant slot to **its own original test slot**. ADR-004 defines the cova
 variant-against-train comparison exists in this run: `config.json.files_read` contains no variant
 train schema. So H2 validates cosine as a measure of *paraphrase distance from a slot's own
 original*, and it does not test the nearest-train-field covariate that ADR-004 stratifies by. The
-"Decision informed" line claims more than the measurement supports, and correcting it is the
-researcher's call, not something to be quietly reworded here.
+"Decision informed" line claimed more than the measurement supports; it was narrowed by Kapardhi
+on 2026-10-02 to paraphrase distance, with nearest-train-field similarity marked as not
+measured.
 
 **The population is also narrower than the L1 premise.** 116 of the 160 pairs are paraphrases of
 test services absent from train, which ADR-004's rule does not make L1. On the 44 pairs that are
@@ -773,11 +782,14 @@ hygiene; it should have been three commits.
    verdict is unaffected.* As it stood: the seen-service restriction was removed without being
    flagged, and the verdict depends on it, supported on 160 pairs and refuted on the 44 that
    ADR-004 calls L1.
-2. **H2's "Decision informed" line.** It claims the ADR-004 covariate, which is defined against
-   the nearest train field and was not measured. The wording is the researcher's.
-3. **Whether H1 is worth re-registering with a calibrated cutoff.** Under MiniLM the 0.8 bar is
-   stricter than a same-slot paraphrase, so the refutation is partly structural. No threshold
-   should be changed on this record; this would be a new experiment.
+2. **H2's "Decision informed" line.** *Answered: narrowed by Kapardhi on 2026-10-02 to
+   paraphrase distance, with nearest-train-field similarity marked as not measured.* As it stood:
+   it claimed the ADR-004 covariate, which is defined against the nearest train field and was not
+   measured.
+3. **Whether H1 is worth re-registering with a calibrated cutoff.** *Answered by the second
+   amendment, 2026-10-02: H1 is refuted under its registered rule but substantively
+   inconclusive, and will not be re-registered.* As it stood: under MiniLM the 0.8 bar is
+   stricter than a same-slot paraphrase, so the refutation is partly structural.
 
 ## Decision
 
@@ -806,3 +818,13 @@ Amendment, 2026-10-01: The final sentence overstated. Under ADR-004, only SGD-X
 paraphrases of services present in train/schema.json (44 of 160 pairs per variant)
 are L1 by construction. Paraphrases of test-only services receive no novelty level and
 are not used as leveled benchmark material. The H2 verdict is unaffected.
+
+### Second amendment
+
+Transcribed from Kapardhi, 2026-10-02.
+
+Amendment, 2026-10-02: H1 is refuted under its registered rule but substantively
+inconclusive. MiniLM's 0.8 cutoff is below its own same-slot paraphrase scale (67/160
+v1 paraphrases fall below 0.8), so the both-model conjunction is uninformative. BGE
+alone gives 41.5% [27.8, 56.6], which includes 50%. The action is unchanged: no claim
+of semantic redundancy. H1 will not be re-registered.
