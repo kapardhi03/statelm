@@ -22,7 +22,6 @@ Detail lives in the linked files, not here.
 - D2. Contribution ordering: proposed benchmark-first, model-second (ADR-001)
 - D3. Real data source and second annotator for EXP-000
 - D4. Accept / modify / reject ADR-002 (ledger) and ADR-003 (typed abstention)
-- D5. Accept / modify / reject ADR-005 (similarity covariate reporting)
 
 ## ADRs
 
@@ -32,7 +31,7 @@ Detail lives in the linked files, not here.
 | ADR-002 | Temporal memory is a deterministic ledger | Proposed |
 | ADR-003 | Typed abstention, distinct from NO-OP | Proposed |
 | ADR-004 | Novelty levels by construction, not thresholds | Accepted |
-| ADR-005 | Similarity reported as rank or stratum, never a cutoff | Proposed |
+| ADR-005 | Similarity as a calibrated continuous covariate | Accepted |
 
 Nothing may be built on a Proposed ADR as if it were Accepted.
 
@@ -44,11 +43,14 @@ Nothing may be built on a Proposed ADR as if it were Accepted.
 | EXP-001 | Headroom probe (frontier vs small) | Planned | EXP-000 |
 | EXP-002 | Schema novelty audit on SGD / SGD-X | Done | nothing |
 
+## Tooling
+
+Genesis (Ayush's genesis-kit. - https://github.com/ayush488-glitch/genesis-kit) adoption
+deferred to Stage 4, when spec-bound engineering begins (ledger Apply, benchmark
+construction, eval harness). Adopt with `genesis adopt .` read-only first; existing
+docs/research/ is ingested as evidence, not rewritten. HumanLayer not used.
+
 ## Where things live
 
-- Research question, definitions, hypotheses: `docs/research/research-question.md`
-- Prior work and what it means for us: `docs/research/literature.md`
-- Current agreed architecture (Mermaid): `docs/research/architecture.md`
-- Knowns, unknowns, risks, research clusters: `docs/research/knowns-unknowns.md`
-- ADRs: `docs/research/adr/`
-- Experiment records: `docs/research/experiments/`
+All under `docs/research/`: `research-question.md` (question, definitions, hypotheses),
+`literature.md` (prior work), `architecture.md`, `knowns-unknowns.md`, `adr/`, `experiments/`.
