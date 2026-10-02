@@ -1,5 +1,7 @@
 # Data (raw data and frozen splits stay local; the schema-to-split map is tracked)
 data/raw/
+# Scrubbed conversation text is still client text: it never gets committed.
+data/scrubbed/
 data/splits/**
 !data/splits/**/
 !data/splits/schema_assignment.json
