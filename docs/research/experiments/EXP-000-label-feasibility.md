@@ -4,7 +4,7 @@ Status: Planned
 Owner: Kapardhi
 Created: 2026-10-01
 Decision informed: ADR-003 (keep, merge, or redefine abstention types)
-Blocked by: guideline approval (Kapardhi)
+Blocked by: nothing
 
 ## Hypothesis
 Two independent human annotators agree on NO-OP vs value vs ABSTAIN type at κ ≥ 0.6 per
@@ -66,6 +66,9 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
 - 2026-10-02: D3 resolved. Conversations are available from the ARTHRYX database; a second
   annotator is identified (Annotator B); the design is inter-annotator. The remaining blocker
   is approval of the annotation guideline.
+- 2026-10-02: annotation guideline approved by Kapardhi. EXP-000 is unblocked and ready to
+  run. ADR-003 is still Proposed and D4 is still pending: the approval settles how the labels
+  are applied, not whether the taxonomy is right, which is what this experiment measures.
 - 2026-10-02: the three guideline boundary rules settled by Kapardhi and recorded in
   `EXP-000-annotation-guideline.md` §3. One of them bears on a measurement: approximations are
   VALUEs ("around 40 lakhs" -> VALUE `~40 lakhs`), so value agreement treats an approximation

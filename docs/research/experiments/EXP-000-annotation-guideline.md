@@ -1,9 +1,12 @@
 # EXP-000 annotation guideline
 
-**DRAFT, Kapardhi to edit and approve.** The boundary rules in §3 are settled (Kapardhi's
-decisions, 2026-10-02); the full text has not been approved. Do not label from this version.
+**APPROVED by Kapardhi, 2026-10-02.** This is the version to label from.
 
-Status: Draft · For EXP-000 (label feasibility) · Design: inter-annotator, two annotators
+Status: Approved · For EXP-000 (label feasibility) · Design: inter-annotator, two annotators
+
+Approval covers this text as the labelling instrument. It is not acceptance of ADR-003: that
+ADR is still **Proposed**, D4 is still pending, and EXP-000 is the experiment that tests it.
+See §1.
 
 This is the one document that defines the labels, so it is also the one document that decides
 what EXP-000's κ means. A disagreement caused by a vague guideline is indistinguishable, in the
@@ -156,3 +159,10 @@ what the disagreement list and your `notes` are for.
   §3.1 rather than from any decision about metrics: because approximations are now VALUEs, the
   value-agreement comparison treats an approximation marker as part of the value.
   `~40 lakhs` and `around 40 lakhs` are the same value; neither is `40 lakhs`.
+- **2026-10-02** — Sheet order: the shuffled unit is the turn block, not the item, so a turn's
+  five fields stay together. §4 says so to the annotators.
+- **2026-10-02** — **Approved by Kapardhi.** DRAFT marker removed; this text is the labelling
+  instrument for EXP-000. Any later change to a label definition needs a new entry here and,
+  if labelling has begun, a decision about the items already labelled under the old wording.
+  ADR-003 remains Proposed and D4 remains pending: approving this guideline settles how the
+  labels are applied, not whether the taxonomy is right.

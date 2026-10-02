@@ -115,10 +115,12 @@ Writes aggregates to `runs/EXP-000/<run-id>/` and the disagreement list to
 
 ### Before step 4: the guideline
 
-**The annotation guideline is still marked DRAFT and is EXP-000's one recorded blocker.** Nobody
-labels anything until you have approved
-`docs/research/experiments/EXP-000-annotation-guideline.md`. Both annotators need it, and
-`labels_reference.txt` alongside it.
+`docs/research/experiments/EXP-000-annotation-guideline.md` was **approved on 2026-10-02** and is
+the labelling instrument. Both annotators need it, with `labels_reference.txt` alongside.
+
+If a label definition has to change after labelling has begun, that needs a change-log entry in
+the guideline *and* a decision about the items already labelled under the old wording. Changing a
+definition mid-run and leaving the earlier items in place would mix two instruments in one κ.
 
 ### What you keep, what you hand over, what never leaves
 
