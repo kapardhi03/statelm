@@ -1,6 +1,6 @@
 # StateLM: Current Research State
 
-Last updated: 2026-10-01 · Stage 1 (problem definition) complete, awaiting decisions
+Last updated: 2026-10-02 · Stage 1 (problem definition) complete, awaiting decisions
 
 This file is the one-page snapshot every session reads first. Keep it under 60 lines.
 Detail lives in the linked files, not here.
@@ -9,7 +9,7 @@ Detail lives in the linked files, not here.
 
 | Stage | Status |
 |---|---|
-| 1. Problem, gap, contribution | Drafted, awaiting 4 decisions below |
+| 1. Problem, gap, contribution | Drafted, awaiting 3 decisions below |
 | 2. Define X and Y (model contract) | Not started |
 | 3. Data model | Not started |
 | 4. Benchmark design | Not started |
