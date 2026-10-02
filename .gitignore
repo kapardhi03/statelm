@@ -13,6 +13,8 @@ runs/**
 !runs/**/config.json
 !runs/**/sanity_check.json
 !runs/**/per_slot.jsonl
+# A void marker has to be committable, or the record of a void run lives only on one machine.
+!runs/**/VOID.md
 
 # Python
 __pycache__/

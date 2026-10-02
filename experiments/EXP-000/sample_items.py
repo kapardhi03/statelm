@@ -31,11 +31,12 @@ from pathlib import Path
 
 import cues
 import safety
+import thresholds
 
 #: The sheet's columns. The last three are always empty: the annotator fills them in.
 SHEET_COLUMNS = (
     "item_id", "conversation_id", "turn_index", "field", "field_type", "field_description",
-    "context", "turn_speaker", "turn_text", "label", "value", "notes",
+    "context", "turn_role", "turn_text", "label", "value", "notes",
 )
 EMPTY_COLUMNS = ("label", "value", "notes")
 
@@ -46,7 +47,8 @@ LABEL_VOCABULARY = (
     "HEDGED",
 )
 
-DEFAULT_QUOTAS = {"correction": 0.25, "hedge": 0.25, "multi_speaker": 0.2}
+#: Pre-registered in thresholds.py. "random" is the remainder, drawn without requiring a cue.
+DEFAULT_QUOTAS = dict(thresholds.SAMPLING_QUOTAS)
 
 #: EXP-000 is an inter-annotator design with two annotators, named only "A" and "B". No personal
 #: name goes into a sheet, the manifest or any other annotation artifact: which person is which
@@ -56,6 +58,37 @@ DEFAULT_ANNOTATORS = ("A", "B")
 
 class SamplerError(Exception):
     pass
+
+
+def load_field_keywords(path: str | Path | None) -> dict | None:
+    """Optional local overrides for the field-mention keyword lists.
+
+    Locality names are corpus-specific and cannot be enumerated in this repository, so this file
+    is how the researcher adds real ones. It is read on his machine and nothing from it is
+    written into a sheet or into runs/, so the names never leave that machine through this tool.
+
+    A list given here REPLACES the built-in list for that field; a field left out keeps its
+    built-in list.
+    """
+    if path is None:
+        return None
+    import yaml
+
+    raw = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
+    entries = raw.get("field_keywords") if isinstance(raw, dict) else None
+    if not entries:
+        raise SamplerError(f"{path}: expected a non-empty 'field_keywords:' mapping")
+    unknown = sorted(set(entries) - set(thresholds.FIELD_KEYWORDS))
+    if unknown:
+        raise SamplerError(
+            f"{path}: field_keywords names field(s) {unknown} that are not in the pilot field "
+            f"list {sorted(thresholds.FIELD_KEYWORDS)}")
+    merged = {field: tuple(words) for field, words in thresholds.FIELD_KEYWORDS.items()}
+    for field, words in entries.items():
+        if not words:
+            raise SamplerError(f"{path}: field_keywords[{field}] is empty")
+        merged[field] = tuple(str(w) for w in words)
+    return merged
 
 
 def load_fields(path: str | Path) -> list[dict]:
@@ -95,22 +128,48 @@ def load_conversations(input_dir: str | Path) -> dict[str, list[dict]]:
     return out
 
 
-def candidate_turns(conversations: dict[str, list[dict]], *, context_turns: int) -> list[dict]:
-    """Every turn, with its preceding context window and its strata."""
+def candidate_turns(conversations: dict[str, list[dict]], *, context_turns: int,
+                    keywords=None) -> tuple[list[dict], dict]:
+    """Eligible target turns, each with its context window and strata. Returns (turns, census).
+
+    Only a customer turn of real text can be a target. Seller turns and media placeholders stay
+    in the **context**, where the annotator needs them to apply rule Q3, but are never the turn
+    being labelled: a seller target is NO-OP by construction and measures nothing.
+
+    The census counts every turn by why it was or was not eligible. It exists because the
+    researcher needs to know whether the corpus can support the quotas *before* anyone labels,
+    not after a void run.
+    """
     out = []
+    census = {
+        "turns_total": 0,
+        "eligible_targets": 0,
+        "rejected": {},
+        "by_stratum": {name: 0 for name in cues.STRATA},
+        "field_mentions": {field: 0 for field in (keywords or thresholds.FIELD_KEYWORDS)},
+    }
     for conversation_id, rows in sorted(conversations.items()):
         for position, turn in enumerate(rows):
-            if not (turn.get("text") or "").strip():
+            census["turns_total"] += 1
+            reason = cues.target_rejection(turn)
+            if reason is not None:
+                census["rejected"][reason] = census["rejected"].get(reason, 0) + 1
                 continue
             context = rows[max(0, position - context_turns):position]
+            strata = cues.strata_for(turn, context, keywords=keywords)
+            census["eligible_targets"] += 1
+            for name in strata:
+                census["by_stratum"][name] = census["by_stratum"].get(name, 0) + 1
+            for field in cues.fields_mentioned(turn.get("text", ""), keywords):
+                census["field_mentions"][field] = census["field_mentions"].get(field, 0) + 1
             out.append({
                 "conversation_id": conversation_id,
                 "turn_index": turn.get("turn_index", position),
                 "turn": turn,
                 "context": context,
-                "strata": cues.strata_for(turn, context),
+                "strata": strata,
             })
-    return out
+    return out, census
 
 
 def choose_turns(candidates: list[dict], *, n_turns: int, seed: int,
@@ -125,34 +184,55 @@ def choose_turns(candidates: list[dict], *, n_turns: int, seed: int,
     rng = random.Random(seed)
     by_key = {(c["conversation_id"], c["turn_index"]): c for c in candidates}
     chosen: dict[tuple, dict] = {}
-    report = {"targets": {}, "achieved": {}, "shortfall": {}}
+    report = {"targets": {}, "achieved": {}, "shortfall": {},
+              "eligible_per_stratum": {}, "quotas": dict(quotas)}
 
-    for stratum, share in sorted(quotas.items()):
+    cue_quotas = {s: share for s, share in quotas.items() if s != thresholds.RANDOM_STRATUM}
+    for stratum, share in sorted(cue_quotas.items()):
         target = min(int(round(share * n_turns)), n_turns)
         pool = sorted(
             (k for k, c in by_key.items() if stratum in c["strata"] and k not in chosen),
             key=lambda k: (str(k[0]), k[1]),
         )
+        report["eligible_per_stratum"][stratum] = sum(
+            1 for c in by_key.values() if stratum in c["strata"])
         take = pool if len(pool) <= target else rng.sample(pool, target)
         for key in take:
             if len(chosen) < n_turns:
                 chosen[key] = by_key[key]
         report["targets"][stratum] = target
-        report["achieved"][stratum] = len(take)
-        report["shortfall"][stratum] = max(0, target - len(take))
+        report["achieved"][stratum] = sum(1 for k in take if k in chosen)
+        report["shortfall"][stratum] = max(0, target - report["achieved"][stratum])
 
+    # The random remainder: whatever is left, cue or no cue. Its target is the quota's share,
+    # but it also absorbs any shortfall the cue strata could not fill, so n_turns is still met
+    # where the corpus allows.
     remaining = sorted((k for k in by_key if k not in chosen), key=lambda k: (str(k[0]), k[1]))
+    random_target = n_turns - sum(report["targets"].values())
     short = n_turns - len(chosen)
+    drawn = 0
     if short > 0 and remaining:
         for key in rng.sample(remaining, min(short, len(remaining))):
             chosen[key] = by_key[key]
+            drawn += 1
+    report["eligible_per_stratum"][thresholds.RANDOM_STRATUM] = len(by_key)
+    report["targets"][thresholds.RANDOM_STRATUM] = max(0, random_target)
+    report["achieved"][thresholds.RANDOM_STRATUM] = drawn
+    report["shortfall"][thresholds.RANDOM_STRATUM] = max(0, n_turns - len(chosen))
+    report["turns_requested"] = n_turns
+    report["turns_selected"] = len(chosen)
 
     turns = sorted(chosen.values(), key=lambda c: (str(c["conversation_id"]), c["turn_index"]))
     return turns, report
 
 
 def format_context(context: list[dict]) -> str:
-    return "\n".join(f"{r.get('speaker_id', '?')}: {r.get('text', '')}" for r in context)
+    """Context lines labelled by role, not by SPEAKER_n.
+
+    Rule Q3 turns on who said a thing, so an annotator who cannot tell the customer from the
+    seller in the context cannot apply the guideline. The voided run's sheets showed SPEAKER_n.
+    """
+    return "\n".join(f"{cues.display_role(r)}: {r.get('text', '')}" for r in context)
 
 
 def build_items(turns: list[dict], fields: list[dict], *, n_items: int) -> list[dict]:
@@ -176,7 +256,7 @@ def build_items(turns: list[dict], fields: list[dict], *, n_items: int) -> list[
                 "field_type": field["type"],
                 "field_description": field["description"],
                 "context": context,
-                "turn_speaker": turn["turn"].get("speaker_id", ""),
+                "turn_role": cues.display_role(turn["turn"]),
                 "turn_text": turn["turn"].get("text", ""),
                 "label": "", "value": "", "notes": "",
             })
@@ -279,6 +359,40 @@ def write_sheets(root: Path, orders: dict[str, list[dict]]) -> list[Path]:
     return written
 
 
+def report_census(census: dict, *, n_items: int, fields: int, out) -> None:
+    """What the corpus can support, printed BEFORE any sheet is written.
+
+    The point is to make an under-supplied corpus visible while it can still be acted on. Run
+    20261002T175103Z-f318529 was voided after labelling, and this is the number that would have
+    predicted it: of its turns, the eligible-target count was a small fraction of the total.
+    """
+    wanted_turns = max(1, n_items // max(1, fields))
+    print(f"turns read: {census['turns_total']}", file=out)
+    print(f"eligible targets (customer, text, >= {thresholds.MIN_TARGET_WORDS} words): "
+          f"{census['eligible_targets']}", file=out)
+    if census["rejected"]:
+        shown = ", ".join(f"{reason} {count}"
+                          for reason, count in sorted(census["rejected"].items()))
+        print(f"  not eligible: {shown}", file=out)
+    print(f"eligible per stratum: "
+          f"{ {k: v for k, v in census['by_stratum'].items() if v} }", file=out)
+    print(f"field mentions among eligible: "
+          f"{ {k: v for k, v in census['field_mentions'].items() if v} }", file=out)
+    print(f"turns needed for --n-items {n_items} over {fields} fields: {wanted_turns}", file=out)
+    if census["eligible_targets"] < wanted_turns:
+        print(f"WARNING: only {census['eligible_targets']} eligible target(s) for "
+              f"{wanted_turns} needed; the sample will be smaller than requested", file=out)
+    for stratum, share in sorted(thresholds.SAMPLING_QUOTAS.items()):
+        if stratum == thresholds.RANDOM_STRATUM:
+            continue
+        need = int(round(share * wanted_turns))
+        have = census["by_stratum"].get(stratum, 0)
+        if have < need:
+            print(f"WARNING: stratum {stratum} wants {need} turn(s), corpus has {have}",
+                  file=out)
+    print(file=out)
+
+
 def write_manifest(root: Path, items, turns, report, settings, orders=None) -> Path:
     """The researcher's record of how items were chosen. Annotators do not see this."""
     manifest = {
@@ -288,6 +402,7 @@ def write_manifest(root: Path, items, turns, report, settings, orders=None) -> P
         "agreement_design": "inter-annotator, two annotators named only A and B",
         "settings": settings,
         "enrichment": report,
+        "corpus_census": settings.get("census"),
         "sheet_order": orders or {},
         "items": len(items),
         "turns": len(turns),
@@ -336,6 +451,9 @@ def main(argv=None, out=sys.stdout) -> int:
     parser.add_argument("--n-items", type=int, default=80, help="target (field, turn) items")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--context-turns", type=int, default=6)
+    parser.add_argument("--field-keywords", type=Path, default=None,
+                        help="optional YAML of field_keywords to replace the built-in lists, "
+                             "for locality names this repository cannot hold")
     parser.add_argument("--annotators", nargs="+", default=list(DEFAULT_ANNOTATORS),
                         metavar="NAME",
                         help="sheet names, space- or comma-separated; one sheet each. Use "
@@ -347,7 +465,16 @@ def main(argv=None, out=sys.stdout) -> int:
     root = safety.resolve_root(args.output)
     fields = load_fields(args.fields)
     conversations = load_conversations(args.input)
-    candidates = candidate_turns(conversations, context_turns=args.context_turns)
+    keywords = load_field_keywords(args.field_keywords)
+    candidates, census = candidate_turns(conversations, context_turns=args.context_turns,
+                                         keywords=keywords)
+    report_census(census, n_items=args.n_items, fields=len(fields), out=out)
+    if not candidates:
+        raise SamplerError(
+            "no turn in this corpus can be a target. A target must be a customer turn of real "
+            f"text with at least {thresholds.MIN_TARGET_WORDS} words; "
+            f"{census['turns_total']} turns were read and all were rejected "
+            f"({census['rejected']}).")
     n_turns = max(1, args.n_items // len(fields))
     turns, report = choose_turns(candidates, n_turns=n_turns, seed=args.seed)
     items = build_items(turns, fields, n_items=args.n_items)
@@ -363,6 +490,10 @@ def main(argv=None, out=sys.stdout) -> int:
         "context_turns": args.context_turns, "fields": [f["name"] for f in fields],
         "annotators": annotators, "quotas": DEFAULT_QUOTAS,
         "agreement_design": "inter_annotator" if len(annotators) > 1 else "single_sheet",
+        "target_roles": list(thresholds.TARGET_ROLES),
+        "min_target_words": thresholds.MIN_TARGET_WORDS,
+        "field_keywords_overridden": bool(args.field_keywords),
+        "census": census,
     }
 
     orders, order_report = shuffled_orders(items, annotators, seed=args.seed)
