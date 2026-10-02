@@ -1,0 +1,24 @@
+# EXP-000 pilot field list, not the StateLM data model (Stage 3 not started)
+#
+# Decided by Kapardhi, 2026-10-02. These five fields exist to make EXP-000's annotation
+# items concrete. They are not a schema proposal and nothing downstream should treat them
+# as one: the data model is Stage 3, which has not started.
+#
+# One annotation item is produced per (field, turn) pair, so five fields means
+# --n-items 80 yields 16 turns.
+fields:
+  - name: budget
+    type: numeric_range
+    description: What the customer has said they are willing to pay, as a figure or a range.
+  - name: property_type
+    type: categorical
+    description: The kind of property wanted, such as flat, villa or plot.
+  - name: location_preference
+    type: free_text
+    description: Where the customer wants the property, in their own words.
+  - name: timeline
+    type: temporal
+    description: When the customer needs possession or wants to transact.
+  - name: decision_maker
+    type: entity
+    description: Who decides, when someone other than the speaker has to agree.

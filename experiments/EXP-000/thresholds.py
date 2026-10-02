@@ -1,0 +1,112 @@
+"""Every pre-registered number and measurement choice for EXP-000's agreement analysis.
+
+Separated from the code that uses it so the pre-registered values are auditable in one place
+and diffable on their own. Nothing here may change after a real run has been seen. If one must
+change, the change is recorded in docs/research/experiments/EXP-000-label-feasibility.md with
+the reason, per the repo's research rules.
+
+Provenance of each value is named, because "who decided this and when" is the thing that makes
+a pre-registration worth anything.
+"""
+
+from __future__ import annotations
+
+#: The label vocabulary. Source: EXP-000's Setup section.
+LABELS = (
+    "NO-OP",
+    "VALUE",
+    "ABSTAIN:insufficient",
+    "ABSTAIN:ambiguous",
+    "ABSTAIN:conflicting",
+    "HEDGED",
+)
+
+#: The three types the pre-registered threshold applies to. Source: EXP-000's Metric section,
+#: "Cohen's κ per category. Working threshold κ ≥ 0.6 per abstention type." NO-OP is excluded
+#: by ADR-003, which does not count it as abstention; VALUE and HEDGED are not abstention types.
+ABSTENTION_TYPES = (
+    "ABSTAIN:insufficient",
+    "ABSTAIN:ambiguous",
+    "ABSTAIN:conflicting",
+)
+
+#: Source: EXP-000's Metric section. The hypothesis is refuted if any abstention type is below it.
+KAPPA_THRESHOLD = 0.6
+
+#: Below this many items a category's κ is reported but marked "not interpretable", never
+#: dropped or hidden. Counted as n_either: the number of items either rater assigned to the
+#: category. Decided by Kapardhi, 2026-10-02 (Q3).
+MIN_CATEGORY_N = 10
+
+#: Bootstrap. The primary unit is the conversation, because turns within one chat are not
+#: independent and an item-level resample would give a CI that is too narrow. Item-level is
+#: computed too and reported as secondary, never as the headline.
+#: Decided by Kapardhi, 2026-10-02 (Q1).
+BOOTSTRAP_UNIT_PRIMARY = "conversation"
+BOOTSTRAP_UNIT_SECONDARY = "item"
+BOOTSTRAP_UNITS = (BOOTSTRAP_UNIT_PRIMARY, BOOTSTRAP_UNIT_SECONDARY)
+BOOTSTRAP_RESAMPLES = 2000
+BOOTSTRAP_CI_LEVEL = 0.95
+BOOTSTRAP_SEED = 0
+
+#: A replicate whose expected agreement is 1 has no defined κ (the denominator is zero). Such
+#: replicates are excluded from the percentile interval and counted. Above this fraction the
+#: interval itself is marked not interpretable, because it then describes only the subset of
+#: resamples in which the category appeared. Decided by Kapardhi, 2026-10-02 (Q2).
+UNDEFINED_REPLICATE_MAX_FRACTION = 0.05
+
+#: Value agreement. Strict normalization is the primary figure; the number-aware pass is a
+#: separate secondary figure and never replaces it. Decided by Kapardhi, 2026-10-02 (Q4).
+VALUE_NORMALIZATION_PRIMARY = "strict"
+VALUE_NORMALIZATION_SECONDARY = "number_aware"
+VALUE_NORMALIZATIONS = (VALUE_NORMALIZATION_PRIMARY, VALUE_NORMALIZATION_SECONDARY)
+
+#: Magnitude words the number-aware pass understands, as multipliers. "l" and "lac" are the
+#: Indian-English spellings of lakh. Source: the pilot field list's budget field.
+MAGNITUDES = {
+    "thousand": 1_000,
+    "k": 1_000,
+    "lakh": 100_000,
+    "lakhs": 100_000,
+    "lac": 100_000,
+    "lacs": 100_000,
+    "l": 100_000,
+    "crore": 10_000_000,
+    "crores": 10_000_000,
+    "cr": 10_000_000,
+}
+
+#: HEDGED carries the tentative value in the value column: "might stretch to 45" is labelled
+#: HEDGED with value 45. This is rule (a), decided by Kapardhi on 2026-10-02 and provisional on
+#: EXP-000's results. research-question.md lists hedged statements as Unresolved
+#: ("Tentative value or abstain?"); this choice does not resolve that question, it fixes an
+#: operational rule so annotation can proceed.
+HEDGED_RULE = "a"
+HEDGED_RULE_TEXT = (
+    "HEDGED records the tentative value in the value column "
+    '("might stretch to 45" -> label HEDGED, value 45).'
+)
+
+#: ADR-003 (typed abstention) is Proposed, not Accepted, and D4 is pending. EXP-000 is the
+#: experiment that tests it, so everything above is provisional on a taxonomy that may change.
+ADR_003_STATUS_AT_PREREGISTRATION = "Proposed"
+
+
+#: Floating-point tolerance on the threshold comparison. A one-vs-rest table of
+#: (both-in 2, a-only 1, b-only 1, both-out 14) has an exact kappa of 3/5, but computes as
+#: 0.5999999999999996, so a bare `kappa >= 0.6` would report BELOW on a category that exactly
+#: meets the threshold. n = 18 is well inside EXP-000's range, so this is reachable, not
+#: theoretical. Added 2026-10-02, before any real run; a test pins that table.
+KAPPA_TOLERANCE = 1e-9
+
+
+def meets_threshold(kappa: float | None) -> bool | None:
+    """Whether a kappa meets the pre-registered threshold. None in, None out.
+
+    The tolerance admits a kappa that is exactly at the threshold in exact arithmetic but lands
+    just under it in binary floating point. It is not a relaxation of the threshold: 0.6 minus
+    anything a person would notice still reads as below.
+    """
+    if kappa is None:
+        return None
+    return kappa >= KAPPA_THRESHOLD - KAPPA_TOLERANCE

@@ -68,8 +68,14 @@ class FakeCursor:
             self._connection.read_only_set = True
             self._rows = []
             return self
+        if "information_schema.schemata" in sql:
+            self._rows = [(name,) for name in self._connection.schemas]
+            return self
+        if "current_database()" in sql:
+            self._rows = [(self._connection.database, self._connection.role)]
+            return self
         if "information_schema.columns" in sql:
-            self._rows = self._connection.catalog_rows()
+            self._rows = self._connection.catalog_rows(params)
             return self
         self._rows = None
         translated, values = self._translate(sql, params)
@@ -104,11 +110,20 @@ class FakeCursor:
 class FakeConnection:
     """Minimal DB-API surface, plus a record of every statement executed."""
 
-    def __init__(self, *, messages=None, with_invoices: bool = True) -> None:
+    def __init__(self, *, messages=None, with_invoices: bool = True,
+                 empty: bool = False, database: str = "arthryx_test",
+                 role: str = "statelm_ro", schemas=("public",)) -> None:
         self.raw = sqlite3.connect(":memory:")
         self.statements: list[tuple] = []
         self.read_only = False
         self.read_only_set = False
+        self.database = database
+        self.role = role
+        self.schemas = list(schemas)
+        if empty:
+            # A connection that can see no tables: the privileges or wrong-schema case.
+            self.raw.commit()
+            return
         self.raw.execute(
             "CREATE TABLE messages (conversation_id TEXT, sender_name TEXT, "
             "sender_type TEXT, created_at TEXT, body TEXT)"
@@ -125,7 +140,11 @@ class FakeConnection:
     def cursor(self, *args, **kwargs):
         return FakeCursor(self)
 
-    def catalog_rows(self):
+    def catalog_rows(self, params=None):
+        """Rows for information_schema.columns, filtered by the requested schemas."""
+        wanted = set(params[0]) if params else {"public"}
+        if "public" not in wanted:
+            return []
         rows = []
         for (table,) in self.raw.execute(
             "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"

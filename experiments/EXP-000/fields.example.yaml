@@ -1,0 +1,21 @@
+# Copy to fields.yaml and replace this with YOUR field list.
+#
+# This list is benchmark design and belongs to the researcher: Stage 3 (data model) has not
+# started, so there is no agreed schema anywhere in docs/research/. The entries below are
+# placeholders to show the shape, NOT a proposal.
+#
+# One annotation item is produced per (field, turn) pair, so the field count multiplies the
+# number of turns sampled.
+fields:
+  - name: budget
+    type: amount
+    description: The highest amount the customer has said they are willing to pay.
+  - name: location_preference
+    type: text
+    description: Where the customer wants the property.
+  - name: property_type
+    type: enum
+    description: Flat, villa, plot or other.
+  - name: possession_timeline
+    type: date_or_text
+    description: When the customer needs possession.
