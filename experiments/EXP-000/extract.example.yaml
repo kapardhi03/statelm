@@ -15,3 +15,19 @@ sources:
       user: customer
       staff: agent
       automation: bot
+      # outbound: CONFIRM_BOT_OR_AGENT   # replace: only you know which side this is
+
+    # Optional. Each message kind needs exactly one disposition; an unclassified kind that
+    # appears in the data fails the run rather than being guessed at. The placeholder
+    # substitution is done in SQL, so a non-text body is never transmitted to this process.
+    kinds:
+      column: kind
+      text: [text]
+      placeholder:
+        audio: "[media: voice note]"
+        image: "[media: image]"
+      drop: [reaction]
+
+    # Optional. These columns must never appear in any statement. A column that is both
+    # excluded and mapped is a config error, not a silent precedence rule.
+    exclude: [intent, meta]

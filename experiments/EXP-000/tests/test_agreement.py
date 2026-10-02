@@ -12,6 +12,7 @@ import csv
 import hashlib
 import io
 import json
+import random
 from pathlib import Path
 
 import pytest
@@ -90,6 +91,11 @@ def run(workspace, items=None, *, flag="--sheets", extra=(), paths=None, resampl
          "--bootstrap", str(resamples), *extra],
         runs_root=workspace["runs"], scrubbed_root=workspace["scrubbed"], out=buffer)
     return code, buffer.getvalue()
+
+
+def read_sheet(path: Path) -> list[dict]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
 
 
 def read_outputs(workspace):
@@ -577,3 +583,77 @@ class TestLocalToolGuarantees:
         run(workspace, paths=paths, write=False)
         after = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
         assert after == before and before
+
+
+class TestShuffledSheetsChangeNothing:
+    """The sampler gives each annotator their own item order. No number may depend on it.
+
+    agreement.py joins on item_id and `align` sorts the shared ids, so the comparison order is
+    canonical whatever order the sheets arrive in. These tests hold that property down, because
+    if it ever broke, the two annotators' different orders would silently change the kappa.
+    """
+
+    #: No VALUE here: the two VALUE/VALUE items are set explicitly below, so n_both_value is
+    #: exactly 2 and the value-agreement arithmetic is checkable by hand.
+    LABELS = ("NO-OP", "ABSTAIN:insufficient", "ABSTAIN:ambiguous", "HEDGED")
+
+    def items(self):
+        entries = spread(self.LABELS, conversations=5, per_conversation=6)
+        entries[0]["label_b"] = "HEDGED"          # one label disagreement
+        # Mutated in place rather than replaced, so no item_id is duplicated.
+        entries[3].update(label_a="VALUE", label_b="VALUE",
+                          value_a="~40 lakhs", value_b="around 40 lakhs")
+        entries[4].update(label_a="VALUE", label_b="VALUE",
+                          value_a="~40 lakhs", value_b="40 lakhs")
+        return entries
+
+    def shuffle_sheet(self, path, seed):
+        rows = read_sheet(path)
+        random.Random(seed).shuffle(rows)
+        with path.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=list(SHEET_COLUMNS))
+            writer.writeheader()
+            writer.writerows(rows)
+
+    def test_every_number_is_identical_whatever_order_the_sheets_use(self, workspace, tmp_path):
+        entries = self.items()
+        run(workspace, entries, extra=("--run-id", "fixed"))
+        ordered, _, _ = read_outputs(workspace)
+
+        shuffled = {"sheets": tmp_path / "s", "runs": tmp_path / "r",
+                    "scrubbed": tmp_path / "d"}
+        paths = write_sheets(shuffled["sheets"], entries)
+        self.shuffle_sheet(paths[0], 1)
+        self.shuffle_sheet(paths[1], 2)
+        run(shuffled, paths=paths, write=False, extra=("--run-id", "fixed"))
+        reordered, _, _ = read_outputs(shuffled)
+
+        assert reordered["overall"] == ordered["overall"]
+        assert reordered["per_category"] == ordered["per_category"]
+        assert reordered["confusion_matrix"] == ordered["confusion_matrix"]
+        assert reordered["value_agreement"] == ordered["value_agreement"]
+        assert reordered["verdict"] == ordered["verdict"]
+
+    def test_the_two_sheets_really_were_in_different_orders(self, workspace, tmp_path):
+        """Guards the test above from passing because the shuffle did nothing."""
+        paths = write_sheets(tmp_path / "s", self.items())
+        before = [row["item_id"] for row in read_sheet(paths[0])]
+        self.shuffle_sheet(paths[0], 1)
+        self.shuffle_sheet(paths[1], 2)
+        after_a = [row["item_id"] for row in read_sheet(paths[0])]
+        after_b = [row["item_id"] for row in read_sheet(paths[1])]
+        assert after_a != before
+        assert after_a != after_b
+        assert set(after_a) == set(after_b)
+
+    def test_an_approximation_counts_as_a_value_disagreement(self, workspace):
+        """Kapardhi's Q1 decision puts approximations in VALUE, so "~40 lakhs" vs "40 lakhs"
+        is a real disagreement about the value and must not be normalized away."""
+        run(workspace, self.items())
+        metrics, _, _ = read_outputs(workspace)
+        value = metrics["value_agreement"]
+        assert value["n_both_value"] == 2
+        # "~40 lakhs" vs "around 40 lakhs" agree only under number_aware;
+        # "~40 lakhs" vs "40 lakhs" agree under neither.
+        assert value["strict"]["agreement"] == pytest.approx(0.0)
+        assert value["number_aware"]["agreement"] == pytest.approx(0.5)

@@ -20,8 +20,10 @@ Detail lives in the linked files, not here.
 
 - D1. "Small" bound: proposed ≤4B primary, size curve at ~1B / ~4B / ~8B
 - D2. Contribution ordering: proposed benchmark-first, model-second (ADR-001)
-- D3. Real data source and second annotator for EXP-000
 - D4. Accept / modify / reject ADR-002 (ledger) and ADR-003 (typed abstention)
+
+Resolved: D3, 2026-10-02 — conversations available; second annotator identified (Annotator B);
+inter-annotator design. (Removed from the list above on Kapardhi's instruction, 2026-10-02.)
 
 ## ADRs
 
@@ -39,7 +41,7 @@ Nothing may be built on a Proposed ADR as if it were Accepted.
 
 | ID | Title | Status | Blocked by |
 |---|---|---|---|
-| EXP-000 | Label feasibility (abstention agreement) | Planned | D3 |
+| EXP-000 | Label feasibility (abstention agreement) | Planned | guideline approval |
 | EXP-001 | Headroom probe (frontier vs small) | Planned | EXP-000 |
 | EXP-002 | Schema novelty audit on SGD / SGD-X | Done | nothing |
 

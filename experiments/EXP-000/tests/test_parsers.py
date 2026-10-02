@@ -89,3 +89,30 @@ class TestDiscover:
     def test_a_missing_directory_is_an_error(self, tmp_path):
         with pytest.raises(parsers.ColumnMapError, match="not a directory"):
             parsers.discover(tmp_path / "nope")
+
+
+class TestSidecarsAreNotInputs:
+    """extract.py writes `<output>.meta.json` into the same tree the scrubber scans.
+
+    Without an exclusion the scrubber reads the run's own counts as a conversation export and
+    fails with a column-mapping error, which is how this was found: the cross-tool test in
+    test_extract.py broke the moment extract.py started writing the sidecar.
+    """
+
+    def test_a_meta_json_sidecar_is_skipped(self, tmp_path):
+        (tmp_path / "arthryx_messages.csv").write_text(
+            "conversation_id,speaker,speaker_role,timestamp,text\n"
+            "c1,inbound,customer,2025-08-12T10:00:00,hello\n", encoding="utf-8")
+        (tmp_path / "arthryx_messages.meta.json").write_text(
+            '{"messages_written": 1, "per_role": {"customer": 1}}', encoding="utf-8")
+        found = [p.name for p in parsers.discover(tmp_path)]
+        assert found == ["arthryx_messages.csv"]
+
+    def test_an_ordinary_json_export_is_still_found(self, tmp_path):
+        (tmp_path / "export.json").write_text('[]', encoding="utf-8")
+        assert [p.name for p in parsers.discover(tmp_path)] == ["export.json"]
+
+    def test_the_exclusion_is_by_full_name_not_suffix(self, tmp_path):
+        """A file merely containing "meta" is an export; only the sidecar suffix is excluded."""
+        (tmp_path / "metadata_export.json").write_text('[]', encoding="utf-8")
+        assert [p.name for p in parsers.discover(tmp_path)] == ["metadata_export.json"]

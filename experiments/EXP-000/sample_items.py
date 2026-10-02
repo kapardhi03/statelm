@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import random
 import sys
@@ -46,6 +47,11 @@ LABEL_VOCABULARY = (
 )
 
 DEFAULT_QUOTAS = {"correction": 0.25, "hedge": 0.25, "multi_speaker": 0.2}
+
+#: EXP-000 is an inter-annotator design with two annotators, named only "A" and "B". No personal
+#: name goes into a sheet, the manifest or any other annotation artifact: which person is which
+#: letter is the researcher's to know and is deliberately not recorded here.
+DEFAULT_ANNOTATORS = ("A", "B")
 
 
 class SamplerError(Exception):
@@ -177,30 +183,80 @@ def build_items(turns: list[dict], fields: list[dict], *, n_items: int) -> list[
     return items
 
 
-def write_sheets(root: Path, items: list[dict], annotators: list[str]) -> list[Path]:
-    """One identical sheet per annotator, with empty label columns."""
-    written = []
+def annotator_seed(base_seed: int, name: str, attempt: int = 0) -> int:
+    """A per-annotator seed derived from the run seed, so each order is reproducible.
+
+    Derived rather than passed in so one `--seed` reproduces the whole run, sheet orders
+    included, and so adding an annotator does not change anyone else's order.
+    """
+    digest = hashlib.sha256(f"{base_seed}:{name}:{attempt}".encode()).digest()
+    return int.from_bytes(digest[:8], "big")
+
+
+def shuffled_orders(items: list[dict], annotators: list[str], *,
+                    seed: int) -> tuple[dict[str, list[dict]], dict]:
+    """Each annotator gets the same items in their own seeded order.
+
+    Different orders mean neither annotator can anchor on the other's sequence, and a
+    disagreement cannot be an artefact of both having read the items in the same run-up. The
+    item *set* is identical for everyone; only the order differs.
+
+    Identical orders are re-drawn with a bumped attempt counter. With one item that is
+    impossible, so the report says so rather than the function looping.
+    """
+    orders: dict[str, list[dict]] = {}
+    report: dict = {"seeds": {}, "collisions_redrawn": 0, "orders_distinct": True}
     for name in annotators:
+        for attempt in range(8):
+            derived = annotator_seed(seed, name, attempt)
+            candidate = list(items)
+            random.Random(derived).shuffle(candidate)
+            sequence = [item["item_id"] for item in candidate]
+            if any(sequence == [i["item_id"] for i in existing]
+                   for existing in orders.values()):
+                report["collisions_redrawn"] += 1
+                continue
+            orders[name] = candidate
+            report["seeds"][name] = derived
+            break
+        else:
+            orders[name] = list(items)
+            report["seeds"][name] = annotator_seed(seed, name)
+            report["orders_distinct"] = False
+    if not report["orders_distinct"]:
+        report["note"] = ("Two sheets share an item order. With this few items a distinct "
+                          "permutation does not exist; the orders are recorded as they are.")
+    report["item_order"] = {name: [item["item_id"] for item in rows]
+                            for name, rows in orders.items()}
+    return orders, report
+
+
+def write_sheets(root: Path, orders: dict[str, list[dict]]) -> list[Path]:
+    """One sheet per annotator: the same items, each in that annotator's own order."""
+    written = []
+    for name, rows in orders.items():
         target = f"sheet_{name}.csv"
         path = safety.assert_within(root, target)
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("w", newline="", encoding="utf-8") as fh:
             writer = csv.DictWriter(fh, fieldnames=list(SHEET_COLUMNS))
             writer.writeheader()
-            for item in items:
+            for item in rows:
                 writer.writerow(item)
         written.append(path)
     return written
 
 
-def write_manifest(root: Path, items, turns, report, settings) -> Path:
+def write_manifest(root: Path, items, turns, report, settings, orders=None) -> Path:
     """The researcher's record of how items were chosen. Annotators do not see this."""
     manifest = {
         "tool": "EXP-000 sample_items.py",
         "do_not_show_to_annotators": "Strata record why a turn was sampled. Showing a cue to an "
                                      "annotator would prime the label.",
+        "agreement_design": "inter-annotator, two annotators named only A and B",
         "settings": settings,
         "enrichment": report,
+        "sheet_order": orders or {},
         "items": len(items),
         "turns": len(turns),
         "turn_strata": [
@@ -235,7 +291,7 @@ def write_label_reference(root: Path) -> Path:
         + "".join(f"  {label}\n" for label in LABEL_VOCABULARY)
         + "\nFill 'value' only for VALUE. Use 'notes' for anything you want to flag.\n\n"
           "This file is the vocabulary, not the annotation guideline. The guideline is written\n"
-          "and approved by Kapardhi; label nothing until you have it.\n"
+          "and approved by the researcher; label nothing until you have it.\n"
     )
     return safety.write_text(root, "labels_reference.txt", body)
 
@@ -248,8 +304,11 @@ def main(argv=None, out=sys.stdout) -> int:
     parser.add_argument("--n-items", type=int, default=80, help="target (field, turn) items")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--context-turns", type=int, default=6)
-    parser.add_argument("--annotators", default="annotator_1,annotator_2",
-                        help="comma-separated sheet names; one sheet each")
+    parser.add_argument("--annotators", nargs="+", default=list(DEFAULT_ANNOTATORS),
+                        metavar="NAME",
+                        help="sheet names, space- or comma-separated; one sheet each. Use "
+                             "letters, not people's names: no personal name belongs in an "
+                             "annotation artifact.")
     args = parser.parse_args(argv)
 
     safety.assert_disjoint(args.input, args.output)
@@ -261,17 +320,22 @@ def main(argv=None, out=sys.stdout) -> int:
     turns, report = choose_turns(candidates, n_turns=n_turns, seed=args.seed)
     items = build_items(turns, fields, n_items=args.n_items)
 
-    annotators = [a.strip() for a in args.annotators.split(",") if a.strip()]
+    annotators = [part.strip() for chunk in args.annotators
+                  for part in str(chunk).split(",") if part.strip()]
     if not annotators:
         raise SamplerError("--annotators named nobody")
+    if len(annotators) != len(set(annotators)):
+        raise SamplerError(f"--annotators repeats a name: {annotators}")
     settings = {
         "n_items_requested": args.n_items, "seed": args.seed,
         "context_turns": args.context_turns, "fields": [f["name"] for f in fields],
         "annotators": annotators, "quotas": DEFAULT_QUOTAS,
+        "agreement_design": "inter_annotator" if len(annotators) > 1 else "single_sheet",
     }
 
-    sheets = write_sheets(root, items, annotators)
-    write_manifest(root, items, turns, report, settings)
+    orders, order_report = shuffled_orders(items, annotators, seed=args.seed)
+    sheets = write_sheets(root, orders)
+    write_manifest(root, items, turns, report, settings, orders=order_report)
     write_pilot_items(root, turns)
     write_label_reference(root)
 
@@ -283,6 +347,10 @@ def main(argv=None, out=sys.stdout) -> int:
         print(f"enrichment shortfall: "
               f"{ {k: v for k, v in report['shortfall'].items() if v} }", file=out)
     print(f"sheets: {', '.join(p.name for p in sheets)} (label columns are empty)", file=out)
+    print("each sheet holds the same items in its own seeded order; the orders are in the "
+          "manifest", file=out)
+    if not order_report["orders_distinct"]:
+        print(f"WARNING: {order_report['note']}", file=out)
     print(f"wrote {root}", file=out)
     print("The manifest records why each turn was sampled. Do not show it to annotators.",
           file=out)

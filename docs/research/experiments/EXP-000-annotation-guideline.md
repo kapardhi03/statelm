@@ -1,155 +1,158 @@
 # EXP-000 annotation guideline
 
-**DRAFT, Kapardhi to edit and approve.** Do not label anything from this version.
+**DRAFT, Kapardhi to edit and approve.** The boundary rules in §3 are settled (Kapardhi's
+decisions, 2026-10-02); the full text has not been approved. Do not label from this version.
 
-Status: Draft · Drafted by Claude Code, 2026-10-02 · For EXP-000 (label feasibility)
+Status: Draft · For EXP-000 (label feasibility) · Design: inter-annotator, two annotators
 
 This is the one document that defines the labels, so it is also the one document that decides
 what EXP-000's κ means. A disagreement caused by a vague guideline is indistinguishable, in the
-numbers, from a disagreement caused by a taxonomy humans cannot apply. The first would be my
-fault; only the second is a finding. That is why the three open questions in §3 matter more than
-anything else here.
+numbers, from a disagreement caused by a taxonomy humans cannot apply. Only the second is a
+finding. That is why §3 exists.
 
-**Every example below is invented.** No client conversation was read, requested or consulted in
-writing this.
+**Every example below is invented.** No client conversation was read or consulted in writing it.
 
-## 1. What this rests on, and what that means
+## 1. What this rests on
 
-The labels come from **ADR-003, which is Proposed, not Accepted**, and D4 (accept / modify /
-reject it) is pending. EXP-000 is the experiment that tests ADR-003's assumption that "humans can
-reliably distinguish the three abstention types". So this guideline is provisional on a taxonomy
-it is being used to evaluate, which is normal for a feasibility study and worth stating plainly:
-if the types collapse in practice, that is a result about the taxonomy, not a failure of
-annotation.
+The labels come from **ADR-003, which is Proposed, not Accepted**, and D4 is pending. EXP-000
+tests ADR-003's own assumption that "humans can reliably distinguish the three abstention types",
+so this guideline is provisional on a taxonomy it is being used to evaluate. If the types
+collapse in practice, that is a result about the taxonomy, not a failure of annotation.
 
-**HEDGED follows rule (a)**, Kapardhi's decision of 2026-10-02: HEDGED records the tentative
-value in the `value` column. `research-question.md` lists hedged statements as **Unresolved**
-("tentative value or abstain?"); rule (a) fixes an operational rule so annotation can proceed and
-does not resolve that question.
+**HEDGED follows rule (a)** (Kapardhi's decision, 2026-10-02): HEDGED records the tentative value
+in the `value` column. `research-question.md` lists hedged statements as **Unresolved**; rule (a)
+fixes an operational rule so annotation can proceed and does not resolve that question.
 
-One item is one `(field, turn)` pair. You will see the turn and up to six preceding turns of
-context. The five pilot fields are `budget` (numeric range), `property_type` (categorical),
+One item is one `(field, turn)` pair. You see the turn and up to six preceding turns of context.
+The five pilot fields are `budget` (numeric range), `property_type` (categorical),
 `location_preference` (free text), `timeline` (temporal) and `decision_maker` (entity).
 
 ## 2. The six labels
 
-Fill `value` only for VALUE and HEDGED. Use `notes` freely, especially when you label something
-you think the guideline handles badly.
+Fill `value` for VALUE and HEDGED. Leave it empty otherwise. Use `notes` freely, especially when
+you label something you think this document handles badly.
 
-### NO-OP — this turn says nothing about this field
-Not an abstention. Excluded from abstention metrics (ADR-003).
-
-| Field | Turn | Why |
+| Label | Means | `value` |
 |---|---|---|
-| `budget` | "Can you send the floor plan for tower B?" | The turn never engages budget. |
-| `decision_maker` | "The photos look good, thanks." | Nothing about who decides. |
+| **NO-OP** | This turn contributes nothing about this field. Not an abstention; excluded from abstention metrics (ADR-003). | empty |
+| **VALUE** | One reading, stated. Includes approximations and ranges. | the value |
+| **HEDGED** | One reading, but the customer is not committed to it. | the tentative value |
+| **ABSTAIN:insufficient** | The field is addressed; no value of its type is recoverable. | empty |
+| **ABSTAIN:ambiguous** | Two careful readers could write different values. | empty |
+| **ABSTAIN:conflicting** | Incompatible evidence, with no explicit correction. | empty |
 
-### VALUE — a value for this field is determinable from this turn
-Put it in `value`, in the speaker's own terms.
+## 3. The boundaries
 
-| Field | Turn | `value` |
+All three rules below are **Kapardhi's decisions, 2026-10-02**.
+
+### 3.1 VALUE, HEDGED and ABSTAIN:ambiguous — three bins, one test each
+
+- **VALUE** — one reading, stated, *including approximations and ranges*.
+- **HEDGED** — one reading, but the customer is not committed to it.
+- **ABSTAIN:ambiguous** — two careful readers could write different values.
+
+**Approximation words alone ("around", "approximately") never make a turn HEDGED.** An
+approximation is part of the value. Tentativeness is about commitment.
+
+| Field | Turn | Label | `value` | Which test |
+|---|---|---|---|---|
+| `budget` | "Around 40 lakhs." | VALUE | `~40 lakhs` | one reading, stated |
+| `budget` | "40 to 45 lakhs." | VALUE | `40-45 lakhs` | one reading, stated |
+| `budget` | "Might stretch to 45." | HEDGED | `45` | one reading, not committed |
+| `property_type` | "Maybe 3BHK." | HEDGED | `3BHK` | one reading, not committed |
+| `budget` | "Around 40." (no unit anywhere in the context) | ABSTAIN:ambiguous | empty | 40 lakhs or 40 thousand: two readers, two values |
+| `location_preference` | "Near the new metro line." (two different lines are live in the context) | ABSTAIN:ambiguous | empty | two referents, two values |
+
+**On each side of the VALUE / HEDGED line:** "Around 40 lakhs" is VALUE because the approximation
+is the value; "Might stretch to 45" is HEDGED because 45 is clear and the commitment is not.
+
+**On each side of the VALUE / ambiguous line:** "Around 40 lakhs" is VALUE because both readers
+write `~40 lakhs`; "Around 40" is ambiguous because one may write 40 lakhs and the other 40
+thousand. The word "around" is identical in both. The unit is what differs.
+
+### 3.2 A label describes what *this turn* contributes
+
+Earlier mentions do not carry forward. A turn that adds nothing about a field is **NO-OP** for
+that field, even when the field's value is perfectly well known from the context.
+
+| Field | Context | Turn | Label |
+|---|---|---|---|
+| `budget` | "Our max is 60 lakhs." | "Can you send the floor plan for tower B?" | NO-OP |
+| `budget` | "Can you send the floor plan?" | "Our max is 60 lakhs." | VALUE `60 lakhs` |
+
+The same two turns, in either order: each is labelled for what it does, not for what is known by
+the time it arrives.
+
+### 3.3 Seller-side turns never establish a customer field
+
+An `agent` turn does not establish a customer field, however clearly it states one. The
+customer's confirmation does.
+
+| Field | Speaker | Turn | Label | `value` |
+|---|---|---|---|---|
+| `budget` | agent | "So your budget is 50 lakhs?" | NO-OP | empty |
+| `budget` | customer | "Yes." (following the turn above) | VALUE | `50 lakhs` |
+
+This is the one place a value comes from outside the turn's own words. It does not contradict
+§3.2: the confirmation is this turn's contribution, and the value it contributes is the one being
+confirmed. §3.2 forbids carrying an earlier *customer* statement forward onto a later turn; it
+does not forbid a turn whose whole content is agreement.
+
+### 3.4 The remaining boundaries
+
+| Boundary | One side | The other |
 |---|---|---|
-| `budget` | "My limit is 85 lakhs, that's firm." | 85 lakhs |
-| `property_type` | "We only want a villa, not a flat." | villa |
+| NO-OP vs **insufficient** | `budget`, "Can you send the floor plan?" → **NO-OP**: budget is not engaged | `budget`, "Budget is whatever it takes for the right place." → **insufficient**: engaged, no figure exists |
+| **insufficient** vs **ambiguous** | `timeline`, "We need to move soon." → **insufficient**: vague, but there is no competing reading to choose between | `timeline`, "By the end of the quarter." (the context has discussed both the financial and the calendar quarter) → **ambiguous**: two readers, two dates |
+| **conflicting** vs VALUE | `budget`, context "our max is 60 lakhs", turn "We've been approved for 90 and we'll use all of it." → **conflicting**: both stand, neither withdrawn | `budget`, context "our max is 60 lakhs", turn "Sorry, I meant 90." → **VALUE** `90`: an explicit correction, so the later value wins |
+| **conflicting** on an entity | `decision_maker`, context "I decide this myself", turn "My brother has to sign off." → **conflicting** | `decision_maker`, context "I decide this myself", turn "Actually my brother decides, ignore what I said." → **VALUE** `brother` |
 
-### ABSTAIN:insufficient — the field is addressed, but no value of its type is recoverable
-The turn engages the field. There is simply not enough to fill it.
+## 4. Annotator instructions
 
-| Field | Turn | Why |
-|---|---|---|
-| `budget` | "Budget is whatever it takes for the right place." | Budget is addressed; no figure exists to record. |
-| `timeline` | "We need to move soon." | A temporal field, addressed, with no date or window. "Soon" is vague rather than tentative, which is what separates this from HEDGED. |
+You are **Annotator A** or **Annotator B**. Your sheet is `sheet_A.csv` or `sheet_B.csv`.
 
-### ABSTAIN:ambiguous — the evidence supports several readings
-Not that the speaker is unsure: that *you* cannot tell which value is meant.
-
-| Field | Turn | Why |
-|---|---|---|
-| `budget` | "Around 40, I think." (no unit anywhere in the context) | 40 lakhs or 40 thousand. Two readings, orders of magnitude apart. |
-| `location_preference` | "Somewhere near the new metro line." (the context has mentioned two different lines) | Two referents, both live. |
-
-### ABSTAIN:conflicting — incompatible evidence, with no explicit correction
-If the speaker corrects themselves ("sorry, I meant 90"), that is not conflicting: the later
-value wins and the label is VALUE.
-
-| Field | Turn and context | Why |
-|---|---|---|
-| `budget` | Context: "our max is 60 lakhs." Turn: "We've been approved for 90 and we'll use all of it." | Both stand; neither is withdrawn. |
-| `decision_maker` | Context: "I decide this myself." Turn: "My brother has to sign off on it." | Incompatible, with no retraction. |
-
-### HEDGED — a determinate value, held tentatively
-Rule (a): record the tentative value in `value`.
-
-| Field | Turn | `value` |
-|---|---|---|
-| `budget` | "Might stretch to 45 lakhs if the view is good." | 45 lakhs |
-| `timeline` | "Probably by Diwali, but don't hold me to it." | Diwali |
-
-## 3. Three questions this draft cannot answer
-
-Each one changes labels on real items, so each is Kapardhi's. My proposal is given so there is
-something to accept or reject, not because the choice is mine.
-
-### Q1. HEDGED and ABSTAIN:ambiguous overlap in the source documents
-`research-question.md` gives **"around 40"** as the example of ABSTAIN:ambiguous and
-**"might stretch to 45"** as the hedged case. Under rule (a) both produce a tentative value, and
-both are hedged in ordinary English. As written, an annotator can justify either label for
-either turn.
-
-What actually differs between the two documented examples is the **unit**: "around 40" has none,
-so the value has several readings; "45 lakhs" has one, so the value is determinate and only the
-speaker's commitment is soft.
-
-**Proposed rule: ask what is uncertain.** Uncertainty about *which value* (unit, referent,
-scope) is ABSTAIN:ambiguous. A determinate value held with uncertain *commitment* is HEDGED.
-Under this rule "around 40 lakhs" is HEDGED with value 40 lakhs, and bare "around 40" is
-ABSTAIN:ambiguous.
-
-This boundary carries more weight than it looks. The sampler's hedge quota is 25% of sampled
-turns, and its cue list includes "around", "maybe", "might" and "probably", so a large share of
-items will sit near this line by construction. Leaving it implicit would depress κ for a reason
-that is this document's fault, and D4 would be decided on it.
-
-### Q2. Is the label about the turn, or about the field's state after the turn?
-These diverge constantly. If the context already established `budget = 60 lakhs` and the turn is
-"can you send the floor plan?", then *this turn* does nothing for budget (NO-OP) while the
-field's state is perfectly well known (VALUE, 60 lakhs).
-
-ABSTAIN:conflicting forces part of the answer: incompatible evidence almost always spans turns,
-so the context must count for at least that label.
-
-**Proposed rule: the label describes what this turn does to this field.** The research question
-is about "turn-level state-delta operations", so NO-OP means this turn contributes nothing even
-when the value is known from context, and conflicting means this turn introduces evidence
-incompatible with the context. The context is there to interpret the turn, not to be labelled
-itself.
-
-### Q3. Does an agent's or the bot's restatement count as evidence?
-The field descriptions say things like "what the customer has said they are willing to pay". If
-the agent says "so your budget is 40 lakhs, correct?" and the customer does not answer in that
-turn, is the `budget` item VALUE, ABSTAIN:insufficient, or NO-OP?
-
-**Proposed rule: only the customer's own statements establish a customer field.** An agent's
-restatement is NO-OP for that field until the customer confirms it. The alternative, treating a
-confirmed restatement as VALUE, needs a definition of confirmation that this draft does not have.
-
-## 4. How to work
-
-- **Label independently.** No discussion with the other annotator while labelling, on any item,
-  including the ones you are unsure about. That is what EXP-000 measures.
-- **Do not change earlier labels** after a later item teaches you something. Note it instead.
-  Revising silently makes agreement look better than the guideline earned.
+- **Label independently.** Do not discuss any item with the other annotator until **both** sheets
+  are complete. Not the hard ones, not the ones you are sure about, not in passing. Agreement
+  reached by discussion is not the thing EXP-000 measures.
+- **Do not look at the other sheet**, before, during or after your own.
+- **Your sheets are in different orders.** The two sheets hold the same items, each shuffled
+  with its own seed, so neither of you can anchor on the other's sequence. Item ids are what
+  pairs them up, not row numbers, so do not try to align the two by position.
 - **One label per item.** If two fit equally, pick one and say so in `notes`. A tie recorded in
-  `notes` is data about this document; a coin flip left unrecorded is noise in the κ.
-- **Nothing you read is a model output or a label.** The sheets carry the conversation text, the
-  field's name, type and description, and three empty columns for you to fill. If you see a
-  suggested label, a confidence, or any mark on an item anywhere, stop and report it: the sheets
-  are built to contain none, and one appearing would be a bug.
+  `notes` is evidence about this document. A coin flip left unrecorded is noise in the κ.
+- **Do not go back and change earlier labels** after a later item teaches you something. Note it
+  instead. Revising silently makes agreement look better than this guideline earned.
+- **Nothing in your sheet is a model output or a suggested label.** It holds the conversation
+  text, the field's name, type and description, and three empty columns. If you see a suggested
+  label, a confidence, or any mark on an item, stop and report it: the sheets are built to carry
+  none, and one appearing is a bug.
+- **A `[media: ...]` marker is not a redaction.** `[media: voice note]` means the message was a
+  voice note whose content was never extracted. `[PERSON_1]`-style tokens are redactions. Both
+  mean you cannot see the content; they differ in why.
 
 ## 5. What a disagreement means here
 
-EXP-000's working threshold is κ ≥ 0.6 per abstention type. A type below it has three possible
-causes and they are not interchangeable: this guideline is unclear, the type does not survive
-contact with real conversations, or the sample was too thin to say. The agreement script reports
-the third directly, by marking any category under ten items as not interpretable. Separating the
-first two is what the disagreement list is for, and it is why `notes` is worth filling in.
+The working threshold is κ ≥ 0.6 per abstention type. A type below it has three possible causes,
+and they are not interchangeable: this guideline is unclear, the type does not survive contact
+with real conversations, or the sample was too thin to say. The agreement script reports the third
+directly, marking any category under ten items as not interpretable. Separating the first two is
+what the disagreement list and your `notes` are for.
+
+## Change log
+
+- **2026-10-02** — Drafted. Three boundary questions raised unresolved (VALUE/HEDGED/ambiguous,
+  turn versus cumulative state, seller-side restatements).
+- **2026-10-02** — All three settled by Kapardhi and recorded in §3. The VALUE/HEDGED/ambiguous
+  split became three bins with one test each, replacing the drafted proposal, which had made
+  "around 40 lakhs" HEDGED; it is VALUE `~40 lakhs`. Examples restructured so every boundary has
+  one example on each side.
+- **2026-10-02** — Annotator instructions added (§4) for the inter-annotator design: two
+  annotators, A and B, independent labelling, no discussion until both sheets are complete,
+  per-sheet shuffled item order.
+- **2026-10-02** — Note on the sampler's enrichment: its hedge cues ("around", "maybe", "might")
+  now enrich for **both** VALUE-with-approximation and HEDGED, since "around" no longer implies
+  HEDGED. This is intended. The cues decide only what is sampled and never appear in a sheet.
+- **2026-10-02** — Consequence for the agreement script, recorded here because it follows from
+  §3.1 rather than from any decision about metrics: because approximations are now VALUEs, the
+  value-agreement comparison treats an approximation marker as part of the value.
+  `~40 lakhs` and `around 40 lakhs` are the same value; neither is `40 lakhs`.

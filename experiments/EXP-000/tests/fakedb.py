@@ -46,8 +46,17 @@ INVOICES = [(1, "INV-001", 25000), (2, "INV-002", 48000)]
 
 SECRET_TEXTS = {m[4].split()[0] for m in MESSAGES} | {"INV-001", "INV-002"}
 
-_ANY = re.compile(r"=\s*ANY\(%s\)", re.I)
 _SCHEMA_QUALIFIER = re.compile(r'"[A-Za-z_][A-Za-z0-9_]*"\.(?=")')
+
+#: Each parameter slot, in order: a list-valued ANY/ALL, or an ordinary scalar.
+_PLACEHOLDER = re.compile(r"=\s*ANY\(%s\)|<>\s*ALL\(%s\)|%s", re.I)
+
+#: PostgreSQL casts have no sqlite equivalent. Stripping `::timestamptz` leaves sqlite comparing
+#: the raw text, which orders ISO-8601 correctly and orders anything else wrongly. That is a
+#: shim limitation, not a product difference: against real PostgreSQL the cast does the work.
+#: The extractor's own stream-order assertion is what catches the wrong case, and a test covers
+#: it firing.
+_CAST = re.compile(r"::\s*\w+")
 
 
 class FakeCursor:
@@ -83,17 +92,44 @@ class FakeCursor:
         return self
 
     def _translate(self, sql, params):
+        """Rewrite one PostgreSQL statement into something sqlite will run.
+
+        Parameters are consumed left to right, in the order the placeholders appear, because a
+        statement may now hold several list-valued slots (`kind = ANY(%s)`, `kind <> ALL(%s)`,
+        `conversation = ANY(%s)`) mixed with scalars. Taking the id list as "the last
+        parameter" was only ever true of the simpler query.
+        """
         # SQLite has no schemas, so strip the qualifier. Against PostgreSQL the extractor's
         # "public"."messages" is correct; this is a shim detail, not a product difference.
         sql = _SCHEMA_QUALIFIER.sub("", sql)
+        sql = _CAST.sub("", sql)
+        sql = re.sub(r"\bbtrim\(", "trim(", sql, flags=re.I)
+
         values = list(params or [])
-        match = _ANY.search(sql)
-        if match:
-            # The id list is always the last parameter the extractor passes.
-            ids = values.pop()
-            sql = sql[: match.start()] + "IN (" + ",".join("?" * len(ids)) + ")" + sql[match.end():]
-            values = values + list(ids)
-        return sql.replace("%s", "?"), values
+        pieces, expanded, consumed, cut = [], [], 0, 0
+        for match in _PLACEHOLDER.finditer(sql):
+            pieces.append(sql[cut:match.start()])
+            token = match.group(0).upper()
+            if consumed >= len(values):
+                raise AssertionError(
+                    f"statement has more placeholders than parameters: {sql!r}")
+            value = values[consumed]
+            consumed += 1
+            if token.startswith("=") or token.startswith("<>"):
+                if not isinstance(value, (list, tuple)):
+                    raise AssertionError(f"ANY/ALL slot got a scalar: {value!r}")
+                keyword = "IN" if token.startswith("=") else "NOT IN"
+                pieces.append(f"{keyword} (" + ",".join("?" * len(value)) + ")")
+                expanded.extend(value)
+            else:
+                pieces.append("?")
+                expanded.append(value)
+            cut = match.end()
+        pieces.append(sql[cut:])
+        if consumed != len(values):
+            raise AssertionError(
+                f"{len(values) - consumed} parameter(s) unused by {sql!r}")
+        return "".join(pieces), expanded
 
     def fetchall(self):
         return list(self._rows) if self._rows is not None else self._cursor.fetchall()
