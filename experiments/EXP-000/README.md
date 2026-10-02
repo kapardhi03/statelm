@@ -49,10 +49,13 @@ uv run python extract.py --extract --config extract.yaml
 uv run python scrub.py --input ../../data/raw --output ../../data/scrubbed/EXP-000 \
                        --columns columns.yaml --check
 
-# 5. Copy fields.example.yaml to fields.yaml, put YOUR field list in it, then sample the items.
+# 5. Sample the annotation items. fields.yaml holds the five pilot fields already.
 uv run python sample_items.py --input ../../data/scrubbed/EXP-000 \
                               --output ../../data/scrubbed/EXP-000/annotation \
                               --fields fields.yaml --n-items 80 --seed 0
+
+# 6. The annotators fill the label / value / notes columns. Then measure agreement.
+uv run python agreement.py --sheets sheet_annotator_1.csv sheet_annotator_2.csv
 ```
 
 ## extract.py: pulling conversations out of PostgreSQL
@@ -302,7 +305,6 @@ Reads the scrubbed JSONL, samples turns, and writes one sheet per annotator with
 conversation text, so it never runs in a Claude session.
 
 ```bash
-cp fields.example.yaml fields.yaml     # then put your own field list in it
 uv run python sample_items.py --input ../../data/scrubbed/EXP-000 \
                               --output ../../data/scrubbed/EXP-000/annotation \
                               --fields fields.yaml --n-items 80 --seed 0
@@ -316,14 +318,19 @@ uv run python sample_items.py --input ../../data/scrubbed/EXP-000 \
 | `--context-turns` | 6 | Preceding turns shown with each item |
 | `--annotators` | `annotator_1,annotator_2` | One identical sheet per name |
 
-### `fields.yaml` is required, and that is a decision for you
+### `fields.yaml`: the five pilot fields
 
 One item is a `(field, turn)` pair, so the sampler cannot run without knowing which fields are
-being tracked. There is no agreed field list anywhere in `docs/research/` — Stage 3 (data model)
-has not started — and inventing one would be writing benchmark design. So the file is a required
-input and `fields.example.yaml` contains **placeholders, not a proposal**. Its header says so.
+being tracked, and there is no agreed field list in `docs/research/` because Stage 3 (data model)
+has not started. Kapardhi settled a pilot list on 2026-10-02 and it is committed as
+`fields.yaml`: `budget`, `property_type`, `location_preference`, `timeline`, `decision_maker`.
 
-The field count multiplies the turn count: four fields and `--n-items 80` gives 20 turns.
+Its header says what it is: **a pilot field list, not the StateLM data model.** Nothing
+downstream should read it as a schema proposal. `fields.example.yaml` stays as the template if you
+ever want a different list; `--fields` is still required, with no fallback, so a run always names
+the list it used.
+
+The field count multiplies the turn count: five fields and `--n-items 80` gives 16 turns.
 
 ### Two rules from the experiment record, and how the code keeps them
 
