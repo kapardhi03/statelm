@@ -22,7 +22,6 @@ Detail lives in the linked files, not here.
 - D2. Contribution ordering: proposed benchmark-first, model-second (ADR-001)
 - D3. Real data source and second annotator for EXP-000
 - D4. Accept / modify / reject ADR-002 (ledger) and ADR-003 (typed abstention)
-- D5. Accept / modify / reject ADR-005 (similarity covariate reporting)
 
 ## ADRs
 
@@ -32,7 +31,7 @@ Detail lives in the linked files, not here.
 | ADR-002 | Temporal memory is a deterministic ledger | Proposed |
 | ADR-003 | Typed abstention, distinct from NO-OP | Proposed |
 | ADR-004 | Novelty levels by construction, not thresholds | Accepted |
-| ADR-005 | Similarity reported as rank or stratum, never a cutoff | Proposed |
+| ADR-005 | Similarity as a calibrated continuous covariate | Accepted |
 
 Nothing may be built on a Proposed ADR as if it were Accepted.
 

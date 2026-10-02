@@ -1,9 +1,10 @@
 # ADR-005: Embedding similarity is reported as a calibrated, continuous covariate
 
-Status: Proposed
+Status: Accepted
 Date: 2026-10-01
 Revised: 2026-10-02 (twice)
 Supersedes: none
+Status changed on Kapardhi's instruction, 2026-10-02 (was Proposed).
 
 ## Decision
 Embedding similarity is reported **only as a continuous covariate**, as within-model ranks,
@@ -16,7 +17,10 @@ computed with **at least two encoders**, and **never compared against an absolut
   interpreted**, and the calibration is reported alongside the figure it qualifies. The pairs come
   from L1 construction itself, each L1 paraphrase paired with its source field, so every
   constructed benchmark carries its own calibration set. For an external dataset with no such
-  pairs, the covariate is not reported.
+  pairs, the covariate is not reported. A fixed share of constructed L1 pairs (20%, chosen by
+  seeded random selection at construction time) is reserved as the calibration set and is never
+  used as a benchmark item. Calibration is therefore independent of every item it qualifies,
+  including L1.
 
 Calibration interprets an encoder's scale; it does not license a cutoff. Knowing that same-meaning
 pairs sit at a given level under one encoder says what a number means there, and it still does not
@@ -46,13 +50,17 @@ EXP-002 measured similarity two ways and the results diverge on scale while agre
   no group at all. An earlier version of this ADR allowed up to two similarity-defined strata; a
   median split would have satisfied it while reintroducing exactly the uncalibrated bar the
   no-cutoff rule exists to forbid.
+- **Closed:** an earlier version drew calibration pairs from the same L1 items the covariate then
+  described, so on L1 the calibration was not independent of what it qualified. The reserved 20%
+  holdout closes that: calibration pairs are never benchmark items, so independence holds for
+  every level including L1.
 
 ## Assumptions
 - Calibration pairs come from L1 construction, so a benchmark with L1 items has them by
   construction. A benchmark with no L1 items has none, and the covariate is then unreportable.
-- **The calibration set and the L1 items it qualifies are the same pairs.** For reporting on L1
-  items the calibration is therefore not independent of what it describes; for L2 and L4 items it
-  is drawn from a different subset. This is a real circularity, narrow in scope, and unresolved.
+- A 20% reserved share is enough to characterise an encoder's same-meaning scale. Untested: no
+  minimum calibration-set size has been established, and on a small L1 set 20% may be too few
+  pairs to read a scale from.
 - Rank stability observed on paraphrase distance carries over to other similarity relations,
   including similarity to the nearest train field, which EXP-002 did not measure.
 - Two encoders suffice to catch an encoder-specific artifact. Weakly tested: EXP-002's two are
@@ -75,9 +83,12 @@ EXP-002 measured similarity two ways and the results diverge on scale while agre
   where the ADR forbids one in print. The calibration reported alongside is the only defence.
 - **A benchmark with no L1 items loses the covariate entirely**, which removes it silently from
   exactly the material (L2, L4) where novelty claims are strongest.
-- **Calibration inherits its pairs' construction**, and on L1 items it is drawn from those same
-  pairs. Same-meaning pairs define sameness by how they were built, so the calibration carries
-  that definition's biases into every figure it qualifies.
+- **Calibration inherits its pairs' construction.** Same-meaning pairs define sameness by how
+  they were built, so the calibration carries that definition's biases into every figure it
+  qualifies. The reserved holdout buys independence, not neutrality.
+- **The holdout spends benchmark material.** A fifth of constructed L1 pairs become calibration
+  and are unavailable as items, so L1 sample size drops by 20% and every L1 statistic loses power
+  accordingly.
 - **Ranks hide magnitude** by design: two items adjacent in rank can be far apart in similarity.
 - **Agreement for the wrong reason.** Encoders of one family can agree through a shared bias.
   "At least two" is a floor, and different families should be preferred.
