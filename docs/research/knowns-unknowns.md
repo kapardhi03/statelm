@@ -15,6 +15,11 @@ or a literature row as evidence.
   location 3, decision_maker 2, timeline 1), and 0 matched a correction or hedge cue. 54 turns
   were voice-note placeholders. The corpus as it stands cannot support the abstention
   hypothesis.
+- Cue-language blindness does not explain that absence (EXP-000 v3 census, 2026-10-03). The
+  hedge and correction cue lists were extended with romanized Telugu and Hindi forms and the
+  census re-run on the same real corpus: 135 eligible customer turns, field_mention 18,
+  correction 0, hedge 0 — unchanged from v2. Adding the forms a code-mixing deployment would
+  use found nothing, so the English-only lists were not what was hiding the phenomena.
 
 ## Unknown (to test)
 - Whether H-A / H-B / H-C hold
@@ -22,16 +27,22 @@ or a literature row as evidence.
 - Human agreement on abstention types (EXP-000)
 - Size threshold for the joint task
 - How hedged values should be labeled
-- Why real customer turns are state-sparse. Three explanations, none ruled out:
+- Why real customer turns are state-sparse. Three explanations; (b) ruled out 2026-10-03,
+  two remaining:
   (a) **voice notes** carry the hedging and self-correction, so the text channel systematically
   lacks them. 54 of the rejected turns were voice-note placeholders. This is a sampling-frame
   limit rather than a cue limit: better cue lists cannot recover it, transcription could.
   Raised by Claude Code, 2026-10-03.
-  (b) **English-only cues** missed code-mixed hedges and corrections. Partly testable now: the
-  romanized Telugu and Hindi forms were added on 2026-10-03 and the census reports how many
-  eligible turns they match, so a re-run separates this from (c).
+  (b) ~~**English-only cues** missed code-mixed hedges and corrections.~~ **Ruled out,
+  2026-10-03.** The romanized Telugu and Hindi forms were added and the census re-run on the
+  same corpus returned correction 0 and hedge 0, unchanged. Kept here rather than deleted
+  because a hypothesis that was tested and failed is a result, and because it is the reason the
+  cue lists now hold those forms. It no longer competes with (a) or (c).
   (c) the **phenomenon is genuinely rare** in WhatsApp sales chat, where customers state figures
   flatly and negotiate by phone. 10 budget mentions with 0 hedge matches is consistent with this.
+  With (b) eliminated, (a) and (c) are the live pair, and they are not separable from text
+  alone: (a) predicts the hedges are recoverable by transcription, (c) predicts they are not.
+  Nothing in the current corpus distinguishes them.
 - Whether agreement measured on model-authored conversations transfers to real ones at all
   (EXP-000's synthetic subset is reported separately for exactly this reason)
 - Gap between gold and predicted prior state (exposure bias)

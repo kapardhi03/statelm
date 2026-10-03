@@ -124,6 +124,37 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
   VALUEs ("around 40 lakhs" -> VALUE `~40 lakhs`), so value agreement treats an approximation
   marker as part of the value. `~40 lakhs` and `around 40 lakhs` agree; neither agrees with
   `40 lakhs`. Pre-registered before any sheet is labelled.
+- 2026-10-03: **v3 census — the extended cue lists change nothing.** Transcribed from
+  Kapardhi, 2026-10-03, counts only: "135 eligible customer turns; field_mention 18;
+  correction 0; hedge 0, unchanged from v2." His reading, recorded as his: the extended cues
+  found no hedges or corrections, so **cue-language blindness does not explain the absence.**
+  Two explanations remain: the phenomena are genuinely absent from the text channel, or they
+  occur in the 54 voice notes. Pre-labelling; the run wrote sheets but none were labelled.
+  Internal consistency: every form in `cues.CODE_MIXED_CUES` is also a hedge or a correction
+  cue, so `code_mixed_cue_hits` is 0 whenever those two strata are, which is what the census
+  reported. The census path is the sampling path — `candidate_turns` -> `cues.strata_for` ->
+  the module-level cue tuples — and `--census-only` returns only after `report_census`, so the
+  two cannot read different lists; pinned end to end by
+  `tests/test_sample_items.py::TestCensusOnlyUsesTheExtendedCueLists`, whose corpus carries
+  hedges and corrections in romanized forms only and whose control fixture is the same turns
+  with those words removed.
+- 2026-10-03: **the v3 sampling run printed the synthetic set's stratum counts to Annotator A's
+  terminal before labelling.** Reported by Kapardhi, 2026-10-03: "hedge 13, correction 5,
+  code-mixed 13 among eligible synthetic targets. No item-level or row-level information was
+  shown, and Annotator B saw nothing." The sampler now prints a `--synthetic` set's totals only;
+  the breakdown goes to the manifest, `--show-synthetic-strata` prints it, and every manifest
+  records whether that run printed it, so a past run can be checked rather than guessed at.
+  Covered by `tests/test_sample_items.py::TestSyntheticStrataAreWithheld`, which also pins that
+  the real census keeps its full breakdown — that census is the finding above.
+  What the fix does not reach, recorded so the measurement is not read as cleaner than it is.
+  The quotas are pre-registered and public, so the composition the sampler aimed for stays
+  derivable from the turn count. And with real hedge 0 and correction 0, **any item in the mixed
+  set that reads as a hedge or a correction is almost certainly synthetic** — an inference that
+  follows from the real census alone, which Annotator A must see, not from the counts that were
+  printed. For the strata the abstention hypothesis is about, the mixed set is de-blinded by
+  construction for Annotator A, and suppressing the synthetic counts removes the magnitude
+  rather than the inference. Annotator B has seen none of it. Flagged by Claude Code; whether
+  the design should change in response is Kapardhi's call, not recorded here as settled.
 
 ## Leakage check
 Items used here are pilot items and must not enter the eventual test split.

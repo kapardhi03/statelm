@@ -62,6 +62,16 @@ SOURCE_SYNTHETIC = "synthetic"
 #: letter is the researcher's to know and is deliberately not recorded here.
 DEFAULT_ANNOTATORS = ("A", "B")
 
+#: Printed in place of a synthetic set's per-stratum counts. Kapardhi, 2026-10-03: during the v3
+#: sampling run the synthetic set's stratum counts (hedge 13, correction 5, code-mixed 13) went
+#: to Annotator A's terminal before labelling. No item-level or row-level information was shown
+#: and Annotator B saw nothing, so no label is known to be affected, but an annotator who knows
+#: how many hedges a set holds has an expectation to meet. Totals only, by default.
+STRATA_WITHHELD = ("per-stratum counts withheld for this set: an annotator who knows how "
+                   "many hedges or corrections it holds has an expectation to meet.\n"
+                   "  They are in the manifest; --show-synthetic-strata prints them here.")
+STRATA_WITHHELD_SHORT = "per-stratum counts withheld (see above)"
+
 
 class SamplerError(Exception):
     pass
@@ -416,12 +426,20 @@ def write_sheets(root: Path, orders: dict[str, list[dict]]) -> list[Path]:
     return written
 
 
-def report_census(census: dict, *, n_items: int, fields: int, out) -> None:
+def report_census(census: dict, *, n_items: int, fields: int, out,
+                  strata: bool = True) -> None:
     """What the corpus can support, printed BEFORE any sheet is written.
 
     The point is to make an under-supplied corpus visible while it can still be acted on. Run
     20261002T175103Z-f318529 was voided after labelling, and this is the number that would have
     predicted it: of its turns, the eligible-target count was a small fraction of the total.
+
+    `strata=False` prints totals only, and is the default for a `--synthetic` set. During the
+    v3 sampling run the synthetic set's per-stratum counts printed to Annotator A's terminal
+    before labelling. A count like "hedge 13" tells an annotator how often to expect a
+    phenomenon in the part of the item set that contains it, which is priming; the eligible
+    total carries no such expectation. The counts are still written to the manifest, which is
+    the researcher's file.
     """
     wanted_turns = max(1, n_items // max(1, fields))
     print(f"turns read: {census['turns_total']}", file=out)
@@ -431,25 +449,29 @@ def report_census(census: dict, *, n_items: int, fields: int, out) -> None:
         shown = ", ".join(f"{reason} {count}"
                           for reason, count in sorted(census["rejected"].items()))
         print(f"  not eligible: {shown}", file=out)
-    print(f"eligible per stratum: "
-          f"{ {k: v for k, v in census['by_stratum'].items() if v} }", file=out)
-    print(f"field mentions among eligible: "
-          f"{ {k: v for k, v in census['field_mentions'].items() if v} }", file=out)
-    if census.get("code_mixed_cue_hits"):
-        print(f"of which matched a code-mixed cue: {census['code_mixed_cue_hits']} "
-              "(romanized Telugu/Hindi forms added 2026-10-03)", file=out)
+    if strata:
+        print(f"eligible per stratum: "
+              f"{ {k: v for k, v in census['by_stratum'].items() if v} }", file=out)
+        print(f"field mentions among eligible: "
+              f"{ {k: v for k, v in census['field_mentions'].items() if v} }", file=out)
+        if census.get("code_mixed_cue_hits"):
+            print(f"of which matched a code-mixed cue: {census['code_mixed_cue_hits']} "
+                  "(romanized Telugu/Hindi forms added 2026-10-03)", file=out)
+    else:
+        print(STRATA_WITHHELD, file=out)
     print(f"turns needed for --n-items {n_items} over {fields} fields: {wanted_turns}", file=out)
     if census["eligible_targets"] < wanted_turns:
         print(f"WARNING: only {census['eligible_targets']} eligible target(s) for "
               f"{wanted_turns} needed; the sample will be smaller than requested", file=out)
-    for stratum, share in sorted(thresholds.SAMPLING_QUOTAS.items()):
-        if stratum == thresholds.RANDOM_STRATUM:
-            continue
-        need = int(round(share * wanted_turns))
-        have = census["by_stratum"].get(stratum, 0)
-        if have < need:
-            print(f"WARNING: stratum {stratum} wants {need} turn(s), corpus has {have}",
-                  file=out)
+    if strata:
+        for stratum, share in sorted(thresholds.SAMPLING_QUOTAS.items()):
+            if stratum == thresholds.RANDOM_STRATUM:
+                continue
+            need = int(round(share * wanted_turns))
+            have = census["by_stratum"].get(stratum, 0)
+            if have < need:
+                print(f"WARNING: stratum {stratum} wants {need} turn(s), corpus has {have}",
+                      file=out)
     print(file=out)
 
 
@@ -543,6 +565,12 @@ def main(argv=None, out=sys.stdout) -> int:
                              "a quota share; repeatable")
     parser.add_argument("--no-random-topup", action="store_true",
                         help="do not pad the real set with cue-free turns to reach --n-items")
+    parser.add_argument("--show-synthetic-strata", action="store_true",
+                        help="print the --synthetic set's per-stratum counts, which are "
+                             "withheld by default so that labelling them is not primed by "
+                             "knowing how many hedges or corrections they contain. The counts "
+                             "are in the manifest either way; use this only when nobody who "
+                             "will label the set can see the output")
     parser.add_argument("--census-only", action="store_true",
                         help="print the census and write nothing, to see what a corpus can "
                              "support before committing to a sample")
@@ -584,7 +612,7 @@ def main(argv=None, out=sys.stdout) -> int:
             source=SOURCE_SYNTHETIC)
         print(f"--- synthetic set: {args.synthetic} ---", file=out)
         report_census(synthetic_census, n_items=args.synthetic_turns * len(fields),
-                      fields=len(fields), out=out)
+                      fields=len(fields), out=out, strata=args.show_synthetic_strata)
 
     if args.census_only:
         print("--census-only: nothing was written.", file=out)
@@ -616,8 +644,15 @@ def main(argv=None, out=sys.stdout) -> int:
     print(f"ITEMS TO BE WRITTEN: {len(items)} "
           f"({len(turns)} turns x {len(fields)} fields) {by_source}", file=out)
     if len(items) > args.n_items:
-        print(f"  this exceeds --n-items {args.n_items}; --all-stratum takes every turn in "
-              f"{list(all_strata)} regardless of the request", file=out)
+        reasons = []
+        if all_strata:
+            reasons.append(f"--all-stratum takes every turn in {list(all_strata)} regardless "
+                           "of the request")
+        if synthetic_candidates:
+            reasons.append(f"--n-items governs --input only, and --synthetic-turns "
+                           f"{args.synthetic_turns} adds to it")
+        print(f"  this exceeds --n-items {args.n_items}"
+              + ("; " + "; ".join(reasons) if reasons else ""), file=out)
     print(file=out)
 
     annotators = [part.strip() for chunk in args.annotators
@@ -636,6 +671,11 @@ def main(argv=None, out=sys.stdout) -> int:
         "field_keywords_overridden": bool(args.field_keywords),
         "census": census,
         "synthetic_census": synthetic_census,
+        "synthetic_strata_printed": bool(args.synthetic) and args.show_synthetic_strata,
+        "synthetic_strata_note": "Whether this run printed the synthetic set's per-stratum "
+                                 "counts to a terminal. False is the default: an annotator who "
+                                 "knows how many hedges a set holds has an expectation to meet. "
+                                 "Recorded so a run can be audited for that exposure.",
         "synthetic_enrichment": synthetic_report,
         "synthetic_turns_requested": args.synthetic_turns if args.synthetic else None,
         "all_strata": list(all_strata),
@@ -664,10 +704,16 @@ def main(argv=None, out=sys.stdout) -> int:
         print(f"real enrichment shortfall: "
               f"{ {k: v for k, v in report['shortfall'].items() if v} }", file=out)
     if synthetic_report:
-        print(f"synthetic enrichment achieved: {synthetic_report['achieved']}", file=out)
-        if any(synthetic_report["shortfall"].values()):
-            print(f"synthetic enrichment shortfall: "
-                  f"{ {k: v for k, v in synthetic_report['shortfall'].items() if v} }", file=out)
+        if args.show_synthetic_strata:
+            print(f"synthetic enrichment achieved: {synthetic_report['achieved']}", file=out)
+            if any(synthetic_report["shortfall"].values()):
+                print(f"synthetic enrichment shortfall: "
+                      f"{ {k: v for k, v in synthetic_report['shortfall'].items() if v} }",
+                      file=out)
+        else:
+            print(f"synthetic enrichment: "
+                  f"{sum(synthetic_report['achieved'].values())} turn(s) sampled", file=out)
+            print(f"  {STRATA_WITHHELD_SHORT}", file=out)
     print(f"sheets: {', '.join(p.name for p in sheets)} (label columns are empty)", file=out)
     print(f"each sheet holds the same items with the turn blocks in its own seeded order "
           f"({order_report['turns']} turns); the orders are in the manifest", file=out)

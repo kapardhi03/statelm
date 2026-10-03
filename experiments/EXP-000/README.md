@@ -139,6 +139,20 @@ It prints the total item count before writing a single sheet. With `--all-stratu
 size comes from the corpus rather than from `--n-items`, so the total can exceed the request and
 the run says when it does.
 
+**The synthetic set's per-stratum counts are not printed.** The census and the enrichment
+report give its totals only; the breakdown goes to the manifest. During the v3 sampling run the
+breakdown (hedge 13, correction 5, code-mixed 13) reached the terminal before labelling, and a
+count like that tells you how many hedges to find in the part of the item set that holds them.
+`--show-synthetic-strata` prints it, for a moment when nobody who will label the set can see the
+output. Each run records in its manifest whether it printed them, so a past run can be checked
+rather than guessed at.
+
+Two things that suppression does not reach, both of them structural. The quotas in
+`thresholds.py` are pre-registered and public, so the composition the sampler was *aiming* for
+stays derivable from the turn count. And the manifest holds every item's stratum and source, so
+the protection for the real-versus-synthetic comparison is Annotator B, who sees none of this,
+not your own forgetting. Read the manifest after you label, not before.
+
 **Nothing in a sheet says which subset an item is from.** The source is in the manifest, and
 sheet-facing conversation ids are per-run aliases (`c001`, `c002`, …) drawn from one namespace
 across both sets — a `syn_` prefix in an item id would tell an annotator the turn was
@@ -147,7 +161,8 @@ test-split exclusion has to match the real corpus.
 
 `field_keywords.yaml` carries the Hyderabad locality names, which the built-in suffix heuristic
 cannot know. Read the census it prints before the sheets are written: if `field_mention` falls
-short of its 40%, that is the corpus telling you so while you can still act on it.
+short of its 40%, that is the corpus telling you so while you can still act on it. That reading
+is for the **real** set, whose census is printed in full; the synthetic set is a total.
 
 The annotation directory is a **sibling** of the scrubbed conversations, not a subdirectory of
 them: the sampler refuses an output nested inside its input, since a run that could read its own

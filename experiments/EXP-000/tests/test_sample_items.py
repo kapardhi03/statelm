@@ -6,6 +6,7 @@ no value, no cue, nothing that could prime an annotator.
 
 from __future__ import annotations
 
+import ast
 import csv
 import hashlib
 import io
@@ -939,3 +940,261 @@ class TestTheCommittedSyntheticSet:
             named = [cid for cid in ids if cid in line]
             if named and any(word in lowered for word in phenomena):
                 raise AssertionError(f"README maps {named} to a phenomenon: {line!r}")
+
+
+#: Hedges and corrections carried ONLY by romanized Telugu and Hindi forms. No English cue
+#: appears in any turn: not "flexible", not "maybe", not "actually", not "sorry". A census run
+#: against the pre-2026-10-03 lists would score every one of these turns "plain".
+CODE_MIXED_ONLY = [
+    ("agent", "Good morning, sharing the brochure now."),
+    ("customer", "budget konchem ekkuva avthundi"),
+    ("agent", "Understood, noted."),
+    ("customer", "kaadu, 95 lakhs ani cheppanu"),
+    ("customer", "price gurinchi alochistanu ippudu"),
+    ("agent", "Please take your time."),
+    ("customer", "nahi nahi, 3BHK kavali ante"),
+    ("customer", "possession date pata nahi inka"),
+]
+
+#: The same turns with the romanized cue words removed and nothing else changed. The control
+#: for the fixture above: it pins that what the census counts comes from the cue lists, not
+#: from some other property these turns happen to share.
+ENGLISH_BLIND = [
+    ("agent", "Good morning, sharing the brochure now."),
+    ("customer", "budget ekkuva avthundi ippudu"),
+    ("agent", "Understood, noted."),
+    ("customer", "95 lakhs ani cheppanu nenu"),
+    ("customer", "price gurinchi cheppandi ippudu"),
+    ("agent", "Please take your time."),
+    ("customer", "3BHK kavali ante inka"),
+    ("customer", "possession date cheppandi inka"),
+]
+
+
+def census_strata(text, header="eligible per stratum: "):
+    """The `{stratum: count}` dict the census printed, or {} if it printed none."""
+    for line in text.splitlines():
+        if line.startswith(header):
+            return ast.literal_eval(line[len(header):].strip())
+    return {}
+
+
+def nonzero(counts):
+    """A census dict as the sampler prints it: zero-valued strata are filtered out."""
+    return {k: v for k, v in counts.items() if v}
+
+
+def stratum_dicts(output):
+    """Every `{stratum: count}` mapping the run printed, in the order printed."""
+    names = set(cues.STRATA) | {thresholds.RANDOM_STRATUM}
+    found = []
+    for line in output.splitlines():
+        start, end = line.find("{"), line.rfind("}")
+        if start == -1 or end < start:
+            continue
+        try:
+            value = ast.literal_eval(line[start:end + 1])
+        except (ValueError, SyntaxError):
+            continue
+        if isinstance(value, dict) and names & set(value):
+            found.append(value)
+    return found
+
+
+def synthetic_census_section(output):
+    """Just the synthetic set's census block: header to the item count that follows it."""
+    _, marker, tail = output.partition("--- synthetic set:")
+    assert marker, "no synthetic census in this output"
+    section, _, _ = tail.partition("ITEMS TO BE WRITTEN")
+    return section
+
+
+@pytest.fixture
+def code_mixed_only(tmp_path):
+    source = write_roled_conversations(tmp_path / "scrubbed", turns=CODE_MIXED_ONLY, count=3)
+    fields = tmp_path / "fields.yaml"
+    fields.write_text(FIELDS, encoding="utf-8")
+    return source, fields, tmp_path / "annotation"
+
+
+@pytest.fixture
+def english_blind(tmp_path):
+    source = write_roled_conversations(tmp_path / "scrubbed", turns=ENGLISH_BLIND, count=3)
+    fields = tmp_path / "fields.yaml"
+    fields.write_text(FIELDS, encoding="utf-8")
+    return source, fields, tmp_path / "annotation"
+
+
+class TestCensusOnlyUsesTheExtendedCueLists:
+    """`--census-only` counts strata with the same cue lists a sampling run uses.
+
+    This is the test to cite for "did the v3 census read the romanized forms". `--census-only`
+    shares one code path with a sampling run -- `candidate_turns` -> `cues.strata_for` -> the
+    module-level cue tuples -- and returns only after `report_census`, so there is no way for
+    the two to disagree. These tests pin that end to end rather than by inspection.
+    """
+
+    def test_it_counts_hedges_and_corrections_carried_only_by_romanized_forms(
+            self, code_mixed_only):
+        source, fields, out = code_mixed_only
+        code, output = run(source, out, fields, "--census-only")
+        assert code == 0
+        strata = census_strata(output)
+        # 3 conversations x 3 romanized hedges and 2 romanized corrections.
+        assert strata.get("hedge") == 9, output
+        assert strata.get("correction") == 6, output
+        assert "matched a code-mixed cue" in output
+
+    def test_the_same_turns_without_those_words_count_zero(self, english_blind):
+        """Sensitivity: the counts above come from the cue lists, not from the fixture."""
+        source, fields, out = english_blind
+        _, output = run(source, out, fields, "--census-only")
+        strata = census_strata(output)
+        assert strata.get("hedge", 0) == 0, output
+        assert strata.get("correction", 0) == 0, output
+        assert "matched a code-mixed cue" not in output
+
+
+@pytest.fixture
+def mixed_sources(tmp_path):
+    """A real set with no hedge or correction, and a synthetic set with 6 and 4 of them.
+
+    The two sets hold different numbers of conversations on purpose. A test that looks for a
+    leaked synthetic figure can only tell a leak from a coincidence if the two sets' stratum
+    counts differ, and an earlier version of this fixture gave both `field_mention: 15`.
+    """
+    real = write_roled_conversations(tmp_path / "real", turns=ENGLISH_BLIND, count=3)
+    syn = write_roled_conversations(tmp_path / "syn", turns=CODE_MIXED_ONLY, count=2)
+    for path in sorted(syn.glob("*.jsonl")):
+        body = path.read_text(encoding="utf-8").replace("conv_", "syn_")
+        path.write_text(body, encoding="utf-8")
+        path.rename(syn / path.name.replace("conv_", "syn_"))
+    fields = tmp_path / "fields.yaml"
+    fields.write_text(FIELDS, encoding="utf-8")
+    return real, syn, fields, tmp_path / "annotation"
+
+
+class TestSyntheticStrataAreWithheld:
+    """Totals only for a `--synthetic` set, unless the operator asks for more.
+
+    Kapardhi, 2026-10-03: the v3 sampling run printed the synthetic set's stratum counts to
+    Annotator A's terminal before labelling. Nothing item-level was shown and Annotator B saw
+    nothing, so no label is known to be affected, but "hedge 13" tells an annotator how many
+    hedges to find in the part of the item set that holds them.
+    """
+
+    def test_the_synthetic_census_prints_no_stratum_counts(self, mixed_sources):
+        real, syn, fields, out = mixed_sources
+        code, output = run_two(real, syn, fields, out, "--synthetic-turns", "4")
+        assert code == 0
+        section = synthetic_census_section(output)
+        assert "eligible per stratum" not in section, section
+        assert "field mentions among eligible" not in section, section
+        assert "matched a code-mixed cue" not in section, section
+        assert "per-stratum counts withheld" in section
+
+    def test_the_real_census_still_prints_its_strata(self, mixed_sources):
+        """The suppression is for the synthetic set. The real census IS the research finding."""
+        real, syn, fields, out = mixed_sources
+        _, output = run_two(real, syn, fields, out, "--synthetic-turns", "4")
+        head, _, _ = output.partition("--- synthetic set:")
+        assert "eligible per stratum" in head
+        assert census_strata(head).get("field_mention", 0) > 0
+
+    def test_the_synthetic_phenomenon_counts_do_not_reach_the_terminal(self, mixed_sources):
+        """Neither count can be read off the output, directly or by coincidence.
+
+        The real set has no hedge and no correction, so a printed 6 or 4 beside either name
+        could only have come from the synthetic census.
+        """
+        real, syn, fields, out = mixed_sources
+        _, output = run_two(real, syn, fields, out, "--synthetic-turns", "4")
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        by_stratum = manifest["synthetic_census"]["by_stratum"]
+        assert by_stratum.get("hedge") == 6 and by_stratum.get("correction") == 4, by_stratum
+        for stratum in ("hedge", "correction"):
+            assert f"'{stratum}': {by_stratum[stratum]}" not in output, stratum
+
+    def test_every_stratum_breakdown_printed_is_a_real_set_figure(self, mixed_sources):
+        """Stronger than a string search: each printed breakdown is attributable to the real set.
+
+        A coincidence is then not a failure, because the figure is a real one either way. This
+        covers the printed numbers only. The sampling quotas are pre-registered and public, so
+        an expected composition stays derivable from `thresholds.SAMPLING_QUOTAS` and the turn
+        count; that is a limit of the design, not something a flag can close.
+        """
+        real, syn, fields, out = mixed_sources
+        _, output = run_two(real, syn, fields, out, "--synthetic-turns", "4")
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        real_figures = [nonzero(manifest["corpus_census"]["by_stratum"]),
+                        manifest["enrichment"]["achieved"],
+                        nonzero(manifest["enrichment"]["achieved"]),
+                        manifest["enrichment"]["shortfall"],
+                        nonzero(manifest["enrichment"]["shortfall"])]
+        synthetic = nonzero(manifest["synthetic_census"]["by_stratum"])
+        assert synthetic not in real_figures, "fixture cannot distinguish the two sets"
+        printed = stratum_dicts(output)
+        assert printed, output
+        for breakdown in printed:
+            assert breakdown in real_figures, breakdown
+
+    def test_synthetic_enrichment_is_reported_as_a_total(self, mixed_sources):
+        real, syn, fields, out = mixed_sources
+        _, output = run_two(real, syn, fields, out, "--synthetic-turns", "4")
+        assert "synthetic enrichment achieved" not in output
+        assert "synthetic enrichment: 4 turn(s) sampled" in output
+
+    def test_the_flag_prints_them_again(self, mixed_sources):
+        real, syn, fields, out = mixed_sources
+        _, output = run_two(real, syn, fields, out, "--synthetic-turns", "4",
+                            "--show-synthetic-strata")
+        section = synthetic_census_section(output)
+        assert census_strata(section).get("hedge") == 6, section
+        assert "synthetic enrichment achieved" in output
+
+    def test_the_counts_are_in_the_manifest_either_way(self, mixed_sources):
+        """Withheld from the terminal, never dropped: the record still needs them."""
+        real, syn, fields, out = mixed_sources
+        for extra in ((), ("--show-synthetic-strata",)):
+            run_two(real, syn, fields, out, "--synthetic-turns", "4", *extra)
+            manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+            assert manifest["synthetic_census"]["by_stratum"]["hedge"] == 6
+            assert manifest["synthetic_enrichment"]["achieved"]
+
+    def test_the_manifest_records_whether_they_were_printed(self, mixed_sources):
+        """So a run can be audited for the exposure, not just fixed going forward."""
+        real, syn, fields, out = mixed_sources
+        run_two(real, syn, fields, out, "--synthetic-turns", "4")
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        assert manifest["settings"]["synthetic_strata_printed"] is False
+        run_two(real, syn, fields, out, "--synthetic-turns", "4", "--show-synthetic-strata")
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        assert manifest["settings"]["synthetic_strata_printed"] is True
+
+    def test_a_real_only_run_records_no_exposure(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--show-synthetic-strata")
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        assert manifest["settings"]["synthetic_strata_printed"] is False
+
+
+class TestTheOvershootMessageNamesTheRightCause:
+    """`--n-items` governs `--input`; `--synthetic-turns` adds to it.
+
+    The message used to name `--all-stratum` for every overshoot, printing an empty stratum
+    list when none was asked for, which reads as a bug in the flag rather than as the sum of
+    two requests.
+    """
+
+    def test_a_synthetic_set_is_named_as_the_cause(self, mixed_sources):
+        real, syn, fields, out = mixed_sources
+        _, output = run_two(real, syn, fields, out, "--synthetic-turns", "4", "--n-items", "20")
+        assert "--synthetic-turns 4 adds to it" in output
+        assert "--all-stratum" not in output
+
+    def test_all_stratum_is_still_named_when_it_is_the_cause(self, seller_heavy):
+        source, fields, out = seller_heavy
+        _, output = run(source, out, fields, "--all-stratum", "field_mention",
+                        "--no-random-topup", "--n-items", "5")
+        assert "--all-stratum takes every turn in ['field_mention']" in output
+        assert "--synthetic-turns" not in output
