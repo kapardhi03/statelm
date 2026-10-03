@@ -258,6 +258,32 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
   What the script mix adds is specific: turns holding words in the Telugu or Devanagari blocks
   are out of reach of every ASCII form, however many romanized words are added. Whether any of
   this reopens explanation (b) is Kapardhi's call.
+- 2026-10-03: **script blindness ruled out; the word floor is now the open frame question.**
+  Transcribed from Kapardhi, 2026-10-03, counts only: the script-mix diagnostic ruled out script
+  blindness, `ascii_only` 121 of 135 eligible targets, `telugu` 1. His reading, recorded as his.
+  The two figures he reported account for 122 of the 135; the remaining 13 sit in the
+  `devanagari` and `other_non_ascii` buckets, and the run record's `other_non_ascii_detail`
+  says whether they are symbol-only (a currency sign, which leaves every word matchable) rather
+  than another script. Not transcribed because he did not report it.
+  What this settles and what it leaves. 121 eligible targets are pure ASCII and every cue form
+  scored zero on them, so the probe was not blocked by the writing system on the great majority
+  of the corpus. By the entry above, that is **not** evidence the phenomenon is absent: it
+  leaves cue coverage (16 romanized forms are exact strings, and recall on hedges is unmeasured)
+  and it leaves the eligibility frame.
+  **The frame is now the measurable one, so `--cue-diagnostics` was extended to measure it.**
+  Instructed by Kapardhi, pre-labelling. A separate block reports, over the customer text turns
+  the 3-word floor excludes and counts only: field mentions per field, `amount_pattern` and
+  locality matches, hedge and correction hits per form including zeros, and the word-count
+  distribution. The question it answers is whether the floor discards short but substantive
+  answers -- "50 lakhs", "3 BHK", "maybe 60" are one or two words each and each settles or
+  hedges a field. The floor itself is pre-registered and unchanged; this measures what it costs.
+  Reported per field and per pattern rather than per keyword, so a `--field-keywords` list kept
+  off the machine is not named in a tracked record. **No threshold.** The block prints its
+  counts and no verdict: whether the cost is too high for the floor to stand is Kapardhi's call,
+  and a threshold set after seeing the number would not be pre-registered. Selection is by
+  `cues.target_rejection` returning `too_short`, the same predicate that decides eligibility, so
+  the two populations are exact complements and a seller turn, a media placeholder and an empty
+  turn each stay out under their own reason.
 
 ## Known limitations
 Accepted rather than fixed, and no action is asked for. The two bullets below are what Kapardhi

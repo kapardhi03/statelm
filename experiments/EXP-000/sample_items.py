@@ -447,6 +447,20 @@ def write_sheets(root: Path, orders: dict[str, list[dict]]) -> list[Path]:
     return written
 
 
+def short_target_texts(conversations: dict[str, list[dict]]) -> list[str]:
+    """Texts of the customer text turns the word floor excludes, and only those.
+
+    Selected by `cues.target_rejection` returning `REJECT_TOO_SHORT`, so this population is the
+    complement of the eligible targets by the same predicate the sampler uses. A seller turn, a
+    media placeholder and an empty turn are each rejected for their own reason and none of them
+    reaches this list.
+    """
+    return [turn.get("text", "")
+            for rows in conversations.values()
+            for turn in rows
+            if cues.target_rejection(turn) == cues.REJECT_TOO_SHORT]
+
+
 def write_run_record(run_dir: Path, *, step: str, inputs: dict, payloads: dict,
                      extra: dict | None = None, allowed_root: Path | None = None) -> list[Path]:
     """`config.json` plus one file per payload, under `runs/EXP-000/<run-id>/`.
@@ -686,11 +700,14 @@ def main(argv=None, out=sys.stdout, *, runs_root: Path | None = None) -> int:
             steps.append("cue_diagnostics")
             texts = [item["turn"].get("text", "") for item in candidates]
             report = diagnostics.cue_diagnostics(texts, keywords=keywords)
+            report["excluded_by_word_floor"] = diagnostics.short_turn_diagnostics(
+                short_target_texts(conversations), keywords=keywords)
             if args.synthetic:
                 print("--cue-diagnostics measures --input only; the synthetic set is excluded "
                       "so that diagnosing the real corpus cannot prime its labelling.",
                       file=out)
             diagnostics.report_diagnostics(report, out=out)
+            diagnostics.report_short_turns(report["excluded_by_word_floor"], out=out)
             payloads["cue_diagnostics"] = report
         written = write_run_record(
             run_dir, step="+".join(steps),

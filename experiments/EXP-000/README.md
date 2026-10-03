@@ -150,6 +150,14 @@ keyword lists it measured with. Read it this way:
   eligibility frame, where `MIN_TARGET_WORDS` of 3 removes exactly the shortest hedges —
   "maybe", "around 40", "pata nahi".
 
+The run then prints a **second block** for the customer text turns the 3-word floor excludes:
+field mentions per field, the amount and locality patterns, hedge and correction hits per form,
+and how many turns were one word and how many were two. That population is the frame question,
+and it is the one the script mix left open — "50 lakhs", "3 BHK" and "maybe 60" are one or two
+words each and each settles or hedges a field, and the floor cannot tell them from "ok". The
+block prints counts and no verdict: the floor is pre-registered, and whether its cost is too
+high is yours to judge, not a threshold this tool sets after seeing the number.
+
 In every branch, remember a cue match is not a hedge. Firing tells you the matcher is lexically
 live on this text; it does not tell you the phenomenon is there, and cue recall on hedges is
 unmeasured.

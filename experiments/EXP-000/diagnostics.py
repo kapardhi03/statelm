@@ -50,6 +50,10 @@ NO_CUE_NOTE = ("Every form in both cue lists scored zero on these texts. A probe
                "the text, so this count does not support either reading on its own.")
 
 
+def _plural(count: int, noun: str) -> str:
+    return f"{count} {noun}" if count == 1 else f"{count} {noun}s"
+
+
 def _in_block(code: int, block: tuple[int, int]) -> bool:
     return block[0] <= code <= block[1]
 
@@ -184,6 +188,84 @@ def cue_diagnostics(texts: Sequence[str], *, keywords=None) -> dict:
     return report
 
 
+#: The population the word-floor block measures, named so the no-text test can allow it by
+#: constant rather than by a copy of the string.
+FLOOR_POPULATION = "customer text turns rejected as too_short"
+
+FLOOR_NOTE = ("Counts only, and no threshold. Whether this many short-but-substantive turns "
+              "is too many for the word floor to stand is Kapardhi's call, not a number this "
+              "tool decides.")
+
+
+def short_turn_diagnostics(texts: Sequence[str], *, keywords=None) -> dict:
+    """What the word floor throws away, over the customer text turns it excludes.
+
+    `MIN_TARGET_WORDS` is 3, and it was pre-registered to keep the sampler off the 2-to-16
+    character turns that helped void run 20261002T175103Z-f318529. But the floor cannot tell a
+    content-free turn from a short answer that settles a field: "50 lakhs", "3 BHK" and
+    "maybe 60" are all one or two words and all substantive. If the excluded turns carry field
+    mentions and cues at a serious rate, the floor is part of why the corpus reads state-sparse,
+    which is neither of the two readings the v3 census left open.
+
+    Per field and per pattern rather than per keyword, so a `--field-keywords` list kept off
+    this machine is not named here either.
+    """
+    keyword_map = thresholds.FIELD_KEYWORDS if keywords is None else keywords
+    per_cue = {
+        "correction": cues.per_cue_hits(texts, cues.CORRECTION_CUES),
+        "hedge": cues.per_cue_hits(texts, cues.HEDGE_CUES),
+    }
+    field_mentions = {field: 0 for field in keyword_map}
+    with_field, with_cue = 0, 0
+    word_counts = {count: 0 for count in range(1, thresholds.MIN_TARGET_WORDS)}
+    for text in texts:
+        fields = cues.fields_mentioned(text, keyword_map)
+        for field in fields:
+            field_mentions[field] += 1
+        cued = cues.has_hedge_cue(text) or cues.has_correction_cue(text)
+        with_field += bool(fields)
+        with_cue += bool(cued)
+        words = cues.word_count(text)
+        word_counts[words] = word_counts.get(words, 0) + 1
+    return {
+        "population": FLOOR_POPULATION,
+        "min_target_words": thresholds.MIN_TARGET_WORDS,
+        "turns": len(texts),
+        "word_counts": word_counts,
+        "field_mentions": field_mentions,
+        "field_patterns": cues.field_pattern_hits(texts),
+        "cues": per_cue,
+        "cue_forms_that_matched": {
+            name: sorted(cue for cue, count in counts.items() if count)
+            for name, counts in per_cue.items()
+        },
+        "with_field_mention": with_field,
+        "with_hedge_or_correction_cue": with_cue,
+        "note": FLOOR_NOTE,
+    }
+
+
+def report_short_turns(block: dict, *, out) -> None:
+    """The excluded population, printed as its own block so it is not read as the sample."""
+    floor = block["min_target_words"]
+    counts = ", ".join(f"{_plural(words, 'word')} {count}"
+                       for words, count in sorted(block["word_counts"].items()))
+    print(f"--- customer text turns excluded by the {floor}-word floor ---", file=out)
+    print(f"excluded turns: {block['turns']} ({counts})", file=out)
+    print(f"with a field mention: {block['with_field_mention']} "
+          f"{ {k: v for k, v in block['field_mentions'].items() if v} }", file=out)
+    print(f"field keyword patterns: {block['field_patterns']}", file=out)
+    for name, cue_counts in block["cues"].items():
+        matched = block["cue_forms_that_matched"][name]
+        print(f"{name} cues: {len(matched)} of {len(cue_counts)} forms matched anything "
+              f"({_plural(sum(cue_counts.values()), 'hit')})", file=out)
+        if matched:
+            print(f"  matched: {', '.join(matched)}", file=out)
+    print(f"with a hedge or correction cue: {block['with_hedge_or_correction_cue']}", file=out)
+    print(f"note: {FLOOR_NOTE}", file=out)
+    print(file=out)
+
+
 def report_diagnostics(diagnostics: dict, *, out) -> None:
     """The headline on the terminal. The file holds every count; this holds the finding."""
     script = diagnostics["script"]["eligible_targets"]
@@ -192,7 +274,7 @@ def report_diagnostics(diagnostics: dict, *, out) -> None:
     for name, counts in diagnostics["cues"].items():
         matched = diagnostics["cue_forms_that_matched"][name]
         print(f"{name} cues: {len(matched)} of {len(counts)} forms matched anything "
-              f"({sum(counts.values())} hits)", file=out)
+              f"({_plural(sum(counts.values()), 'hit')})", file=out)
         if matched:
             print(f"  matched: {', '.join(matched)}", file=out)
     print(f"field keyword patterns: {diagnostics['field_patterns']}", file=out)

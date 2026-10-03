@@ -134,6 +134,15 @@ def word_count(text: str) -> int:
     return len((text or "").split())
 
 
+#: Why a turn cannot be a target. Named so the sampler, the census and the diagnostics all
+#: select the same population by the same constant rather than by a repeated string literal.
+REJECT_NOT_CUSTOMER = "not_customer"
+REJECT_MEDIA_PLACEHOLDER = "media_placeholder"
+REJECT_EMPTY = "empty"
+REJECT_TOO_SHORT = "too_short"
+REJECTIONS = (REJECT_NOT_CUSTOMER, REJECT_MEDIA_PLACEHOLDER, REJECT_EMPTY, REJECT_TOO_SHORT)
+
+
 def target_rejection(turn: dict) -> str | None:
     """Why this turn cannot be a target, or None if it can.
 
@@ -142,14 +151,14 @@ def target_rejection(turn: dict) -> str | None:
     researcher needs before any labelling, not after.
     """
     if role_of(turn) not in thresholds.TARGET_ROLES:
-        return "not_customer"
+        return REJECT_NOT_CUSTOMER
     text = turn.get("text", "")
     if is_media_placeholder(text):
-        return "media_placeholder"
+        return REJECT_MEDIA_PLACEHOLDER
     if not text.strip():
-        return "empty"
+        return REJECT_EMPTY
     if word_count(text) < thresholds.MIN_TARGET_WORDS:
-        return "too_short"
+        return REJECT_TOO_SHORT
     return None
 
 
