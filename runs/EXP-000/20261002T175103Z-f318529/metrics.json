@@ -1,0 +1,374 @@
+{
+  "experiment": "EXP-000",
+  "agreement_type": "inter_annotator",
+  "run_id": "20261002T175103Z-f318529",
+  "n_items_compared": 80,
+  "n_conversations": 12,
+  "items_only_in_sheet_a": 0,
+  "items_only_in_sheet_b": 0,
+  "items_excluded_unlabelled": 0,
+  "partial_overlap_allowed": false,
+  "overall": {
+    "kappa": null,
+    "percent_agreement": 1.0,
+    "kappa_undefined_reason": "expected agreement is 1: both raters used a single identical label, so kappa has no defined value",
+    "primary_unit": "conversation",
+    "ci_conversation": {
+      "level": 0.95,
+      "unit": "conversation",
+      "resamples": 2000,
+      "seed": 0,
+      "undefined_replicates": 2000,
+      "undefined_fraction": 1.0,
+      "low": null,
+      "high": null,
+      "interpretable": false,
+      "reason": "every resample gave an undefined statistic"
+    },
+    "ci_item": {
+      "level": 0.95,
+      "unit": "item",
+      "resamples": 2000,
+      "seed": 0,
+      "undefined_replicates": 2000,
+      "undefined_fraction": 1.0,
+      "low": null,
+      "high": null,
+      "interpretable": false,
+      "reason": "every resample gave an undefined statistic"
+    }
+  },
+  "per_category": {
+    "NO-OP": {
+      "kappa": null,
+      "is_abstention_type": false,
+      "interpretable": false,
+      "reason": "expected agreement is 1; kappa has no defined value for this category",
+      "n_rater_a": 80,
+      "n_rater_b": 80,
+      "n_either": 80,
+      "n_both": 80,
+      "primary_unit": "conversation",
+      "ci_conversation": {
+        "level": 0.95,
+        "unit": "conversation",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 2000,
+        "undefined_fraction": 1.0,
+        "low": null,
+        "high": null,
+        "interpretable": false,
+        "reason": "every resample gave an undefined statistic"
+      },
+      "ci_item": {
+        "level": 0.95,
+        "unit": "item",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 2000,
+        "undefined_fraction": 1.0,
+        "low": null,
+        "high": null,
+        "interpretable": false,
+        "reason": "every resample gave an undefined statistic"
+      }
+    },
+    "VALUE": {
+      "kappa": null,
+      "is_abstention_type": false,
+      "interpretable": false,
+      "reason": "n_either 0 < 10; reported for completeness, not interpretable",
+      "n_rater_a": 0,
+      "n_rater_b": 0,
+      "n_either": 0,
+      "n_both": 0,
+      "primary_unit": "conversation",
+      "ci_conversation": {
+        "level": 0.95,
+        "unit": "conversation",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 2000,
+        "undefined_fraction": 1.0,
+        "low": null,
+        "high": null,
+        "interpretable": false,
+        "reason": "every resample gave an undefined statistic"
+      },
+      "ci_item": {
+        "level": 0.95,
+        "unit": "item",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 2000,
+        "undefined_fraction": 1.0,
+        "low": null,
+        "high": null,
+        "interpretable": false,
+        "reason": "every resample gave an undefined statistic"
+      }
+    },
+    "ABSTAIN:insufficient": {
+      "kappa": null,
+      "is_abstention_type": true,
+      "interpretable": false,
+      "reason": "n_either 0 < 10; reported for completeness, not interpretable",
+      "n_rater_a": 0,
+      "n_rater_b": 0,
+      "n_either": 0,
+      "n_both": 0,
+      "primary_unit": "conversation",
+      "ci_conversation": {
+        "level": 0.95,
+        "unit": "conversation",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 2000,
+        "undefined_fraction": 1.0,
+        "low": null,
+        "high": null,
+        "interpretable": false,
+        "reason": "every resample gave an undefined statistic"
+      },
+      "ci_item": {
+        "level": 0.95,
+        "unit": "item",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 2000,
+        "undefined_fraction": 1.0,
+        "low": null,
+        "high": null,
+        "interpretable": false,
+        "reason": "every resample gave an undefined statistic"
+      }
+    },
+    "ABSTAIN:ambiguous": {
+      "kappa": null,
+      "is_abstention_type": true,
+      "interpretable": false,
+      "reason": "n_either 0 < 10; reported for completeness, not interpretable",
+      "n_rater_a": 0,
+      "n_rater_b": 0,
+      "n_either": 0,
+      "n_both": 0,
+      "primary_unit": "conversation",
+      "ci_conversation": {
+        "level": 0.95,
+        "unit": "conversation",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 2000,
+        "undefined_fraction": 1.0,
+        "low": null,
+        "high": null,
+        "interpretable": false,
+        "reason": "every resample gave an undefined statistic"
+      },
+      "ci_item": {
+        "level": 0.95,
+        "unit": "item",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 2000,
+        "undefined_fraction": 1.0,
+        "low": null,
+        "high": null,
+        "interpretable": false,
+        "reason": "every resample gave an undefined statistic"
+      }
+    },
+    "ABSTAIN:conflicting": {
+      "kappa": null,
+      "is_abstention_type": true,
+      "interpretable": false,
+      "reason": "n_either 0 < 10; reported for completeness, not interpretable",
+      "n_rater_a": 0,
+      "n_rater_b": 0,
+      "n_either": 0,
+      "n_both": 0,
+      "primary_unit": "conversation",
+      "ci_conversation": {
+        "level": 0.95,
+        "unit": "conversation",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 2000,
+        "undefined_fraction": 1.0,
+        "low": null,
+        "high": null,
+        "interpretable": false,
+        "reason": "every resample gave an undefined statistic"
+      },
+      "ci_item": {
+        "level": 0.95,
+        "unit": "item",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 2000,
+        "undefined_fraction": 1.0,
+        "low": null,
+        "high": null,
+        "interpretable": false,
+        "reason": "every resample gave an undefined statistic"
+      }
+    },
+    "HEDGED": {
+      "kappa": null,
+      "is_abstention_type": false,
+      "interpretable": false,
+      "reason": "n_either 0 < 10; reported for completeness, not interpretable",
+      "n_rater_a": 0,
+      "n_rater_b": 0,
+      "n_either": 0,
+      "n_both": 0,
+      "primary_unit": "conversation",
+      "ci_conversation": {
+        "level": 0.95,
+        "unit": "conversation",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 2000,
+        "undefined_fraction": 1.0,
+        "low": null,
+        "high": null,
+        "interpretable": false,
+        "reason": "every resample gave an undefined statistic"
+      },
+      "ci_item": {
+        "level": 0.95,
+        "unit": "item",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 2000,
+        "undefined_fraction": 1.0,
+        "low": null,
+        "high": null,
+        "interpretable": false,
+        "reason": "every resample gave an undefined statistic"
+      }
+    }
+  },
+  "confusion_matrix": {
+    "labels": [
+      "NO-OP",
+      "VALUE",
+      "ABSTAIN:insufficient",
+      "ABSTAIN:ambiguous",
+      "ABSTAIN:conflicting",
+      "HEDGED"
+    ],
+    "rows_are": "sheet_a",
+    "columns_are": "sheet_b",
+    "counts": [
+      [
+        80,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  "label_use": {
+    "sheet_a": {
+      "NO-OP": 80
+    },
+    "sheet_b": {
+      "NO-OP": 80
+    }
+  },
+  "value_agreement": {
+    "n_both_value": 0,
+    "primary_normalization": "strict",
+    "strict": {
+      "agreement": null,
+      "n": 0
+    },
+    "number_aware": {
+      "agreement": null,
+      "n": 0
+    }
+  },
+  "verdict": {
+    "threshold": 0.6,
+    "threshold_source": "EXP-000 Metric section",
+    "threshold_tolerance": 1e-09,
+    "applies_to": [
+      "ABSTAIN:insufficient",
+      "ABSTAIN:ambiguous",
+      "ABSTAIN:conflicting"
+    ],
+    "per_abstention_type": {
+      "ABSTAIN:insufficient": {
+        "verdict": "NOT INTERPRETABLE",
+        "kappa": null,
+        "n_either": 0,
+        "reason": "n_either 0 < 10; reported for completeness, not interpretable"
+      },
+      "ABSTAIN:ambiguous": {
+        "verdict": "NOT INTERPRETABLE",
+        "kappa": null,
+        "n_either": 0,
+        "reason": "n_either 0 < 10; reported for completeness, not interpretable"
+      },
+      "ABSTAIN:conflicting": {
+        "verdict": "NOT INTERPRETABLE",
+        "kappa": null,
+        "n_either": 0,
+        "reason": "n_either 0 < 10; reported for completeness, not interpretable"
+      }
+    },
+    "hypothesis": "cannot be evaluated",
+    "because": "ABSTAIN:insufficient, ABSTAIN:ambiguous, ABSTAIN:conflicting rest(s) on fewer than 10 items",
+    "note": "A verdict against a pre-registered threshold is not a Result. Result, Interpretation and Decision in the experiment record are a human's to fill."
+  },
+  "notes": [
+    "No model is involved, so model_name, model_revision and prompt_template_hash are null. The convention's fields are kept rather than omitted so a reader can see they were considered.",
+    "The >=3 seeds convention does not apply: nothing is trained. The bootstrap is seeded and the seed is recorded.",
+    "ADR-003 (typed abstention) was Proposed when these numbers were pre-registered. EXP-000 is the experiment that tests it.",
+    "HEDGED records the tentative value in the value column (\"might stretch to 45\" -> label HEDGED, value 45)."
+  ]
+}

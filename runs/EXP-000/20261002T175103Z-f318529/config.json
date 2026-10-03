@@ -1,0 +1,61 @@
+{
+  "experiment": "EXP-000",
+  "step": "agreement",
+  "agreement_type": "inter_annotator",
+  "run_id": "20261002T175103Z-f318529",
+  "git_commit": "f3185291a2c5f1ddc7db075972f06ed0cd78c0e5",
+  "git_tree_dirty": true,
+  "seed": 0,
+  "python": "3.14.3",
+  "platform": "macOS-15.6.1-arm64-arm-64bit-Mach-O",
+  "model_name": null,
+  "model_revision": null,
+  "prompt_template_hash": null,
+  "inputs": {
+    "sheet_a": {
+      "name": "sheet_A_annotated.csv",
+      "sha256": "1ae6d276faa99cf7a513b4898998c9c46024a45181ed1bc6b022ea75854d37cb"
+    },
+    "sheet_b": {
+      "name": "sheet_B_annotated.csv",
+      "sha256": "7c82d3e0160f913d9abf9f9f1d4a4405ed7c0765006a7da0d82a827b6646960d"
+    }
+  },
+  "alignment": {
+    "n_items_compared": 80,
+    "n_conversations": 12,
+    "items_only_in_sheet_a": 0,
+    "items_only_in_sheet_b": 0,
+    "items_excluded_unlabelled": 0,
+    "partial_overlap_allowed": false
+  },
+  "thresholds": {
+    "kappa_threshold": 0.6,
+    "kappa_tolerance": 1e-09,
+    "min_category_n": 10,
+    "abstention_types": [
+      "ABSTAIN:insufficient",
+      "ABSTAIN:ambiguous",
+      "ABSTAIN:conflicting"
+    ],
+    "undefined_replicate_max_fraction": 0.05,
+    "hedged_rule": "a"
+  },
+  "bootstrap": {
+    "resamples": 2000,
+    "ci_level": 0.95,
+    "primary_unit": "conversation",
+    "secondary_unit": "item",
+    "method": "percentile"
+  },
+  "value_normalizations": {
+    "primary": "strict",
+    "secondary": "number_aware"
+  },
+  "notes": [
+    "No model is involved, so model_name, model_revision and prompt_template_hash are null. The convention's fields are kept rather than omitted so a reader can see they were considered.",
+    "The >=3 seeds convention does not apply: nothing is trained. The bootstrap is seeded and the seed is recorded.",
+    "ADR-003 (typed abstention) was Proposed when these numbers were pre-registered. EXP-000 is the experiment that tests it.",
+    "HEDGED records the tentative value in the value column (\"might stretch to 45\" -> label HEDGED, value 45)."
+  ]
+}

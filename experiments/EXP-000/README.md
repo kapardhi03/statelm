@@ -49,7 +49,7 @@ uv run --project experiments/EXP-000 pytest experiments/EXP-000/tests -q   # 459
 ### 1. Look at the schema (safe to paste into a Claude session)
 
 ```bash
-export DATABASE_URL='postgresql://statelm_ro:...@localhost:5432/arthryx'
+export DATABASE_URL='postgresql://neondb_owner:npg_YicvzNPU6x5y@ep-delicate-fire-azbf8zzn-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
 
 uv run --project experiments/EXP-000 python experiments/EXP-000/extract.py --inspect
 ```
