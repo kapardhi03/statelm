@@ -12,11 +12,16 @@ import hashlib
 import io
 import itertools
 import json
+import re
+import shutil
 from pathlib import Path
 
 import pytest
 
 import cues
+import diagnostics
+import provenance
+import safety
 import sample_items
 import thresholds
 
@@ -64,11 +69,22 @@ def workspace(tmp_path):
     return source, fields, tmp_path / "annotation"
 
 
+def tmp_runs_root(out):
+    """A sibling of the annotation output, so no test can write into the repo's runs/.
+
+    Passed on every invocation: the production default is the real `runs/EXP-000/`, and a test
+    that forgot it would leave a run directory in the working tree.
+    """
+    return Path(out).parent / "runs"
+
+
 def run(source, out, fields, *extra):
     buffer = io.StringIO()
+    runs = tmp_runs_root(out)
     code = sample_items.main(
-        ["--input", str(source), "--output", str(out), "--fields", str(fields), *extra],
-        out=buffer)
+        ["--input", str(source), "--output", str(out), "--fields", str(fields),
+         "--runs-root", str(runs), *extra],
+        out=buffer, runs_root=runs)
     return code, buffer.getvalue()
 
 
@@ -739,9 +755,11 @@ def two_sources(tmp_path):
 
 def run_two(real, syn, fields, out, *extra):
     buffer = io.StringIO()
+    runs = tmp_runs_root(out)
     code = sample_items.main(
         ["--input", str(real), "--synthetic", str(syn), "--output", str(out),
-         "--fields", str(fields), *extra], out=buffer)
+         "--fields", str(fields), "--runs-root", str(runs), *extra],
+        out=buffer, runs_root=runs)
     return code, buffer.getvalue()
 
 
@@ -779,12 +797,13 @@ class TestAllStratum:
 
 
 class TestCensusOnly:
-    def test_it_writes_nothing(self, seller_heavy):
+    def test_it_writes_no_annotation_artifact(self, seller_heavy):
+        """It does write a run record now, which is the point; it writes no sheet."""
         source, fields, out = seller_heavy
         code, output = run(source, out, fields, "--census-only")
         assert code == 0
         assert not out.exists()
-        assert "nothing was written" in output
+        assert "no annotation artifact written" in output
 
     def test_it_still_prints_the_census(self, seller_heavy):
         source, fields, out = seller_heavy
@@ -1238,3 +1257,389 @@ class TestCensusOnlyMatchesASamplingRun:
         assert recorded["by_stratum"]["hedge"] == 9
         assert recorded["by_stratum"]["correction"] == 6
         assert recorded["code_mixed_cue_hits"] == 15
+
+
+#: Telugu script (U+0C00-U+0C7F). Nothing in either cue list can match these: every cue is an
+#: ASCII string, and a romanized form is a different sequence of codepoints from the native
+#: spelling of the same word.
+TELUGU_TURNS = [
+    ("agent", "Good morning, sharing the brochure now."),
+    ("customer", "బడ్జెట్ కొంచెం ఎక్కువ అవుతుంది"),
+    ("agent", "Understood, noted."),
+    ("customer", "ఇల్లు కావాలి ఇప్పుడే"),
+    ("customer", "మూడు పడక గదులు కావాలి"),
+    ("agent", "Please take your time."),
+    ("customer", "ధర గురించి ఆలోచిస్తాను"),
+    ("customer", "వచ్చే నెల చూద్దాం"),
+]
+
+#: Devanagari (U+0900-U+097F), and the decisive case. "थोड़ा" is the native spelling of "thoda"
+#: and "नहीं नहीं" of "nahi nahi" -- both already in the cue lists, both in their romanized ASCII
+#: form. So these two turns carry a hedge and a correction that the lists provably cannot see.
+DEVANAGARI_TURNS = [
+    ("agent", "Sharing two options now."),
+    ("customer", "बजट थोड़ा ज्यादा है"),
+    ("customer", "नहीं नहीं तीन कमरे"),
+    ("agent", "Noted, thank you."),
+    ("customer", "अगले महीने देखते हैं"),
+]
+
+#: Keys whose values are run metadata rather than anything measured. Every other string value
+#: in a run record has to be a cue, a keyword, a field name or a script label.
+METADATA_KEYS = frozenset({
+    "git_commit", "platform", "python", "run_id", "input_dir", "sha256",
+    "model_name", "model_revision", "prompt_template_hash",
+})
+
+
+@pytest.fixture
+def telugu_corpus(tmp_path):
+    source = write_roled_conversations(tmp_path / "scrubbed", turns=TELUGU_TURNS, count=3)
+    fields = tmp_path / "fields.yaml"
+    fields.write_text(FIELDS, encoding="utf-8")
+    return source, fields, tmp_path / "annotation"
+
+
+@pytest.fixture
+def devanagari_corpus(tmp_path):
+    source = write_roled_conversations(tmp_path / "scrubbed", turns=DEVANAGARI_TURNS, count=2)
+    fields = tmp_path / "fields.yaml"
+    fields.write_text(FIELDS, encoding="utf-8")
+    return source, fields, tmp_path / "annotation"
+
+
+def only_run_dir(out):
+    """The single run directory the invocation created, under the tmp runs root."""
+    runs = tmp_runs_root(out)
+    dirs = sorted(path for path in runs.iterdir() if path.is_dir())
+    assert len(dirs) == 1, dirs
+    return dirs[0]
+
+
+def read_record(out, name):
+    return json.loads((only_run_dir(out) / f"{name}.json").read_text(encoding="utf-8"))
+
+
+def walk_strings(node, key=None):
+    """Every (key, string) pair in a JSON tree, so a test can check values and keys apart."""
+    if isinstance(node, dict):
+        for child_key, value in node.items():
+            yield None, child_key
+            yield from walk_strings(value, child_key)
+    elif isinstance(node, list):
+        for value in node:
+            yield from walk_strings(value, key)
+    elif isinstance(node, str):
+        yield key, node
+
+
+def allowed_strings(keywords=None):
+    keyword_map = keywords if keywords is not None else thresholds.FIELD_KEYWORDS
+    allowed = {*cues.CORRECTION_CUES, *cues.HEDGE_CUES, *cues.CODE_MIXED_CUES}
+    allowed |= set(diagnostics.SCRIPT_BUCKETS) | set(cues.STRATA)
+    for field, words in keyword_map.items():
+        allowed.add(field)
+        allowed.update(words)
+    allowed |= {
+        "EXP-000", "census", "cue_diagnostics", "census+cue_diagnostics",
+        sample_items.SOURCE_REAL, sample_items.SOURCE_SYNTHETIC,
+        "amount_pattern", "locality_suffix_pattern", "unknown", "",
+        diagnostics.NO_CUE_NOTE, sample_items.SYNTHETIC_CENSUS_NOTE,
+        diagnostics.KEYWORD_SOURCE_BUILT_IN, diagnostics.KEYWORD_SOURCE_FILE,
+        *thresholds.TARGET_ROLES,
+    }
+    return allowed
+
+
+class TestCueDiagnostics:
+    """Can the cue lists fire on this corpus at all?
+
+    The v3 census could not answer it: 0 matches is consistent with an absent phenomenon and
+    with a probe that cannot match the text, and the census reports only the stratum totals
+    those two produce identically.
+    """
+
+    def test_every_cue_is_reported_including_the_zeros(self, seller_heavy):
+        source, fields, out = seller_heavy
+        code, _ = run(source, out, fields, "--cue-diagnostics")
+        assert code == 0
+        report = read_record(out, "cue_diagnostics")
+        assert set(report["cues"]["hedge"]) == set(cues.HEDGE_CUES)
+        assert set(report["cues"]["correction"]) == set(cues.CORRECTION_CUES)
+        assert 0 in report["cues"]["hedge"].values(), "zeros are the point of this report"
+        assert all(isinstance(count, int) for count in report["cues"]["hedge"].values())
+
+    def test_it_fires_on_an_english_corpus(self, seller_heavy):
+        """Sensitivity. A diagnostic that reports zero everywhere proves nothing."""
+        source, fields, out = seller_heavy
+        _, output = run(source, out, fields, "--cue-diagnostics")
+        report = read_record(out, "cue_diagnostics")
+        assert report["no_cue_matched"] is False
+        assert report["cue_forms_that_matched"]["hedge"], report["cues"]["hedge"]
+        assert diagnostics.NO_CUE_NOTE not in output
+
+    def test_a_native_script_corpus_defeats_every_cue(self, telugu_corpus):
+        source, fields, out = telugu_corpus
+        _, output = run(source, out, fields, "--cue-diagnostics")
+        report = read_record(out, "cue_diagnostics")
+        assert report["no_cue_matched"] is True
+        assert sum(report["cues"]["hedge"].values()) == 0
+        assert sum(report["cues"]["correction"].values()) == 0
+        script = report["script"]["eligible_targets"]
+        assert script["counts"]["telugu"] == script["texts"] > 0
+        assert script["counts"]["ascii_only"] == 0
+        assert script["shares"]["telugu"] == 1.0
+        assert "no form in these ASCII cue lists can match" in output
+
+    def test_a_hedge_in_native_script_is_invisible_to_the_romanized_list(
+            self, devanagari_corpus):
+        """The distinction the whole diagnostic exists to draw.
+
+        This corpus contains a hedge and a correction whose romanized spellings are both in the
+        cue lists. Every cue still scores zero, so a zero here cannot mean the phenomenon is
+        absent -- which is exactly the reading the v3 census could not rule out.
+        """
+        source, fields, out = devanagari_corpus
+        _, output = run(source, out, fields, "--cue-diagnostics")
+        report = read_record(out, "cue_diagnostics")
+        assert report["cues"]["hedge"]["thoda"] == 0
+        assert report["cues"]["correction"]["nahi nahi"] == 0
+        assert report["cues"]["hedge"]["dekhte hain"] == 0
+        assert report["no_cue_matched"] is True
+        assert report["script"]["eligible_targets"]["counts"]["devanagari"] > 0
+        assert diagnostics.NO_CUE_NOTE in output
+
+    def test_field_keywords_and_patterns_are_reported(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--cue-diagnostics")
+        report = read_record(out, "cue_diagnostics")
+        assert set(report["field_keywords"]) == set(thresholds.FIELD_KEYWORDS)
+        for field, words in thresholds.FIELD_KEYWORDS.items():
+            entry = report["field_keywords"][field]
+            assert entry["source"] == diagnostics.KEYWORD_SOURCE_BUILT_IN
+            assert set(entry["hits"]) == set(words)
+        # An amount pattern is how a budget is usually written, so keyword zeros beside a
+        # non-zero field_mention stratum is the expected shape, not a contradiction.
+        assert report["field_patterns"]["amount_pattern"] > 0
+
+    def test_the_probe_strings_own_script_is_recorded(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--cue-diagnostics")
+        script = read_record(out, "cue_diagnostics")["script"]
+        for name in ("cue_strings", "field_keyword_strings"):
+            profile = script[name]
+            assert profile["counts"]["ascii_only"] == profile["texts"] > 0, name
+
+    def test_it_writes_no_annotation_artifact(self, seller_heavy):
+        source, fields, out = seller_heavy
+        _, output = run(source, out, fields, "--cue-diagnostics")
+        assert not out.exists()
+        assert "no annotation artifact written" in output
+        assert sorted(path.name for path in only_run_dir(out).iterdir()) == \
+            ["config.json", "cue_diagnostics.json"]
+
+    def test_the_synthetic_set_is_excluded_by_construction(self, mixed_sources):
+        """Diagnosing the real corpus must not print the synthetic set's phenomenon mix."""
+        real, syn, fields, out = mixed_sources
+        _, output = run_two(real, syn, fields, out, "--cue-diagnostics")
+        report = read_record(out, "cue_diagnostics")
+        assert "the synthetic set is excluded" in output
+        # The synthetic set holds 6 romanized hedges; the real set holds none.
+        assert report["no_cue_matched"] is True
+        assert report["eligible_targets"] == 15
+
+
+class TestRunRecordProvenance:
+    """What ties a count to a commit and a corpus, which the v2 and v3 censuses had not."""
+
+    def test_the_record_names_a_commit_and_a_corpus_hash(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--census-only")
+        config = read_record(out, "config")
+        assert config["experiment"] == "EXP-000"
+        assert config["step"] == "census"
+        assert config["git_commit"]
+        assert config["inputs"]["corpus"]["files"] == 3
+        assert len(config["inputs"]["corpus"]["sha256"]) == 64
+        assert config["probe"]["sha256"]
+        assert config["model_name"] is None, "no model runs in this step; null, not missing"
+
+    def test_the_corpus_hash_moves_when_the_corpus_does(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--census-only", "--run-id", "first")
+        before = read_record(out, "config")["inputs"]["corpus"]
+        extra = source / "conv_004.jsonl"
+        extra.write_text((source / "conv_001.jsonl").read_text(encoding="utf-8")
+                         .replace("conv_001", "conv_004"), encoding="utf-8")
+        shutil.rmtree(tmp_runs_root(out))
+        run(source, out, fields, "--census-only", "--run-id", "second")
+        after = read_record(out, "config")["inputs"]["corpus"]
+        assert after["files"] == before["files"] + 1
+        assert after["sha256"] != before["sha256"]
+
+    def test_the_probe_fingerprint_moves_when_the_keywords_do(self, seller_heavy, tmp_path):
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--census-only")
+        before = read_record(out, "config")["probe"]["sha256"]
+        keywords = tmp_path / "kw.yaml"
+        keywords.write_text("field_keywords:\n  budget:\n    - budget\n    - bajet\n",
+                            encoding="utf-8")
+        shutil.rmtree(tmp_runs_root(out))
+        run(source, out, fields, "--census-only", "--field-keywords", str(keywords))
+        assert read_record(out, "config")["probe"]["sha256"] != before
+
+    def test_the_census_record_holds_the_census_that_was_printed(self, seller_heavy):
+        source, fields, out = seller_heavy
+        _, output = run(source, out, fields, "--census-only")
+        recorded = read_record(out, "census")["census"]
+        assert census_strata(output) == nonzero(recorded["by_stratum"])
+        assert census_total(output, "turns read: ") == recorded["turns_total"]
+
+    def test_the_synthetic_census_is_kept_out_of_the_record(self, mixed_sources):
+        """Its per-stratum counts are what Annotator A must not see; runs/ is partly tracked."""
+        real, syn, fields, out = mixed_sources
+        run_two(real, syn, fields, out, "--census-only")
+        record = read_record(out, "census")
+        assert record["source"] == sample_items.SOURCE_REAL
+        assert record["synthetic_set_present"] is True
+        content = (only_run_dir(out) / "census.json").read_text(encoding="utf-8")
+        for stratum in ("hedge", "correction"):
+            assert f'"{stratum}": 6' not in content and f'"{stratum}": 4' not in content
+
+    def test_both_steps_share_one_run_directory(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--census-only", "--cue-diagnostics")
+        assert sorted(path.name for path in only_run_dir(out).iterdir()) == \
+            ["census.json", "config.json", "cue_diagnostics.json"]
+        assert read_record(out, "config")["step"] == "census+cue_diagnostics"
+
+    def test_a_runs_root_outside_runs_is_refused(self, seller_heavy, tmp_path):
+        source, fields, out = seller_heavy
+        elsewhere = tmp_path / "not_runs"
+        with pytest.raises(safety.OutsideOutputRoot):
+            sample_items.main(
+                ["--input", str(source), "--output", str(out), "--fields", str(fields),
+                 "--runs-root", str(elsewhere), "--census-only"],
+                out=io.StringIO(), runs_root=tmp_runs_root(out))
+        assert not elsewhere.exists()
+
+
+class TestRunRecordsCarryNoText:
+    """Counts only. Every string value is a cue, a keyword, a field name or a script label."""
+
+    def test_no_corpus_text_reaches_a_record(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--census-only", "--cue-diagnostics")
+        allowed = allowed_strings()
+        for name in ("config", "census", "cue_diagnostics"):
+            record = read_record(out, name)
+            for key, value in walk_strings(record):
+                if key in METADATA_KEYS:
+                    continue
+                if key is None:                      # a dict key, authored in our source
+                    assert value in allowed or re.fullmatch(r"[a-z0-9_]+", value), value
+                    continue
+                assert value in allowed, f"{name}.json: unexpected string {value!r} at {key!r}"
+
+    def test_a_native_script_record_holds_no_non_ascii(self, telugu_corpus):
+        """The sharpest version: if any turn text leaked, the file would not be ASCII."""
+        source, fields, out = telugu_corpus
+        run(source, out, fields, "--census-only", "--cue-diagnostics")
+        for path in sorted(only_run_dir(out).iterdir()):
+            path.read_bytes().decode("ascii")  # raises if a Telugu codepoint reached the file
+
+    def test_no_conversation_id_reaches_a_record(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--census-only", "--cue-diagnostics")
+        for path in sorted(only_run_dir(out).iterdir()):
+            content = path.read_text(encoding="utf-8")
+            assert "conv_001" not in content, path.name
+            assert "SPEAKER_" not in content, path.name
+
+
+class TestLocalKeywordNamesStayLocal:
+    """`--field-keywords` holds locality names this repository cannot enumerate.
+
+    `runs/**/cue_diagnostics.json` is tracked by git, so naming an overridden field's keywords
+    in it would publish exactly what that file exists to keep local. The counts still have to
+    be there: whether a keyword ever fired is the diagnostic.
+    """
+
+    @staticmethod
+    def local_keywords(tmp_path):
+        path = tmp_path / "local_keywords.yaml"
+        path.write_text("field_keywords:\n"
+                        "  location_preference:\n"
+                        "    - Nowherabad\n"
+                        "    - Someplacepuram\n"
+                        "    - Thirdnagar\n", encoding="utf-8")
+        return path
+
+    def test_an_overridden_fields_keywords_are_not_named(self, seller_heavy, tmp_path):
+        source, fields, out = seller_heavy
+        keywords = self.local_keywords(tmp_path)
+        run(source, out, fields, "--cue-diagnostics", "--field-keywords", str(keywords))
+        entry = read_record(out, "cue_diagnostics")["field_keywords"]["location_preference"]
+        assert entry["source"] == diagnostics.KEYWORD_SOURCE_FILE
+        assert entry["forms"] == 3
+        assert len(entry["hits_in_file_order"]) == 3
+        assert "hits" not in entry
+        for path in sorted(only_run_dir(out).iterdir()):
+            content = path.read_text(encoding="utf-8")
+            for name in ("Nowherabad", "Someplacepuram", "Thirdnagar"):
+                assert name not in content, f"{path.name} names {name}"
+
+    def test_the_counts_are_still_there_and_in_file_order(self, tmp_path):
+        """Order is how the researcher reads them against his own file, so it must be the file's."""
+        turns = [("agent", "Options attached."),
+                 ("customer", "Thirdnagar would suit us best"),
+                 ("customer", "Thirdnagar or nearby please")]
+        source = write_roled_conversations(tmp_path / "scrubbed", turns=turns, count=1)
+        fields = tmp_path / "fields.yaml"
+        fields.write_text(FIELDS, encoding="utf-8")
+        out = tmp_path / "annotation"
+        run(source, out, fields, "--cue-diagnostics",
+            "--field-keywords", str(self.local_keywords(tmp_path)))
+        entry = read_record(out, "cue_diagnostics")["field_keywords"]["location_preference"]
+        assert entry["hits_in_file_order"] == [0, 0, 2], entry
+
+    def test_a_field_left_alone_keeps_its_names(self, seller_heavy, tmp_path):
+        """Only the overridden field is redacted; the built-in lists are repository content."""
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--cue-diagnostics",
+            "--field-keywords", str(self.local_keywords(tmp_path)))
+        report = read_record(out, "cue_diagnostics")["field_keywords"]
+        assert report["budget"]["source"] == diagnostics.KEYWORD_SOURCE_BUILT_IN
+        assert set(report["budget"]["hits"]) == set(thresholds.FIELD_KEYWORDS["budget"])
+
+    def test_the_probe_digest_names_nothing_either(self, seller_heavy, tmp_path):
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--census-only",
+            "--field-keywords", str(self.local_keywords(tmp_path)))
+        probe = read_record(out, "config")["probe"]
+        assert probe["field_keyword_forms"]["location_preference"] == 3
+        assert len(probe["sha256"]) == 64
+        assert "Thirdnagar" not in json.dumps(read_record(out, "config"))
+
+
+class TestNoMachineLayoutInARunRecord:
+    """`config.json` is tracked. An absolute input path is a home directory."""
+
+    def test_an_outside_input_path_is_recorded_by_name_only(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--census-only")
+        recorded = read_record(out, "config")["inputs"]["input_dir"]
+        assert recorded == "scrubbed", recorded
+        assert str(source.parent) not in json.dumps(read_record(out, "config"))
+
+    def test_a_path_inside_the_repository_keeps_its_repo_relative_form(self):
+        """The real run reads data/scrubbed/EXP-000, which is worth seeing in the record.
+
+        Given absolutely, because a relative path resolves against the working directory here
+        as it does everywhere else in the tool, and pytest's is not the repository root.
+        """
+        repo = Path(__file__).resolve().parents[3]
+        assert provenance.repo_relative(repo / "experiments" / "EXP-000") == "experiments/EXP-000"
+        assert provenance.repo_relative(repo / "data" / "scrubbed" / "EXP-000") == \
+            "data/scrubbed/EXP-000"
+        assert provenance.repo_relative("/tmp/somewhere/else/scrubbed") == "scrubbed"

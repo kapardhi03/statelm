@@ -204,3 +204,47 @@ def strata_for(turn: dict, context: Sequence[dict], *, keywords=None) -> frozens
     if distinct_speakers([*context, turn]) >= MULTI_SPEAKER_MINIMUM:
         found.add("multi_speaker")
     return frozenset(found or {"plain"})
+
+
+def per_cue_hits(texts: Sequence[str], cue_list: Sequence[str]) -> dict[str, int]:
+    """How many of `texts` each cue matches, one entry per cue, zeros included.
+
+    Built from the same `_matcher` the strata use, one cue at a time, so a diagnostic cannot
+    report a match the sampler did not act on. **The zeros are the point.** A cue list whose
+    every form scores zero has not been shown able to fire on the corpus at all, and a probe
+    that never fires cannot separate an absent phenomenon from a probe that does not match the
+    text. That is the question the v3 census left open.
+    """
+    patterns = {cue: _matcher((cue,)) for cue in cue_list}
+    return {cue: sum(1 for text in texts if pattern.search(text or ""))
+            for cue, pattern in patterns.items()}
+
+
+def per_field_keyword_hits(texts: Sequence[str],
+                           keywords: dict[str, Sequence[str]] | None = None
+                           ) -> dict[str, dict[str, int]]:
+    """`per_cue_hits` per field, letter-bounded as `fields_mentioned` matches keywords.
+
+    The boundary difference is not cosmetic: a word boundary will not match "bhk" in "3BHK",
+    so matching field keywords with `_matcher` would under-report what the sampler saw.
+    """
+    keywords = thresholds.FIELD_KEYWORDS if keywords is None else keywords
+    out: dict[str, dict[str, int]] = {}
+    for field, words in keywords.items():
+        patterns = {word: _field_matcher((word,)) for word in words}
+        out[field] = {word: sum(1 for text in texts if pattern.search(text or ""))
+                      for word, pattern in patterns.items()}
+    return out
+
+
+def field_pattern_hits(texts: Sequence[str]) -> dict[str, int]:
+    """The two matchers `fields_mentioned` uses besides the keyword lists.
+
+    Without these the keyword counts are misleading: a budget mention is usually caught by the
+    amount pattern ("80 lakhs"), not by the word "budget", so keyword hits of zero alongside a
+    non-zero `field_mention` stratum is the expected shape rather than a contradiction.
+    """
+    return {
+        "amount_pattern": sum(1 for text in texts if _AMOUNT.search(text or "")),
+        "locality_suffix_pattern": sum(1 for text in texts if _LOCALITY.search(text or "")),
+    }

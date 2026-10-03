@@ -30,6 +30,8 @@ import sys
 from pathlib import Path
 
 import cues
+import diagnostics
+import provenance
 import safety
 import thresholds
 
@@ -72,6 +74,18 @@ STRATA_WITHHELD = ("per-stratum counts withheld for this set: an annotator who k
                    "  They are in the manifest; --show-synthetic-strata prints them here.")
 STRATA_WITHHELD_SHORT = "per-stratum counts withheld (see above)"
 
+#: Where a run record goes. Only counts and provenance, never text: this tree is partly
+#: tracked by git, and `safety.assert_in_runs` refuses any path outside it.
+EXPERIMENT = provenance.EXPERIMENT
+
+#: Why a run record of a two-source census holds the real census only. `runs/` is partly
+#: tracked by git, and a synthetic set's per-stratum counts are the thing Annotator A must
+#: not meet before labelling.
+SYNTHETIC_CENSUS_NOTE = ("A --synthetic set's census is deliberately not recorded here. "
+                         "Its per-stratum counts are what Annotator A must not see "
+                         "before labelling; they stay in the sampler's manifest, which "
+                         "is not tracked.")
+
 
 class SamplerError(Exception):
     pass
@@ -81,8 +95,11 @@ def load_field_keywords(path: str | Path | None) -> dict | None:
     """Optional local overrides for the field-mention keyword lists.
 
     Locality names are corpus-specific and cannot be enumerated in this repository, so this file
-    is how the researcher adds real ones. It is read on his machine and nothing from it is
-    written into a sheet or into runs/, so the names never leave that machine through this tool.
+    is how the researcher adds real ones. It is read on his machine, and no name from it is
+    written into a sheet or into runs/: an overridden field's diagnostic counts are recorded in
+    the file's own order, and the run record holds only how many forms a field had, how often
+    each fired, and a one-way digest of the lists. The names never leave that machine through
+    this tool, which `runs/**/cue_diagnostics.json` being tracked by git makes load-bearing.
 
     A list given here REPLACES the built-in list for that field; a field left out keeps its
     built-in list.
@@ -426,6 +443,24 @@ def write_sheets(root: Path, orders: dict[str, list[dict]]) -> list[Path]:
     return written
 
 
+def write_run_record(run_dir: Path, *, step: str, inputs: dict, payloads: dict,
+                     extra: dict | None = None, allowed_root: Path | None = None) -> list[Path]:
+    """`config.json` plus one file per payload, under `runs/EXP-000/<run-id>/`.
+
+    `config.json` is what ties a set of counts to a commit and a corpus hash; the payloads are
+    the counts. Written because the v2 and v3 censuses had no run directory at all, so their
+    figures rested on a report and could not be re-derived. Containment is checked twice: once
+    for the run directory and once per file.
+    """
+    safety.assert_in_runs(run_dir, EXPERIMENT, allowed_root=allowed_root)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    config = provenance.base_config(step=step, run_id=run_dir.name, inputs=inputs, extra=extra)
+    written = [safety.write_json(run_dir, run_dir / "config.json", config)]
+    for name, payload in payloads.items():
+        written.append(safety.write_json(run_dir, run_dir / f"{name}.json", payload))
+    return written
+
+
 def report_census(census: dict, *, n_items: int, fields: int, out,
                   strata: bool = True) -> None:
     """What the corpus can support, printed BEFORE any sheet is written.
@@ -546,7 +581,7 @@ def write_label_reference(root: Path) -> Path:
     return safety.write_text(root, "labels_reference.txt", body)
 
 
-def main(argv=None, out=sys.stdout) -> int:
+def main(argv=None, out=sys.stdout, *, runs_root: Path | None = None) -> int:
     parser = argparse.ArgumentParser(description="EXP-000 item sampler (run locally)")
     parser.add_argument("--input", required=True, type=Path, help="scrubbed JSONL directory")
     parser.add_argument("--output", required=True, type=Path)
@@ -572,8 +607,20 @@ def main(argv=None, out=sys.stdout) -> int:
                              "are in the manifest either way; use this only when nobody who "
                              "will label the set can see the output")
     parser.add_argument("--census-only", action="store_true",
-                        help="print the census and write nothing, to see what a corpus can "
-                             "support before committing to a sample")
+                        help="print the census, write no annotation artifact, and record the "
+                             "census under runs/EXP-000/<run-id>/ so its figures are tied to a "
+                             "commit and a corpus hash")
+    parser.add_argument("--cue-diagnostics", action="store_true",
+                        help="measure whether the cue lists can fire on --input at all: "
+                             "per-cue and per-keyword hit counts including zeros, and the "
+                             "script mix of the eligible targets. Counts only, recorded under "
+                             "runs/EXP-000/<run-id>/. Writes no annotation artifact, and "
+                             "excludes any --synthetic set by construction")
+    parser.add_argument("--runs-root", type=Path,
+                        default=Path(__file__).parent / ".." / ".." / "runs" / EXPERIMENT,
+                        help="where run records go; refused if outside runs/EXP-000/")
+    parser.add_argument("--run-id", default=None,
+                        help="override the generated <timestamp>-<commit> run id")
     parser.add_argument("--field-keywords", type=Path, default=None,
                         help="optional YAML of field_keywords to replace the built-in lists, "
                              "for locality names this repository cannot hold")
@@ -614,8 +661,46 @@ def main(argv=None, out=sys.stdout) -> int:
         report_census(synthetic_census, n_items=args.synthetic_turns * len(fields),
                       fields=len(fields), out=out, strata=args.show_synthetic_strata)
 
-    if args.census_only:
-        print("--census-only: nothing was written.", file=out)
+    if args.census_only or args.cue_diagnostics:
+        run_dir = (Path(args.runs_root).expanduser().resolve()
+                   / (args.run_id or provenance.new_run_id()))
+        input_paths = sorted(Path(args.input).expanduser().resolve().glob("*.jsonl"))
+        payloads: dict[str, dict] = {}
+        steps = []
+        if args.census_only:
+            steps.append("census")
+            payloads["census"] = {
+                "source": SOURCE_REAL,
+                "census": census,
+                "target_roles": list(thresholds.TARGET_ROLES),
+                "min_target_words": thresholds.MIN_TARGET_WORDS,
+                "quotas": DEFAULT_QUOTAS,
+                "synthetic_set_present": bool(args.synthetic),
+                "synthetic_census_note": SYNTHETIC_CENSUS_NOTE,
+            }
+        if args.cue_diagnostics:
+            steps.append("cue_diagnostics")
+            texts = [item["turn"].get("text", "") for item in candidates]
+            report = diagnostics.cue_diagnostics(texts, keywords=keywords)
+            if args.synthetic:
+                print("--cue-diagnostics measures --input only; the synthetic set is excluded "
+                      "so that diagnosing the real corpus cannot prime its labelling.",
+                      file=out)
+            diagnostics.report_diagnostics(report, out=out)
+            payloads["cue_diagnostics"] = report
+        written = write_run_record(
+            run_dir, step="+".join(steps),
+            inputs={"input_dir": provenance.repo_relative(args.input),
+                    "corpus": provenance.corpus_hash(input_paths)},
+            payloads=payloads,
+            extra={"probe": diagnostics.probe_fingerprint(keywords),
+                   "field_keywords_overridden": bool(args.field_keywords),
+                   "context_turns": args.context_turns,
+                   "n_items_requested": args.n_items,
+                   "fields": [f["name"] for f in fields]},
+            allowed_root=runs_root)
+        print(f"no annotation artifact written. Recorded {len(written)} file(s) under "
+              f"{run_dir}: {', '.join(path.name for path in written)}", file=out)
         return 0
 
     if not candidates and not synthetic_candidates:

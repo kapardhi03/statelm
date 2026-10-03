@@ -28,13 +28,12 @@ import argparse
 import csv
 import json
 import platform
-import subprocess
 import sys
-import time
 from collections import Counter
 from pathlib import Path
 
 import kappa
+import provenance
 import safety
 import thresholds
 import values
@@ -385,17 +384,10 @@ def write_disagreements(path: Path, rows: list[dict], *, mode: str, run_id: str)
     return path
 
 
-def git_output(*args: str) -> str:
-    try:
-        return subprocess.run(("git", *args), capture_output=True, text=True,
-                              check=True, cwd=Path(__file__).parent).stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
-        return "unknown"
-
-
-def sha256_file(path: Path) -> str:
-    import hashlib
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+#: Re-exported so `agreement.git_output` keeps working; one implementation, in `provenance`,
+#: because the sampler writes run records too now.
+git_output = provenance.git_output
+sha256_file = provenance.sha256_file
 
 
 def build_config(*, mode: str, run_id: str, seed: int, resamples: int,
@@ -608,8 +600,7 @@ def main(argv=None, *, runs_root=None, scrubbed_root=None, out=sys.stdout) -> in
     items, alignment = align(sheet_a, sheet_b, names=names,
                              allow_partial=args.allow_partial_overlap)
 
-    run_id = args.run_id or (f"{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}"
-                             f"-{git_output('rev-parse', 'HEAD')[:7]}")
+    run_id = args.run_id or provenance.new_run_id()
     run_dir = safety.assert_in_runs(Path(args.out_root).expanduser().resolve() / run_id,
                                     EXPERIMENT, allowed_root=runs_root)
     disagreement_path = safety.assert_in_data_scrubbed(
