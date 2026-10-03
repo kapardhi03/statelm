@@ -66,6 +66,33 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
 - 2026-10-02: D3 resolved. Conversations are available from the ARTHRYX database; a second
   annotator is identified (Annotator B); the design is inter-annotator. The remaining blocker
   is approval of the annotation guideline.
+- 2026-10-03: **v2 census, and a design change to a mixed item set.** Pre-registered: no sheet
+  from the v2 sampling run was labelled, and the sheets it produced are marked unused in their
+  manifest. Transcribed from Kapardhi, 2026-10-03, counts only: "135 eligible customer turns;
+  field_mention 18 (budget 10, property_type 3, location 3, decision_maker 2, timeline 1);
+  correction 0; hedge 0; 54 voice-note placeholders. The real corpus cannot support the
+  abstention hypothesis." The design therefore changes to a **mixed item set**: every eligible
+  field-mention turn from the real corpus (`--all-stratum field_mention`, no random top-up),
+  plus 16 turns from a synthetic set sampled under the normal quotas.
+  **Only the real subset's verdict bears on ADR-003.** The synthetic conversations were written
+  by Claude Code (`claude-opus-5`), which knows the taxonomy and wrote the annotation guideline,
+  so agreement on them measures whether two people can apply that guideline to text authored
+  against it. `agreement.py`, `metrics.json` and this record label that subset
+  "guideline usability, not evidence for ADR-003". Kapardhi's decision, 2026-10-03. The set and
+  its limits are described in `experiments/EXP-000/synthetic/README.md`; it is an instance of a
+  risk `knowns-unknowns.md` already records, synthetic-data circularity.
+  No sheet reveals which subset an item came from: the source lives in the sampler's manifest,
+  and sheet-facing conversation ids are per-run aliases drawn from one namespace, because a
+  `syn_` prefix in an item id would tell an annotator the turn was model-written.
+- 2026-10-03: hedge and correction cues extended with romanized Telugu and Hindi forms
+  (Kapardhi's list: konchem, approx ga, emo, anukuntunna, chuddam, alochistanu, telidu, shayad,
+  lagbhag, thoda, dekhte hain, pata nahi, around about; kaadu, ledu ledu, matlab, nahi nahi,
+  change). Pre-labelling, prompted by the census above: 135 eligible turns produced 0 matches
+  against the English-only lists in a deployment where customers code-mix. The census now also
+  reports how many eligible turns matched a code-mixed form, so the next run can say whether the
+  English-only lists were the problem or the phenomenon is absent from the text channel.
+  `--census-only` prints the census and writes nothing, so a corpus can be inspected before a
+  sample is committed to.
 - 2026-10-02: **run 20261002T175103Z-f318529 declared VOID by Kapardhi.** Transcribed from
   Kapardhi, 2026-10-02: "Void: all 160 labels NO-OP, kappa undefined. Cause is the sampling
   design, not the annotators: 10 of 16 sampled turns were seller-side (structurally NO-OP under

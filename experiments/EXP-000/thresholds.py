@@ -206,3 +206,16 @@ LOCALITY_SUFFIXES = (
     "nagar", "puram", "halli", "pura", "pur", "abad", "guda", "palli", "wadi", "ganj",
     "colony", "layout", "enclave", "township", "vihar", "kunj", "garh",
 )
+
+
+#: Which item subset's verdict bears on ADR-003. Only the real one: the synthetic conversations
+#: were authored by a model that knows the taxonomy and wrote the guideline, so agreement on
+#: them measures whether two people can apply that guideline to text written against it.
+#: Kapardhi's decision, 2026-10-03.
+ADR_003_SUBSET = "real"
+SYNTHETIC_VERDICT_NOTE = "guideline usability, not evidence for ADR-003"
+REAL_VERDICT_NOTE = "bears on ADR-003"
+COMBINED_VERDICT_NOTE = (
+    "mixed real and synthetic items; reported for completeness and bears on ADR-003 no more "
+    "than its synthetic share allows"
+)

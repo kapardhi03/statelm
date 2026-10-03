@@ -263,7 +263,30 @@ def measure(items: list[dict], *, seed: int, resamples: int) -> dict:
     }
 
 
-def verdict(per_category: dict) -> dict:
+#: What each subset's verdict is allowed to be read as. Kapardhi's decision, 2026-10-03.
+SUBSET_NOTES = {
+    "real": thresholds.REAL_VERDICT_NOTE,
+    "synthetic": thresholds.SYNTHETIC_VERDICT_NOTE,
+    "combined": thresholds.COMBINED_VERDICT_NOTE,
+}
+
+
+def load_item_sources(path: str | Path) -> dict[str, str]:
+    """Read the sampler manifest's item -> source map.
+
+    The map lives in the manifest because no sheet carries a source column: the annotators are
+    blind to which items are synthetic, which is what makes the two subsets comparable at all.
+    """
+    raw = json.loads(Path(path).expanduser().read_text(encoding="utf-8"))
+    sources = raw.get("item_source")
+    if not sources:
+        raise AgreementError(
+            f"{path}: no 'item_source' map. It is written by sample_items.py when a "
+            "--synthetic set is sampled; a manifest from an earlier run will not have it.")
+    return {str(k): str(v) for k, v in sources.items()}
+
+
+def verdict(per_category: dict, *, subset: str = "combined") -> dict:
     """Apply the pre-registered threshold to the three abstention types, and nothing else."""
     rows, below, unevaluable = {}, [], []
     for label in thresholds.ABSTENTION_TYPES:
@@ -292,6 +315,9 @@ def verdict(per_category: dict) -> dict:
                    f"{thresholds.KAPPA_THRESHOLD}")
 
     return {
+        "subset": subset,
+        "reads_as": SUBSET_NOTES.get(subset, SUBSET_NOTES["combined"]),
+        "bears_on_adr_003": subset == thresholds.ADR_003_SUBSET,
         "threshold": thresholds.KAPPA_THRESHOLD,
         "threshold_source": "EXP-000 Metric section",
         "threshold_tolerance": thresholds.KAPPA_TOLERANCE,
@@ -505,6 +531,41 @@ def report_text(metrics: dict, config: dict, out) -> None:
         say(INTRA_CONDITIONS)
 
 
+def report_subsets(metrics: dict, out) -> None:
+    """The per-subset blocks, each stating what its verdict may be read as.
+
+    Printed after the combined report rather than instead of it, because the combined figure is
+    what the sheets actually measured; the split is what makes it interpretable.
+    """
+    primary = f"ci_{thresholds.BOOTSTRAP_UNIT_PRIMARY}"
+    print(file=out)
+    print("=" * 72, file=out)
+    print(f"BY SOURCE. Only the '{thresholds.ADR_003_SUBSET}' subset bears on ADR-003.", file=out)
+    print("=" * 72, file=out)
+    for name, block in metrics["by_source"].items():
+        decision = block["verdict"]
+        marker = "" if decision["bears_on_adr_003"] else "   <-- not evidence for ADR-003"
+        print(file=out)
+        print(f"[{name}] {block['n_items_compared']} items across "
+              f"{block['n_conversations']} conversations{marker}", file=out)
+        print(f"  reads as: {decision['reads_as']}", file=out)
+        print(f"  overall kappa {_fmt(block['overall']['kappa'])}   "
+              f"{_fmt_ci(block['overall'][primary])}   "
+              f"raw agreement {_fmt(block['overall']['percent_agreement'])}", file=out)
+        for label, row in decision["per_abstention_type"].items():
+            print(f"    {label:<22} kappa {_fmt(row['kappa'])}  "
+                  f"n_either {row['n_either']:>3}  {row['verdict']}", file=out)
+        print(f"  hypothesis: {decision['hypothesis'].upper()} -- {decision['because']}",
+              file=out)
+    print(file=out)
+    print("The synthetic conversations were written by a model that knows the taxonomy and "
+          "wrote the", file=out)
+    print("guideline, so agreement on them measures whether the guideline can be applied, not "
+          "whether", file=out)
+    print("the taxonomy survives real conversations. See experiments/EXP-000/synthetic/README.md.",
+          file=out)
+
+
 def main(argv=None, *, runs_root=None, scrubbed_root=None, out=sys.stdout) -> int:
     """`runs_root` and `scrubbed_root` are injected by tests so a test run can write to a
 
@@ -531,6 +592,10 @@ def main(argv=None, *, runs_root=None, scrubbed_root=None, out=sys.stdout) -> in
     parser.add_argument("--seed", type=int, default=thresholds.BOOTSTRAP_SEED)
     parser.add_argument("--bootstrap", type=int, default=thresholds.BOOTSTRAP_RESAMPLES,
                         help="resamples per interval")
+    parser.add_argument("--manifest", type=Path, default=None,
+                        help="the sampler's manifest.json. With it, kappa is reported for the "
+                             "real and synthetic subsets separately as well as combined; only "
+                             "the real subset's verdict bears on ADR-003")
     parser.add_argument("--allow-partial-overlap", action="store_true",
                         help="measure on the shared items when the sheets differ, and record it")
     args = parser.parse_args(argv)
@@ -551,6 +616,17 @@ def main(argv=None, *, runs_root=None, scrubbed_root=None, out=sys.stdout) -> in
         Path(args.disagreements_dir).expanduser().resolve() / f"disagreements_{run_id}.jsonl",
         allowed_root=scrubbed_root)
 
+    sources = load_item_sources(args.manifest) if args.manifest else {}
+    if sources:
+        missing = [item["item_id"] for item in items if item["item_id"] not in sources]
+        if missing:
+            raise AgreementError(
+                f"{len(missing)} labelled item(s) are absent from the manifest's item_source "
+                f"map, e.g. {missing[0]}. The manifest and the sheets are from different "
+                "sampler runs; pass the manifest written beside these sheets.")
+        for item in items:
+            item["source"] = sources[item["item_id"]]
+
     config = build_config(mode=mode, run_id=run_id, seed=args.seed, resamples=args.bootstrap,
                           sheet_paths=paths, report=alignment)
     metrics = {
@@ -560,7 +636,23 @@ def main(argv=None, *, runs_root=None, scrubbed_root=None, out=sys.stdout) -> in
         **alignment,
         **measure(items, seed=args.seed, resamples=args.bootstrap),
     }
-    metrics["verdict"] = verdict(metrics["per_category"])
+    metrics["verdict"] = verdict(metrics["per_category"],
+                                 subset="combined" if sources else "combined")
+
+    if sources:
+        subsets = {}
+        for name in sorted({item["source"] for item in items}):
+            subset_items = [item for item in items if item["source"] == name]
+            block = measure(subset_items, seed=args.seed, resamples=args.bootstrap)
+            block["n_items_compared"] = len(subset_items)
+            block["n_conversations"] = len({i["conversation_id"] for i in subset_items})
+            block["verdict"] = verdict(block["per_category"], subset=name)
+            subsets[name] = block
+        metrics["by_source"] = subsets
+        metrics["items_by_source"] = {
+            name: block["n_items_compared"] for name, block in subsets.items()}
+        metrics["adr_003_subset"] = thresholds.ADR_003_SUBSET
+
     metrics["notes"] = config["notes"]
 
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -570,6 +662,8 @@ def main(argv=None, *, runs_root=None, scrubbed_root=None, out=sys.stdout) -> in
     write_disagreements(disagreement_path, rows, mode=mode, run_id=run_id)
 
     report_text(metrics, config, out)
+    if metrics.get("by_source"):
+        report_subsets(metrics, out)
     print(file=out)
     print(f"aggregates: {run_dir}/metrics.json and config.json", file=out)
     print(f"{len(rows)} disagreement(s): {disagreement_path}", file=out)

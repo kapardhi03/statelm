@@ -50,6 +50,13 @@ LABEL_VOCABULARY = (
 #: Pre-registered in thresholds.py. "random" is the remainder, drawn without requiring a cue.
 DEFAULT_QUOTAS = dict(thresholds.SAMPLING_QUOTAS)
 
+#: Where an item's conversation came from. Recorded in the manifest and NEVER in a sheet: an
+#: annotator who could see "synthetic" would label it differently from a real turn, and the
+#: whole point of reporting the two subsets separately is that the labels are blind to which is
+#: which. Kapardhi's decision, 2026-10-03.
+SOURCE_REAL = "real"
+SOURCE_SYNTHETIC = "synthetic"
+
 #: EXP-000 is an inter-annotator design with two annotators, named only "A" and "B". No personal
 #: name goes into a sheet, the manifest or any other annotation artifact: which person is which
 #: letter is the researcher's to know and is deliberately not recorded here.
@@ -129,7 +136,7 @@ def load_conversations(input_dir: str | Path) -> dict[str, list[dict]]:
 
 
 def candidate_turns(conversations: dict[str, list[dict]], *, context_turns: int,
-                    keywords=None) -> tuple[list[dict], dict]:
+                    keywords=None, source: str = SOURCE_REAL) -> tuple[list[dict], dict]:
     """Eligible target turns, each with its context window and strata. Returns (turns, census).
 
     Only a customer turn of real text can be a target. Seller turns and media placeholders stay
@@ -147,6 +154,8 @@ def candidate_turns(conversations: dict[str, list[dict]], *, context_turns: int,
         "rejected": {},
         "by_stratum": {name: 0 for name in cues.STRATA},
         "field_mentions": {field: 0 for field in (keywords or thresholds.FIELD_KEYWORDS)},
+        "code_mixed_cue_hits": 0,
+        "source": source,
     }
     for conversation_id, rows in sorted(conversations.items()):
         for position, turn in enumerate(rows):
@@ -162,18 +171,23 @@ def candidate_turns(conversations: dict[str, list[dict]], *, context_turns: int,
                 census["by_stratum"][name] = census["by_stratum"].get(name, 0) + 1
             for field in cues.fields_mentioned(turn.get("text", ""), keywords):
                 census["field_mentions"][field] = census["field_mentions"].get(field, 0) + 1
+            if cues.has_code_mixed_cue(turn.get("text", "")):
+                census["code_mixed_cue_hits"] += 1
             out.append({
                 "conversation_id": conversation_id,
                 "turn_index": turn.get("turn_index", position),
                 "turn": turn,
                 "context": context,
                 "strata": strata,
+                "source": source,
             })
     return out, census
 
 
 def choose_turns(candidates: list[dict], *, n_turns: int, seed: int,
-                 quotas: dict[str, float] | None = None) -> tuple[list[dict], dict]:
+                 quotas: dict[str, float] | None = None,
+                 all_strata: tuple[str, ...] = (),
+                 random_topup: bool = True) -> tuple[list[dict], dict]:
     """Fill each stratum's quota first, then top up at random. Returns (turns, report).
 
     Quotas are targets, not guarantees: a corpus with few corrections cannot be made to have
@@ -187,7 +201,23 @@ def choose_turns(candidates: list[dict], *, n_turns: int, seed: int,
     report = {"targets": {}, "achieved": {}, "shortfall": {},
               "eligible_per_stratum": {}, "quotas": dict(quotas)}
 
-    cue_quotas = {s: share for s, share in quotas.items() if s != thresholds.RANDOM_STRATUM}
+    # A stratum named in `all_strata` contributes every eligible turn it has, before any quota
+    # runs and regardless of n_turns. "Take all of them" has to win over a share of a target, or
+    # the flag would mean nothing on a corpus where the stratum is larger than the request.
+    for stratum in sorted(all_strata):
+        for key in sorted((k for k, c in by_key.items() if stratum in c["strata"]),
+                          key=lambda k: (str(k[0]), k[1])):
+            chosen.setdefault(key, by_key[key])
+        report["targets"][stratum] = sum(
+            1 for c in by_key.values() if stratum in c["strata"])
+        report["achieved"][stratum] = report["targets"][stratum]
+        report["shortfall"][stratum] = 0
+        report["eligible_per_stratum"][stratum] = report["targets"][stratum]
+    report["all_strata"] = list(all_strata)
+    report["taken_wholesale"] = len(chosen)
+
+    cue_quotas = {s: share for s, share in quotas.items()
+                  if s != thresholds.RANDOM_STRATUM and s not in all_strata}
     for stratum, share in sorted(cue_quotas.items()):
         target = min(int(round(share * n_turns)), n_turns)
         pool = sorted(
@@ -211,7 +241,8 @@ def choose_turns(candidates: list[dict], *, n_turns: int, seed: int,
     random_target = n_turns - sum(report["targets"].values())
     short = n_turns - len(chosen)
     drawn = 0
-    if short > 0 and remaining:
+    report["random_topup"] = bool(random_topup)
+    if random_topup and short > 0 and remaining:
         for key in rng.sample(remaining, min(short, len(remaining))):
             chosen[key] = by_key[key]
             drawn += 1
@@ -235,7 +266,26 @@ def format_context(context: list[dict]) -> str:
     return "\n".join(f"{cues.display_role(r)}: {r.get('text', '')}" for r in context)
 
 
-def build_items(turns: list[dict], fields: list[dict], *, n_items: int) -> list[dict]:
+def conversation_aliases(turns: list[dict], *, seed: int) -> dict[str, str]:
+    """Sheet-facing ids for the sampled conversations, from one namespace for every source.
+
+    Without this the source leaks through the id. Real conversations arrive as `conv_001` from
+    the scrubber and synthetic ones as `syn_001`, so an item id of `syn_004#2#budget` tells an
+    annotator the turn was written by a model -- which is exactly what keeping `source` out of
+    the sheet was meant to prevent. The aliases are drawn in a seeded shuffle across the merged
+    set, so neither the prefix nor the ordering carries the source.
+
+    The mapping back to the true conversation ids is in the manifest, and `pilot_items.json`
+    keeps the true ids, because test-split exclusion has to work against the real corpus.
+    """
+    true_ids = sorted({turn["conversation_id"] for turn in turns})
+    shuffled = list(true_ids)
+    random.Random(f"alias:{seed}").shuffle(shuffled)
+    return {true_id: f"c{position:03d}" for position, true_id in enumerate(shuffled, start=1)}
+
+
+def build_items(turns: list[dict], fields: list[dict], *, n_items: int,
+                aliases: dict[str, str] | None = None) -> list[dict]:
     """One row per (field, turn), trimmed on a turn boundary.
 
     Trimming whole turns rather than individual fields keeps every presented turn fully
@@ -245,12 +295,16 @@ def build_items(turns: list[dict], fields: list[dict], *, n_items: int) -> list[
     if per_turn == 0:
         raise SamplerError("the field list is empty")
     usable = max(1, n_items // per_turn)
+    aliases = aliases or {}
     for turn in turns[:usable]:
         context = format_context(turn["context"])
+        shown = aliases.get(turn["conversation_id"], turn["conversation_id"])
         for field in fields:
             items.append({
-                "item_id": f"{turn['conversation_id']}#{turn['turn_index']}#{field['name']}",
-                "conversation_id": turn["conversation_id"],
+                "item_id": f"{shown}#{turn['turn_index']}#{field['name']}",
+                "source": turn.get("source", SOURCE_REAL),
+                "true_conversation_id": turn["conversation_id"],
+                "conversation_id": shown,
                 "turn_index": turn["turn_index"],
                 "field": field["name"],
                 "field_type": field["type"],
@@ -354,7 +408,10 @@ def write_sheets(root: Path, orders: dict[str, list[dict]]) -> list[Path]:
             writer = csv.DictWriter(fh, fieldnames=list(SHEET_COLUMNS))
             writer.writeheader()
             for item in rows:
-                writer.writerow(item)
+                # Projected onto SHEET_COLUMNS rather than written whole. An item carries
+                # `source`, and a sheet must not: this makes that structural, so adding another
+                # researcher-only key later cannot leak it into an annotator's view by default.
+                writer.writerow({column: item.get(column, "") for column in SHEET_COLUMNS})
         written.append(path)
     return written
 
@@ -378,6 +435,9 @@ def report_census(census: dict, *, n_items: int, fields: int, out) -> None:
           f"{ {k: v for k, v in census['by_stratum'].items() if v} }", file=out)
     print(f"field mentions among eligible: "
           f"{ {k: v for k, v in census['field_mentions'].items() if v} }", file=out)
+    if census.get("code_mixed_cue_hits"):
+        print(f"of which matched a code-mixed cue: {census['code_mixed_cue_hits']} "
+              "(romanized Telugu/Hindi forms added 2026-10-03)", file=out)
     print(f"turns needed for --n-items {n_items} over {fields} fields: {wanted_turns}", file=out)
     if census["eligible_targets"] < wanted_turns:
         print(f"WARNING: only {census['eligible_targets']} eligible target(s) for "
@@ -393,6 +453,13 @@ def report_census(census: dict, *, n_items: int, fields: int, out) -> None:
     print(file=out)
 
 
+def _count_by_source(items) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for item in items:
+        out[item["source"]] = out.get(item["source"], 0) + 1
+    return out
+
+
 def write_manifest(root: Path, items, turns, report, settings, orders=None) -> Path:
     """The researcher's record of how items were chosen. Annotators do not see this."""
     manifest = {
@@ -403,6 +470,17 @@ def write_manifest(root: Path, items, turns, report, settings, orders=None) -> P
         "settings": settings,
         "enrichment": report,
         "corpus_census": settings.get("census"),
+        "synthetic_enrichment": settings.get("synthetic_enrichment"),
+        "synthetic_census": settings.get("synthetic_census"),
+        "item_source": {item["item_id"]: item["source"] for item in items},
+        "conversation_alias": settings.get("aliases") or {},
+        "alias_note": "Sheets show the alias, never the true conversation id: a `syn_` prefix "
+                      "would tell an annotator the turn was model-written. The true ids are "
+                      "here and in pilot_items.json.",
+        "items_by_source": _count_by_source(items),
+        "source_note": "Item sources are recorded here and in no sheet. agreement.py --manifest "
+                       "reads this map to report kappa for the real and synthetic subsets "
+                       "separately. Only the real subset's verdict bears on ADR-003.",
         "sheet_order": orders or {},
         "items": len(items),
         "turns": len(turns),
@@ -422,8 +500,11 @@ def write_pilot_items(root: Path, turns) -> Path:
     """Ids only, so these turns can be excluded from the eventual test split."""
     payload = {
         "purpose": "EXP-000 pilot items. These turns must never enter the final test split.",
+        "note": "conversation_id here is the TRUE id, not the sheet alias, because exclusion "
+                "has to match the real corpus.",
         "turns": [
-            {"conversation_id": t["conversation_id"], "turn_index": t["turn_index"]}
+            {"conversation_id": t["conversation_id"], "turn_index": t["turn_index"],
+             "source": t.get("source", SOURCE_REAL)}
             for t in turns
         ],
     }
@@ -451,6 +532,20 @@ def main(argv=None, out=sys.stdout) -> int:
     parser.add_argument("--n-items", type=int, default=80, help="target (field, turn) items")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--context-turns", type=int, default=6)
+    parser.add_argument("--synthetic", type=Path, default=None, metavar="DIR",
+                        help="a second conversation set, sampled alongside --input. Its items "
+                             "are marked source=synthetic in the manifest and nowhere else")
+    parser.add_argument("--synthetic-turns", type=int, default=16,
+                        help="turns to draw from --synthetic, using the normal quotas")
+    parser.add_argument("--all-stratum", action="append", default=None, metavar="NAME",
+                        choices=list(cues.STRATA),
+                        help="take EVERY eligible turn in this stratum from --input instead of "
+                             "a quota share; repeatable")
+    parser.add_argument("--no-random-topup", action="store_true",
+                        help="do not pad the real set with cue-free turns to reach --n-items")
+    parser.add_argument("--census-only", action="store_true",
+                        help="print the census and write nothing, to see what a corpus can "
+                             "support before committing to a sample")
     parser.add_argument("--field-keywords", type=Path, default=None,
                         help="optional YAML of field_keywords to replace the built-in lists, "
                              "for locality names this repository cannot hold")
@@ -466,18 +561,64 @@ def main(argv=None, out=sys.stdout) -> int:
     fields = load_fields(args.fields)
     conversations = load_conversations(args.input)
     keywords = load_field_keywords(args.field_keywords)
+    all_strata = tuple(args.all_stratum or ())
+
     candidates, census = candidate_turns(conversations, context_turns=args.context_turns,
-                                         keywords=keywords)
+                                         keywords=keywords, source=SOURCE_REAL)
     report_census(census, n_items=args.n_items, fields=len(fields), out=out)
-    if not candidates:
+
+    synthetic_candidates: list[dict] = []
+    synthetic_census = None
+    synthetic_conversations: dict = {}
+    if args.synthetic:
+        safety.assert_disjoint(args.synthetic, args.output)
+        synthetic_conversations = load_conversations(args.synthetic)
+        overlap = sorted(set(synthetic_conversations) & set(conversations))
+        if overlap:
+            raise SamplerError(
+                f"conversation id(s) {overlap[:5]} appear in both --input and --synthetic. "
+                "Items are keyed by conversation and turn, so a collision would merge two "
+                "different conversations into one item id.")
+        synthetic_candidates, synthetic_census = candidate_turns(
+            synthetic_conversations, context_turns=args.context_turns, keywords=keywords,
+            source=SOURCE_SYNTHETIC)
+        print(f"--- synthetic set: {args.synthetic} ---", file=out)
+        report_census(synthetic_census, n_items=args.synthetic_turns * len(fields),
+                      fields=len(fields), out=out)
+
+    if args.census_only:
+        print("--census-only: nothing was written.", file=out)
+        return 0
+
+    if not candidates and not synthetic_candidates:
         raise SamplerError(
-            "no turn in this corpus can be a target. A target must be a customer turn of real "
-            f"text with at least {thresholds.MIN_TARGET_WORDS} words; "
-            f"{census['turns_total']} turns were read and all were rejected "
+            "no turn in either corpus can be a target. A target must be a customer turn of "
+            f"real text with at least {thresholds.MIN_TARGET_WORDS} words; "
+            f"{census['turns_total']} turns were read from --input and all were rejected "
             f"({census['rejected']}).")
     n_turns = max(1, args.n_items // len(fields))
-    turns, report = choose_turns(candidates, n_turns=n_turns, seed=args.seed)
-    items = build_items(turns, fields, n_items=args.n_items)
+    turns, report = choose_turns(candidates, n_turns=n_turns, seed=args.seed,
+                                 all_strata=all_strata,
+                                 random_topup=not args.no_random_topup)
+    synthetic_report = None
+    if synthetic_candidates:
+        synthetic_turns, synthetic_report = choose_turns(
+            synthetic_candidates, n_turns=args.synthetic_turns, seed=args.seed + 1)
+        turns = turns + synthetic_turns
+
+    # Every selected turn becomes len(fields) items; nothing is trimmed, because the real set's
+    # size is decided by --all-stratum rather than by --n-items.
+    aliases = conversation_aliases(turns, seed=args.seed)
+    items = build_items(turns, fields, n_items=len(turns) * len(fields), aliases=aliases)
+    by_source = {}
+    for item in items:
+        by_source[item["source"]] = by_source.get(item["source"], 0) + 1
+    print(f"ITEMS TO BE WRITTEN: {len(items)} "
+          f"({len(turns)} turns x {len(fields)} fields) {by_source}", file=out)
+    if len(items) > args.n_items:
+        print(f"  this exceeds --n-items {args.n_items}; --all-stratum takes every turn in "
+              f"{list(all_strata)} regardless of the request", file=out)
+    print(file=out)
 
     annotators = [part.strip() for chunk in args.annotators
                   for part in str(chunk).split(",") if part.strip()]
@@ -494,6 +635,12 @@ def main(argv=None, out=sys.stdout) -> int:
         "min_target_words": thresholds.MIN_TARGET_WORDS,
         "field_keywords_overridden": bool(args.field_keywords),
         "census": census,
+        "synthetic_census": synthetic_census,
+        "synthetic_enrichment": synthetic_report,
+        "synthetic_turns_requested": args.synthetic_turns if args.synthetic else None,
+        "all_strata": list(all_strata),
+        "random_topup": not args.no_random_topup,
+        "aliases": {alias: true_id for true_id, alias in aliases.items()},
     }
 
     orders, order_report = shuffled_orders(items, annotators, seed=args.seed)
@@ -502,13 +649,25 @@ def main(argv=None, out=sys.stdout) -> int:
     write_pilot_items(root, turns)
     write_label_reference(root)
 
-    print(f"conversations read: {len(conversations)}", file=out)
-    print(f"candidate turns: {len(candidates)}; sampled: {len(turns)}", file=out)
-    print(f"items: {len(items)} ({len(fields)} fields x {len(turns)} turns)", file=out)
-    print(f"enrichment achieved: {report['achieved']}", file=out)
+    print(f"conversations read: {len(conversations)} real"
+          + (f" + {len(synthetic_conversations)} synthetic" if synthetic_candidates else ""),
+          file=out)
+    print(f"real: {len(candidates)} eligible, "
+          f"{sum(1 for x in turns if x['source'] == SOURCE_REAL)} sampled", file=out)
+    if synthetic_candidates:
+        print(f"synthetic: {len(synthetic_candidates)} eligible, "
+              f"{sum(1 for x in turns if x['source'] == SOURCE_SYNTHETIC)} sampled", file=out)
+    print(f"items: {len(items)} ({len(fields)} fields x {len(turns)} turns) {by_source}",
+          file=out)
+    print(f"real enrichment achieved: {report['achieved']}", file=out)
     if any(report["shortfall"].values()):
-        print(f"enrichment shortfall: "
+        print(f"real enrichment shortfall: "
               f"{ {k: v for k, v in report['shortfall'].items() if v} }", file=out)
+    if synthetic_report:
+        print(f"synthetic enrichment achieved: {synthetic_report['achieved']}", file=out)
+        if any(synthetic_report["shortfall"].values()):
+            print(f"synthetic enrichment shortfall: "
+                  f"{ {k: v for k, v in synthetic_report['shortfall'].items() if v} }", file=out)
     print(f"sheets: {', '.join(p.name for p in sheets)} (label columns are empty)", file=out)
     print(f"each sheet holds the same items with the turn blocks in its own seeded order "
           f"({order_report['turns']} turns); the orders are in the manifest", file=out)

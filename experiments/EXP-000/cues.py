@@ -28,13 +28,31 @@ import thresholds
 CORRECTION_CUES = (
     "actually", "sorry", "i meant", "i mean", "no wait", "scratch that", "instead",
     "correction", "my mistake", "rather than", "not that", "change that", "ignore that",
+    "change",
+    # Romanized Telugu and Hindi. Kapardhi's list of 2026-10-03, prompted by the v2 census:
+    # 135 eligible customer turns produced 0 correction and 0 hedge matches against the
+    # English-only lists, in a deployment where customers code-mix.
+    "kaadu", "ledu ledu", "matlab", "nahi nahi",
 )
 
 #: Phrases that often accompany an underspecified or tentative value.
 HEDGE_CUES = (
     "around", "approximately", "roughly", "maybe", "might", "perhaps", "or so", "ballpark",
     "up to", "at least", "somewhere", "thereabouts", "flexible", "depends", "not sure",
-    "probably", "could be", "give or take",
+    "probably", "could be", "give or take", "around about",
+    # Romanized Telugu and Hindi. Same provenance as the correction additions above.
+    "konchem", "approx ga", "emo", "anukuntunna", "chuddam", "alochistanu", "telidu",
+    "shayad", "lagbhag", "thoda", "dekhte hain", "pata nahi",
+)
+
+#: Cue words added on 2026-10-03 that are not English. Recorded separately so the census can
+#: say how much of a stratum the code-mixed forms are responsible for: if they account for most
+#: of it, the English-only lists were the problem; if they account for little, the phenomenon is
+#: absent from the text channel and better cues will not recover it.
+CODE_MIXED_CUES = (
+    "kaadu", "ledu ledu", "matlab", "nahi nahi",
+    "konchem", "approx ga", "emo", "anukuntunna", "chuddam", "alochistanu", "telidu",
+    "shayad", "lagbhag", "thoda", "dekhte hain", "pata nahi",
 )
 
 #: Strata a target turn can belong to. "field_mention", "correction" and "hedge" carry quotas;
@@ -74,6 +92,7 @@ def _field_matcher(cues: tuple[str, ...]) -> re.Pattern:
 
 _CORRECTION = _matcher(tuple(CORRECTION_CUES))
 _HEDGE = _matcher(tuple(HEDGE_CUES))
+_CODE_MIXED = _matcher(tuple(CODE_MIXED_CUES))
 
 
 def has_correction_cue(text: str) -> bool:
@@ -86,6 +105,11 @@ def has_hedge_cue(text: str) -> bool:
 
 def distinct_speakers(rows: Sequence[dict]) -> int:
     return len({r.get("speaker_id") for r in rows if r.get("speaker_id")})
+
+
+def has_code_mixed_cue(text: str) -> bool:
+    """Whether a non-English cue matched. Counted in the census, never used as a stratum."""
+    return bool(_CODE_MIXED.search(text or ""))
 
 
 def role_of(turn: dict) -> str:

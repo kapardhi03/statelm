@@ -657,3 +657,109 @@ class TestShuffledSheetsChangeNothing:
         # "~40 lakhs" vs "40 lakhs" agree under neither.
         assert value["strict"]["agreement"] == pytest.approx(0.0)
         assert value["number_aware"]["agreement"] == pytest.approx(0.5)
+
+
+class TestPerSourceReporting:
+    """--manifest splits the result. Only the real subset's verdict bears on ADR-003."""
+
+    LABELS = ("NO-OP", "VALUE", "ABSTAIN:insufficient", "ABSTAIN:ambiguous",
+              "ABSTAIN:conflicting", "HEDGED")
+
+    def build(self, workspace, *, real_agree=0.55, synthetic_agree=1.0):
+        """Items from two sources, with the synthetic ones agreeing more often."""
+        entries, rng = [], random.Random(3)
+        sources = {}
+        for source, conversations in (("real", range(1, 5)), ("synthetic", range(5, 9))):
+            for c in conversations:
+                for turn in range(5):
+                    for field in ("budget", "location_preference"):
+                        label = self.LABELS[(c + turn) % len(self.LABELS)]
+                        rate = real_agree if source == "real" else synthetic_agree
+                        other = label if rng.random() < rate else rng.choice(self.LABELS)
+                        entry = item(f"c{c:03d}", turn, field, label, other)
+                        entries.append(entry)
+                        sources[f"c{c:03d}#{turn}#{field}"] = source
+        manifest = workspace["sheets"] / "manifest.json"
+        manifest.parent.mkdir(parents=True, exist_ok=True)
+        manifest.write_text(json.dumps({"item_source": sources}), encoding="utf-8")
+        return entries, manifest
+
+    def test_it_reports_three_blocks(self, workspace):
+        entries, manifest = self.build(workspace)
+        code, output = run(workspace, entries, extra=("--manifest", str(manifest)))
+        assert code == 0
+        metrics, _, _ = read_outputs(workspace)
+        assert set(metrics["by_source"]) == {"real", "synthetic"}
+        assert metrics["overall"]["kappa"] is not None       # the combined figure is still there
+        assert "BY SOURCE" in output
+
+    def test_only_the_real_subset_bears_on_adr_003(self, workspace):
+        entries, manifest = self.build(workspace)
+        _, output = run(workspace, entries, extra=("--manifest", str(manifest)))
+        metrics, _, _ = read_outputs(workspace)
+        assert metrics["by_source"]["real"]["verdict"]["bears_on_adr_003"] is True
+        assert metrics["by_source"]["synthetic"]["verdict"]["bears_on_adr_003"] is False
+        assert metrics["adr_003_subset"] == "real"
+
+    def test_the_synthetic_verdict_carries_its_label(self, workspace):
+        entries, manifest = self.build(workspace)
+        _, output = run(workspace, entries, extra=("--manifest", str(manifest)))
+        metrics, _, _ = read_outputs(workspace)
+        note = metrics["by_source"]["synthetic"]["verdict"]["reads_as"]
+        assert note == "guideline usability, not evidence for ADR-003"
+        assert note in output
+        assert "not evidence for ADR-003" in output
+
+    def test_the_combined_figure_can_disagree_with_the_real_one(self, workspace):
+        """The whole reason for the split.
+
+        Synthetic items that agree far more often pull the combined kappa up, so a single
+        number over a mixed item set can read NOT REFUTED while the real subset is REFUTED.
+        """
+        entries, manifest = self.build(workspace, real_agree=0.45, synthetic_agree=1.0)
+        run(workspace, entries, extra=("--manifest", str(manifest)))
+        metrics, _, _ = read_outputs(workspace)
+        real = metrics["by_source"]["real"]["overall"]["kappa"]
+        combined = metrics["overall"]["kappa"]
+        assert combined > real, (combined, real)
+
+    def test_each_subset_gets_its_own_counts(self, workspace):
+        entries, manifest = self.build(workspace)
+        run(workspace, entries, extra=("--manifest", str(manifest)))
+        metrics, _, _ = read_outputs(workspace)
+        blocks = metrics["by_source"]
+        assert blocks["real"]["n_items_compared"] + blocks["synthetic"]["n_items_compared"] \
+            == metrics["n_items_compared"]
+        assert blocks["real"]["n_conversations"] == 4
+
+    def test_without_the_flag_nothing_changes(self, workspace):
+        entries, _ = self.build(workspace)
+        code, output = run(workspace, entries)
+        assert code == 0
+        metrics, _, _ = read_outputs(workspace)
+        assert "by_source" not in metrics
+        assert "BY SOURCE" not in output
+
+    def test_a_manifest_from_another_run_is_a_loud_error(self, workspace):
+        entries, manifest = self.build(workspace)
+        stale = json.loads(manifest.read_text(encoding="utf-8"))
+        stale["item_source"].pop(next(iter(stale["item_source"])))
+        manifest.write_text(json.dumps(stale), encoding="utf-8")
+        with pytest.raises(agreement.AgreementError, match="different sampler runs"):
+            run(workspace, entries, extra=("--manifest", str(manifest)))
+
+    def test_a_manifest_without_the_map_is_a_loud_error(self, workspace, tmp_path):
+        entries, _ = self.build(workspace)
+        empty = tmp_path / "old_manifest.json"
+        empty.write_text(json.dumps({"tool": "EXP-000 sample_items.py"}), encoding="utf-8")
+        with pytest.raises(agreement.AgreementError, match="no 'item_source' map"):
+            run(workspace, entries, extra=("--manifest", str(empty)))
+
+    def test_no_source_or_text_reaches_runs(self, workspace):
+        entries, manifest = self.build(workspace)
+        run(workspace, entries, extra=("--manifest", str(manifest)))
+        _, _, run_dir = read_outputs(workspace)
+        for name in ("metrics.json", "config.json"):
+            body = (run_dir / name).read_text(encoding="utf-8")
+            assert CANARY not in body
+            assert "c001#" not in body
