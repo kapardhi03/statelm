@@ -1,0 +1,86 @@
+%% StateLM research flow, Oct 1-3 2026
+%% Figures traceable to docs/research/
+flowchart TB
+
+  subgraph D1["Day 1 · Oct 1"]
+  Q["Unseen schema, ≤4B model"]
+  LIT["SGD unseen split is leaky"]
+  E2["EXP-002 novelty audit"]
+  GATE["Gate PASS 75/116 = 64.66%"]
+  H1["H1 REFUTED 12.2% vs rule 50%"]
+  H2["H2 SUPPORTED, 1 inversion"]
+  A4["ADR-004 ACCEPTED"]
+  A123["ADR-001/002/003 Proposed"]
+  E0["EXP-000 opened, κ ≥ 0.6"]
+  end
+
+  subgraph D2["Day 2 · Oct 2"]
+  A5["ADR-005 ACCEPTED"]
+  H1B["H1 inconclusive, dropped"]
+  GL["Guideline approved"]
+  PRG["Floor: 10 items per category"]
+  VOID["VOID: 160 labels NO-OP"]
+  CZ["Cause: 10 of 16 seller-side"]
+  FIX["6 sampler changes pre-reg"]
+  end
+
+  subgraph D3["Day 3 · Oct 3"]
+  C2["v2: 135 eligible, 18 field"]
+  Z2["0 hedge, 0 correction cues"]
+  VN["54 voice-note placeholders"]
+  MIX["Design change: mixed items"]
+  SYN["20 synthetic convs, 164 turns"]
+  CUE["16 romanized forms added"]
+  C3["v3: still 0. Language ruled out"]
+  SCR["121/135 ASCII: script ruled out"]
+  FL["151 excluded: 126 1w, 25 2w"]
+  SUB["Only 4 substantive, 0 cue"]
+  DEC["3-word floor stands"]
+  ALL["Corpus 286: 22 field, 0 cues"]
+  RISK["Abstention may not be testable"]
+  end
+
+  subgraph NX["Next"]
+  LAB["Two annotators label"]
+  AG["κ per source: real vs synth"]
+  D24["Decisions D2 and D4"]
+  E1["EXP-001 headroom probe"]
+  end
+
+  Q --> LIT --> E2 --> GATE
+  GATE --> H1
+  GATE --> H2
+  Q --> A123
+  Q --> E0
+  H1 -.->|"drop redundancy claim"| A4
+  H2 -.->|"no absolute cutoffs"| A5
+  H1 --> H1B
+  E0 --> GL --> PRG --> VOID
+  VOID --> CZ
+  CZ -.->|"design, not annotators"| FIX
+  FIX --> C2 --> Z2
+  C2 --> VN
+  Z2 -.->|"corpus too sparse"| MIX
+  MIX --> SYN
+  Z2 -.->|"deployment code-mixes"| CUE
+  CUE --> C3
+  C3 -.->|"test the instrument"| SCR
+  SCR -.->|"frame is what is left"| FL
+  FL --> SUB --> DEC
+  SUB --> ALL
+  VN --> ALL
+  ALL -.->|"flag for Stage 1"| RISK
+  DEC --> LAB
+  SYN --> LAB
+  LAB --> AG --> D24
+  RISK --> D24 --> E1
+
+  classDef ok fill:#d8f3dc,stroke:#2d6a4f
+  classDef bad fill:#ffd6d6,stroke:#9d0208
+  classDef warn fill:#ffe8c2,stroke:#bb6b00
+  classDef nxt fill:#d7e8ff,stroke:#1d4ed8
+
+  class A4,A5 ok
+  class H1,H1B,VOID,CZ,Z2,C3,SUB bad
+  class C2,VN,MIX,SCR,FL,ALL,RISK warn
+  class LAB,AG,D24,E1 nxt
