@@ -1001,6 +1001,14 @@ def stratum_dicts(output):
     return found
 
 
+def census_total(text, prefix):
+    """The integer a census line ends with, e.g. `turns read: 24`."""
+    for line in text.splitlines():
+        if line.startswith(prefix):
+            return int(line.rsplit(":", 1)[1].strip())
+    raise AssertionError(f"no census line starting {prefix!r} in {text!r}")
+
+
 def synthetic_census_section(output):
     """Just the synthetic set's census block: header to the item count that follows it."""
     _, marker, tail = output.partition("--- synthetic set:")
@@ -1198,3 +1206,35 @@ class TestTheOvershootMessageNamesTheRightCause:
                         "--no-random-topup", "--n-items", "5")
         assert "--all-stratum takes every turn in ['field_mention']" in output
         assert "--synthetic-turns" not in output
+
+
+class TestCensusOnlyMatchesASamplingRun:
+    """`--census-only` and a sampling run report the same census on the same corpus.
+
+    They share one code path, so they cannot differ — which is the point. The experiment record
+    cites the equivalence when it says the v3 census read the extended cue lists, and a cited
+    equivalence should be pinned by a test rather than argued from reading the code.
+    """
+
+    def test_the_census_block_is_identical(self, code_mixed_only):
+        source, fields, out = code_mixed_only
+        _, census_only = run(source, out, fields, "--census-only")
+        assert not out.exists(), "--census-only must write nothing before the comparison"
+        _, sampling = run(source, out, fields)
+        assert census_only.partition("\n\n")[0] == sampling.partition("\n\n")[0]
+
+    def test_it_matches_the_census_the_sampling_run_recorded(self, code_mixed_only):
+        """Printed against stored: the manifest is what every later analysis reads."""
+        source, fields, out = code_mixed_only
+        _, census_only = run(source, out, fields, "--census-only")
+        run(source, out, fields)
+        recorded = json.loads((out / "manifest.json").read_text(encoding="utf-8"))["corpus_census"]
+        assert census_strata(census_only) == nonzero(recorded["by_stratum"])
+        assert census_strata(census_only, "field mentions among eligible: ") == \
+            nonzero(recorded["field_mentions"])
+        assert census_total(census_only, "turns read: ") == recorded["turns_total"]
+        assert census_total(census_only, "eligible targets ") == recorded["eligible_targets"]
+        # The romanized forms are why this fixture has any hedge or correction at all.
+        assert recorded["by_stratum"]["hedge"] == 9
+        assert recorded["by_stratum"]["correction"] == 6
+        assert recorded["code_mixed_cue_hits"] == 15
