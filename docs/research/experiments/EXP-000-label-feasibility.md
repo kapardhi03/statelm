@@ -124,6 +124,75 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
   VALUEs ("around 40 lakhs" -> VALUE `~40 lakhs`), so value agreement treats an approximation
   marker as part of the value. `~40 lakhs` and `around 40 lakhs` agree; neither agrees with
   `40 lakhs`. Pre-registered before any sheet is labelled.
+- 2026-10-03: **v3 census — the extended cue lists change nothing.** Transcribed from
+  Kapardhi, 2026-10-03, counts only: "135 eligible customer turns; field_mention 18;
+  correction 0; hedge 0, unchanged from v2." His reading, recorded as his: the extended cues
+  found no hedges or corrections, so **cue-language blindness does not explain the absence.**
+  Two explanations remain: the phenomena are genuinely absent from the text channel, or they
+  occur in the 54 voice notes. Pre-labelling; the run wrote sheets but none were labelled.
+  What the counts measure is a **cue match**, not a hedge. Same corpus as v2, so v3 is not an
+  independent sample; it carries the one bit that those 16 romanized forms add nothing.
+  Internal consistency: every form in `cues.CODE_MIXED_CUES` is also a hedge or a correction
+  cue, so `code_mixed_cue_hits` is necessarily 0 whenever those two strata are — and
+  `report_census` suppresses the line at 0, so it was absent from the census rather than
+  printed as 0. That also means the count carries no information independent of the two strata
+  at the zero point: it can apportion a non-zero stratum, which is what it was added for, and
+  cannot rule (b) in or out.
+  The census path is the sampling path — `candidate_turns` -> `cues.strata_for` -> the
+  module-level cue tuples — and `--census-only` returns only after `report_census`. Pinned by
+  `tests/test_sample_items.py::TestCensusOnlyUsesTheExtendedCueLists`, whose corpus carries
+  hedges and corrections in romanized forms only and whose control fixture is the same turns
+  with those words removed, and by `TestCensusOnlyMatchesASamplingRun`, which compares the two
+  invocations' censuses on one corpus. Neither ties the v3 run itself to this code version:
+  no `runs/EXP-000/<run-id>/` record exists for the v2 or v3 census, so the counts above rest
+  on Kapardhi's report rather than on an auditable run record. Flagged by Claude Code.
+  **A caveat on the ruling-out, raised by Claude Code and not settled.** The 33 English hedge
+  and correction forms in the same lists — "around", "maybe", "up to", "flexible", "actually",
+  "sorry", "change" among them — also matched 0 of those 135 turns. No cue in either language
+  has been observed to fire on this corpus, so the probe has not been shown capable of firing,
+  and a probe that has never fired cannot separate an absent phenomenon from a probe that does
+  not match this text. Recorded in `knowns-unknowns.md` as an open question with the two
+  aggregate measurements that would settle it.
+- 2026-10-03: **the v3 sampling run printed the synthetic set's stratum counts to Annotator A's
+  terminal before labelling.** Reported by Kapardhi, 2026-10-03: "hedge 13, correction 5,
+  code-mixed 13 among eligible synthetic targets. No item-level or row-level information was
+  shown, and Annotator B saw nothing." The change that follows was instructed by Kapardhi in
+  the same message, prompted by what the run printed; no label existed when it was made.
+  The sampler now prints a `--synthetic` set's totals only; the breakdown goes to the manifest
+  and `--show-synthetic-strata` prints it. Manifests from here on record
+  `synthetic_strata_printed`, so a **future** run can be checked rather than guessed at; the
+  v3 manifest predates the field, so that run is not auditable this way.
+  Covered by `tests/test_sample_items.py::TestSyntheticStrataAreWithheld`, which also pins that
+  the real census keeps its full breakdown — that census is the finding above.
+  **Suppression does not undo the exposure already incurred.** Annotator A has seen those
+  counts; re-running the sampler cannot unsee them, and a fresh draw from the same synthetic
+  set carries the same base rates. What the change protects is runs after this one. Whether
+  the v3 sheets should be marked unused, as the v2 sheets were, is not recorded here: they sit
+  under `data/scrubbed/`, which Claude cannot read, and nothing in this record marks them
+  either way.
+  What the fix does not reach, recorded so the measurement is not read as cleaner than it is.
+  The quotas are pre-registered and public, so the composition the sampler aimed for stays
+  derivable from the turn count. And with real hedge 0 and correction 0, an item in the mixed
+  set that reads as a hedge or a correction **is more likely synthetic than real** — an
+  inference from the real census alone, which Annotator A must see, not from the counts that
+  were printed. How much more likely depends on how completely the cues catch hedges in the
+  real corpus, and that recall is unmeasured: the caveat in the entry above is that no cue has
+  been observed to fire on this corpus at all, so a real hedge the cues missed would sit in the
+  real subset and read as a hedge. The claim cannot be put more strongly than that without
+  holding both "the cues may be blind to hedges here" and "a hedge-reading item must be
+  synthetic", which are in tension. Stated conditionally for that reason, after review.
+  To the extent it holds, it partially de-blinds the mixed set for Annotator A on exactly the
+  strata the abstention hypothesis is about, and suppressing the synthetic counts removes the
+  magnitude rather than the inference. Annotator B has seen none of it. Flagged by Claude
+  Code; whether the design should change in response is Kapardhi's call, not recorded here as
+  settled.
+  A larger threat than the printed counts, also flagged by Claude Code and also Kapardhi's to
+  judge: Annotator A approved the annotation guideline (entry of 2026-10-02) and so is the
+  taxonomy's author-in-effect, which makes the real subset's kappa partly guideline-approver
+  against guideline-user rather than two independent users of it. Setup above states that which
+  person is which letter is not recorded in this repository; the run book addresses Annotator A
+  directly, so within this repository it is derivable. Whether to weaken that claim or to stop
+  addressing A directly is not recorded here either way.
 
 ## Leakage check
 Items used here are pilot items and must not enter the eventual test split.
