@@ -1346,6 +1346,7 @@ def allowed_strings(keywords=None):
         "amount_pattern", "locality_suffix_pattern", "unknown", "",
         diagnostics.NO_CUE_NOTE, sample_items.SYNTHETIC_CENSUS_NOTE,
         diagnostics.KEYWORD_SOURCE_BUILT_IN, diagnostics.KEYWORD_SOURCE_FILE,
+        diagnostics.FLOOR_NOTE, diagnostics.FLOOR_POPULATION,
         *thresholds.TARGET_ROLES,
     }
     return allowed
@@ -1738,3 +1739,145 @@ class TestPerCueCountsAreEntailedZeroWhenTheStratumIs:
         patterns = read_record(out, "cue_diagnostics")["field_patterns"]
         assert census["by_stratum"]["field_mention"] > 0
         assert sum(patterns.values()) > 0
+
+
+#: Short but substantive customer answers, the case the word floor cannot distinguish from
+#: noise. Each is one or two words: "50 lakhs" settles a budget, "3 BHK" a property type,
+#: "maybe 60" is a hedged figure. Mixed with genuinely content-free turns and with one eligible
+#: turn, so the block has something to exclude and something to keep.
+SHORT_ANSWER_TURNS = [
+    ("agent", "What budget are you working with?"),
+    ("customer", "50 lakhs"),
+    ("agent", "And the configuration?"),
+    ("customer", "3 BHK"),
+    ("customer", "maybe 60"),
+    ("customer", "ok"),
+    ("customer", "thanks"),
+    ("customer", "no"),
+    ("agent", "I will share two options."),
+    ("customer", "we are looking at three bedrooms near the metro"),
+    ("customer", "[media: voice note]"),
+    ("customer", ""),
+]
+
+
+@pytest.fixture
+def short_answers(tmp_path):
+    source = write_roled_conversations(tmp_path / "scrubbed", turns=SHORT_ANSWER_TURNS, count=2)
+    fields = tmp_path / "fields.yaml"
+    fields.write_text(FIELDS, encoding="utf-8")
+    return source, fields, tmp_path / "annotation"
+
+
+class TestTurnsExcludedByTheWordFloor:
+    """Does the 3-word floor throw away short answers that settle a field?
+
+    The floor was pre-registered to keep the sampler off the 2-to-16 character turns that helped
+    void run 20261002T175103Z-f318529, and it cannot tell "ok" from "50 lakhs". If the excluded
+    population carries field mentions and cues, the frame is part of why the corpus reads
+    state-sparse -- which is a third cause the v3 census's two readings do not cover.
+    """
+
+    def test_the_population_is_customer_text_turns_only(self, short_answers):
+        source, fields, out = short_answers
+        run(source, out, fields, "--cue-diagnostics")
+        block = read_record(out, "cue_diagnostics")["excluded_by_word_floor"]
+        # 6 short customer turns per conversation x 2: 50 lakhs, 3 BHK, maybe 60, ok, thanks, no.
+        assert block["turns"] == 12
+        assert block["min_target_words"] == 3
+
+    def test_seller_media_and_empty_turns_are_not_in_it(self, short_answers):
+        """Each has its own rejection reason; only too_short belongs in this block."""
+        source, fields, out = short_answers
+        run(source, out, fields, "--census-only", "--cue-diagnostics")
+        rejected = read_record(out, "census")["census"]["rejected"]
+        block = read_record(out, "cue_diagnostics")["excluded_by_word_floor"]
+        assert block["turns"] == rejected["too_short"]
+        assert rejected["media_placeholder"] == 2 and rejected["empty"] == 2
+        assert block["turns"] < sum(rejected.values())
+
+    def test_the_word_count_distribution_covers_every_count_below_the_floor(self,
+                                                                           short_answers):
+        source, fields, out = short_answers
+        run(source, out, fields, "--cue-diagnostics")
+        block = read_record(out, "cue_diagnostics")["excluded_by_word_floor"]
+        assert sorted(block["word_counts"]) == ["1", "2"], "zeros included, keys are JSON strings"
+        # ok, thanks, no = 3 one-word turns per conversation; 50 lakhs, 3 BHK, maybe 60 = 3 two.
+        assert block["word_counts"] == {"1": 6, "2": 6}
+        assert sum(block["word_counts"].values()) == block["turns"]
+
+    def test_it_finds_the_substantive_short_answers(self, short_answers):
+        source, fields, out = short_answers
+        run(source, out, fields, "--cue-diagnostics")
+        block = read_record(out, "cue_diagnostics")["excluded_by_word_floor"]
+        assert block["field_mentions"]["budget"] == 2, "50 lakhs, once per conversation"
+        assert block["field_mentions"]["property_type"] == 2, "3 BHK"
+        assert block["field_patterns"]["amount_pattern"] == 2
+        assert block["with_field_mention"] == 4
+        assert block["cues"]["hedge"]["maybe"] == 2
+        assert block["with_hedge_or_correction_cue"] == 2
+
+    def test_every_cue_form_is_listed_including_zeros(self, short_answers):
+        source, fields, out = short_answers
+        run(source, out, fields, "--cue-diagnostics")
+        block = read_record(out, "cue_diagnostics")["excluded_by_word_floor"]
+        assert set(block["cues"]["hedge"]) == set(cues.HEDGE_CUES)
+        assert set(block["cues"]["correction"]) == set(cues.CORRECTION_CUES)
+        assert block["cues"]["hedge"]["konchem"] == 0
+        assert block["cue_forms_that_matched"]["correction"] == []
+
+    def test_a_corpus_of_noise_shows_nothing_substantive(self, seller_heavy):
+        """Sensitivity the other way: the block must not credit content-free turns."""
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--cue-diagnostics")
+        block = read_record(out, "cue_diagnostics")["excluded_by_word_floor"]
+        assert block["with_field_mention"] == 0
+        assert block["with_hedge_or_correction_cue"] == 0
+
+    def test_it_prints_as_its_own_block_with_no_verdict(self, short_answers):
+        source, fields, out = short_answers
+        _, output = run(source, out, fields, "--cue-diagnostics")
+        assert "customer text turns excluded by the 3-word floor" in output
+        assert "excluded turns: 12 (1 word 6, 2 words 6)" in output
+        assert diagnostics.FLOOR_NOTE in output
+        # No threshold: the tool reports the count and does not judge it.
+        head, _, tail = output.partition("customer text turns excluded")
+        assert "WARNING" not in tail
+
+    def test_it_counts_against_the_effective_keyword_lists(self, short_answers, tmp_path):
+        """A locality that only a --field-keywords file knows must still be counted."""
+        keywords = tmp_path / "local.yaml"
+        keywords.write_text("field_keywords:\n  location_preference:\n    - gachibowli\n",
+                            encoding="utf-8")
+        source, fields, out = short_answers
+        extra = source / "conv_003.jsonl"
+        extra.write_text(json.dumps({
+            "conversation_id": "conv_003", "turn_index": 0, "timestamp": None,
+            "timestamp_raw": "", "speaker_role": "customer", "speaker_id": "SPEAKER_1",
+            "text": "Gachibowli", "provenance": {"source": "human"}}) + "\n", encoding="utf-8")
+        run(source, out, fields, "--cue-diagnostics", "--field-keywords", str(keywords))
+        block = read_record(out, "cue_diagnostics")["excluded_by_word_floor"]
+        assert block["field_mentions"]["location_preference"] == 1
+        assert "Gachibowli" not in json.dumps(block), "per field, never per keyword"
+
+
+class TestTheExcludedBlockCarriesNoText:
+    """It is written to a tracked record, over the turns the sampler discards."""
+
+    def test_only_counts_reach_the_record(self, short_answers):
+        source, fields, out = short_answers
+        run(source, out, fields, "--cue-diagnostics")
+        block = read_record(out, "cue_diagnostics")["excluded_by_word_floor"]
+        allowed = allowed_strings()
+        for key, value in walk_strings(block):
+            if key is None:
+                assert value in allowed or re.fullmatch(r"[a-z0-9_]+", value), value
+                continue
+            assert value in allowed, f"unexpected string {value!r} at {key!r}"
+
+    def test_no_short_turn_text_appears(self, short_answers):
+        source, fields, out = short_answers
+        run(source, out, fields, "--cue-diagnostics")
+        content = (only_run_dir(out) / "cue_diagnostics.json").read_text(encoding="utf-8")
+        for text in ("50 lakhs", "3 BHK", "thanks", "voice note"):
+            assert text not in content, text

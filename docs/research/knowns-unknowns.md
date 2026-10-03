@@ -34,10 +34,19 @@ or a literature row as evidence.
   No cue in either language has been observed to fire on this corpus, so the probe has not been
   shown capable of firing, and a probe that has never fired cannot separate "the phenomenon is
   absent" from "the probe does not match this text" — or from the text not being what the
-  pipeline is assumed to deliver. This bears directly on the ruling-out of (b) below. Two
-  aggregate measurements would settle it, both runnable locally and reporting counts only:
-  per-cue hit counts, and the fraction of eligible turns holding any non-ASCII script or any
-  non-English token. Raised by Claude Code, 2026-10-03; neither has been run.
+  pipeline is assumed to deliver. This bears directly on the ruling-out of (b) below.
+  **Partly answered, 2026-10-03.** Of the two measurements raised here, one was run and the
+  other turned out not to be a measurement. Script: Kapardhi's script-mix run reported
+  `ascii_only` 121 of 135 eligible targets and `telugu` 1, and his reading, recorded as his, is
+  that script blindness is ruled out -- so on the great majority of the corpus the writing
+  system was not what blocked the probe. Per-cue hit counts: entailed to be 0 while the census
+  reads hedge 0 and correction 0, because the stratum is one alternation over the same forms,
+  so they carry nothing the census did not.
+  What stays open is narrower than when this was raised: **cue coverage**, since the 16
+  romanized forms are exact strings ("konchem" does not match "koncham") and recall on hedges is
+  unmeasured anywhere in this experiment; and the **eligibility frame**, since the 3-word floor
+  excludes the turns where a hedge is shortest. `--cue-diagnostics` now measures that excluded
+  population directly, counts only. Raised by Claude Code, 2026-10-03, and updated the same day.
 - Why real customer turns are state-sparse. Three explanations; (b) ruled out on Kapardhi's
   reading of the v3 census, 2026-10-03, two remaining:
   (a) **voice notes** carry the hedging and self-correction, so the text channel systematically
