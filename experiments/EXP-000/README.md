@@ -48,11 +48,25 @@ uv run --project experiments/EXP-000 pytest experiments/EXP-000/tests -q   # 519
 
 ### 1. Look at the schema (safe to paste into a Claude session)
 
-```bash
-export DATABASE_URL='postgresql://<user>:<password>@<host>/<database>?sslmode=require'   # never commit the real one
+The credential lives in `.env`, which is gitignored. **`extract.py` does not read `.env`**: it
+takes `DATABASE_URL` from the environment and nowhere else, on purpose, because a credential a
+script will read out of the repository is a credential that can be committed. So hand the file to
+`uv`, which puts it in the environment of the subprocess it starts:
 
-uv run --project experiments/EXP-000 python experiments/EXP-000/extract.py --inspect
+```bash
+uv run --env-file .env --project experiments/EXP-000 \
+    python experiments/EXP-000/extract.py --inspect
 ```
+
+`.env` holds one line:
+
+```
+DATABASE_URL=postgresql://<user>:<password>@<host>/<database>?sslmode=require
+```
+
+Exporting it in the shell instead works just as well. What does not work is leaving it in `.env`
+and expecting the script to find it: that fails with "DATABASE_URL is not set", which is the
+guard doing its job rather than a bug.
 
 Structure only: table, column, type, row count. In this mode no statement selects a column from
 a user table, so there is nothing in the output to redact.
@@ -60,7 +74,8 @@ a user table, so there is nothing in the output to redact.
 ### 2. Extract
 
 ```bash
-uv run --project experiments/EXP-000 python experiments/EXP-000/extract.py \
+uv run --env-file .env --project experiments/EXP-000 \
+    python experiments/EXP-000/extract.py \
     --extract --config experiments/EXP-000/extract.yaml \
     --tenant-column builder_id \
     --role-note "agent = seller side. Outbound includes the bot and any human takeover; this schema cannot distinguish them (meta is excluded)."
@@ -198,10 +213,11 @@ named summaries.
 
 ### DATABASE_URL, ideally for a read-only user
 
-> **Keep the real DSN out of this file.** It was committed here once, in `2a8926b`, and a
-> credential in a tracked file is a credential in the repository's history: editing the line
-> afterwards does not retract it. Put it in `.env` (already gitignored) or export it in the
-> shell, and if it ever lands in a commit, rotate it rather than deleting the line.
+> **Keep the real DSN out of this file.** It was committed here once, in `2a8926b`; that
+> credential was rotated on 2026-10-03 and the replacement lives in `.env`. A credential in a
+> tracked file is a credential in the repository's history, and editing the line afterwards does
+> not retract it — only rotating does. Pass `.env` with `uv run --env-file .env`, or export the
+> variable in the shell.
 
 Credentials come from the `DATABASE_URL` environment variable and **nowhere else**. No file in
 the repo is consulted, nothing is hardcoded, and the URL is never printed, logged or written to
