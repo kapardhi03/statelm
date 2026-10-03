@@ -49,7 +49,7 @@ uv run --project experiments/EXP-000 pytest experiments/EXP-000/tests -q   # 459
 ### 1. Look at the schema (safe to paste into a Claude session)
 
 ```bash
-export DATABASE_URL='postgresql://neondb_owner:npg_YicvzNPU6x5y@ep-delicate-fire-azbf8zzn-pooler.c-3.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+export DATABASE_URL='postgresql://<user>:<password>@<host>/<database>?sslmode=require'   # never commit the real one
 
 uv run --project experiments/EXP-000 python experiments/EXP-000/extract.py --inspect
 ```
@@ -158,6 +158,11 @@ named summaries.
 ## extract.py: pulling conversations out of PostgreSQL
 
 ### DATABASE_URL, ideally for a read-only user
+
+> **Keep the real DSN out of this file.** It was committed here once, in `2a8926b`, and a
+> credential in a tracked file is a credential in the repository's history: editing the line
+> afterwards does not retract it. Put it in `.env` (already gitignored) or export it in the
+> shell, and if it ever lands in a commit, rotate it rather than deleting the line.
 
 Credentials come from the `DATABASE_URL` environment variable and **nowhere else**. No file in
 the repo is consulted, nothing is hardcoded, and the URL is never printed, logged or written to
