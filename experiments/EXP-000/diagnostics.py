@@ -70,6 +70,18 @@ def scripts_of(text: str) -> frozenset[str]:
     return frozenset(found or {"ascii_only"})
 
 
+def has_non_ascii_letter(text: str) -> bool:
+    """Whether any *letter* is outside ASCII, which is a different question from any character.
+
+    A rupee sign, an emoji or a curly quote puts a turn outside ASCII without putting a single
+    word out of an ASCII cue list's reach: "budget is around Rs.80 lakhs" written with U+20B9
+    still matches the hedge cue "around". In a WhatsApp property corpus that is the common case,
+    not a corner one, so counting it as unmatchable would overstate the diagnostic's central
+    finding in the direction that flatters it.
+    """
+    return any(ord(char) > 127 and char.isalpha() for char in text or "")
+
+
 def script_profile(texts: Sequence[str]) -> dict:
     """Counts and shares per script bucket.
 
@@ -84,18 +96,35 @@ def script_profile(texts: Sequence[str]) -> dict:
     total = len(texts)
     shares = ({bucket: round(count / total, 4) for bucket, count in counts.items()}
               if total else None)
-    return {"texts": total, "counts": counts, "shares": shares}
+    other = [text for text in texts if "other_non_ascii" in scripts_of(text)]
+    return {
+        "texts": total,
+        "counts": counts,
+        "shares": shares,
+        #: Texts holding at least one non-ASCII letter, in any block. This, not the sum of the
+        #: non-ASCII buckets, is the number that bears on whether an ASCII cue list can reach
+        #: the words in a text.
+        "with_non_ascii_letters": sum(1 for text in texts if has_non_ascii_letter(text)),
+        #: Splits the `other_non_ascii` bucket, whose members are mostly symbols in practice.
+        "other_non_ascii_detail": {
+            "with_non_ascii_letter": sum(1 for text in other if has_non_ascii_letter(text)),
+            "symbols_only": sum(1 for text in other if not has_non_ascii_letter(text)),
+        },
+    }
 
 
 def keyword_hits_for_record(texts: Sequence[str], keywords=None) -> dict:
     """Per-keyword counts, naming a keyword only when it is this repository's own.
 
-    `--field-keywords` exists so the researcher can add locality names that cannot be
-    enumerated here, and `load_field_keywords` promises those names stay on his machine. This
+    `--field-keywords` lets the researcher supply locality names from a file he may keep out of
+    the repository, and `load_field_keywords` promises no name from it reaches runs/. This
     record is tracked by git, so naming them would break that promise for the sake of a
     slightly more readable file. An overridden field reports its counts in the order of the
     file it came from and names nothing; the researcher reads them against his own file, and
     the repository learns only how many forms there were and how often each fired.
+
+    This protects a list kept outside the repository and nothing more. The committed
+    `field_keywords.yaml` is already public, and counts in its order are readable against it.
 
     A field counts as overridden when its effective list differs from the built-in one, which
     is exact: `load_field_keywords` replaces a field's list wholesale or leaves it alone.
@@ -173,10 +202,18 @@ def report_diagnostics(diagnostics: dict, *, out) -> None:
                       for bucket in SCRIPT_BUCKETS), file=out)
     if diagnostics["no_cue_matched"]:
         print(f"WARNING: {NO_CUE_NOTE}", file=out)
-    non_ascii = sum(script["counts"][b] for b in SCRIPT_BUCKETS if b != "ascii_only")
-    if non_ascii and diagnostics["no_cue_matched"]:
-        print(f"WARNING: {non_ascii} eligible target(s) hold non-ASCII script, which no form "
-              "in these ASCII cue lists can match. Adding romanized words cannot reach them.",
+    #: Letters, not characters. A turn is only out of an ASCII cue list's reach for the words
+    #: written in another script; a rupee sign or an emoji puts nothing out of reach.
+    with_letters = script["with_non_ascii_letters"]
+    if with_letters and diagnostics["no_cue_matched"]:
+        print(f"WARNING: {with_letters} eligible target(s) contain words written in a "
+              "non-ASCII script. No form in these ASCII cue lists can match those words, so a "
+              "hedge or correction expressed in them is invisible here however many romanized "
+              "words are added. Any ASCII words in the same turn remain matchable.", file=out)
+    symbols = script["other_non_ascii_detail"]["symbols_only"]
+    if symbols:
+        print(f"note: a further {symbols} target(s) are non-ASCII by symbol only (a currency "
+              "sign, an emoji). Their words are ASCII and the cue lists can match them.",
               file=out)
     print(file=out)
 

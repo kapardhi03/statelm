@@ -94,12 +94,16 @@ class SamplerError(Exception):
 def load_field_keywords(path: str | Path | None) -> dict | None:
     """Optional local overrides for the field-mention keyword lists.
 
-    Locality names are corpus-specific and cannot be enumerated in this repository, so this file
-    is how the researcher adds real ones. It is read on his machine, and no name from it is
-    written into a sheet or into runs/: an overridden field's diagnostic counts are recorded in
-    the file's own order, and the run record holds only how many forms a field had, how often
-    each fired, and a one-way digest of the lists. The names never leave that machine through
-    this tool, which `runs/**/cue_diagnostics.json` being tracked by git makes load-bearing.
+    Locality names are corpus-specific, so this file is how the researcher supplies real ones.
+    No name from it is written into a sheet or into runs/: an overridden field's diagnostic
+    counts are recorded in the file's own order, and the run record holds only how many forms a
+    field had, how often each fired, and a one-way digest of the lists. That makes the option
+    usable with a list kept outside the repository, which `runs/**/cue_diagnostics.json` being
+    tracked by git makes load-bearing.
+
+    It buys nothing for `experiments/EXP-000/field_keywords.yaml`, which is tracked: its names
+    are already published and counts in its order are readable against it. Said plainly because
+    an earlier version of this docstring claimed the protection covered that file too.
 
     A list given here REPLACES the built-in list for that field; a field left out keeps its
     built-in list.

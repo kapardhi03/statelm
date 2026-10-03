@@ -109,10 +109,17 @@ Reading the conversations first turns your labels into recall of the text rather
 about it, and the agreement that follows measures memory. `synthetic/README.md` is safe to read:
 it covers provenance and limits and maps no phenomenon to any conversation.
 
-**First, before the census, ask whether the cue lists can fire on the corpus at all.** The v3
-census returned hedge 0 and correction 0 — and so did the 33 English forms already in the lists.
-A probe whose every form scores zero cannot tell an absent phenomenon from a probe that does not
-match the text:
+**Ask what the census's zeros are made of.** The v3 census returned hedge 0 and correction 0,
+and a zero that every form produces cannot tell an absent phenomenon from a probe that does not
+match the text.
+
+One thing to be clear about first, because it decides how to read the output: while the census
+reads hedge 0 and correction 0, the **per-cue counts are entailed to be zero** and tell you
+nothing the census did not. The stratum is set by one alternation over the same forms, so the
+stratum being zero *means* every form scored zero. The per-cue half is worth having as a record
+of which forms were probed, and it earns its keep on a corpus whose strata are not zero. The
+measurements that discriminate here are the **script mix**, the **field-keyword and
+field-pattern counts**, and the **script of the probe strings**:
 
 ```bash
 uv run --project experiments/EXP-000 python experiments/EXP-000/sample_items.py \
@@ -127,12 +134,25 @@ It writes no sheet. It prints the headline and records every count under
 `runs/EXP-000/<run-id>/` with the commit, a corpus hash and a digest of the exact cue and
 keyword lists it measured with. Read it this way:
 
-- **Some English forms fire, the romanized ones do not** → cue language is not the explanation,
-  and the v3 reading stands.
-- **Nothing fires and the script mix is largely Telugu or Devanagari** → the instrument is the
-  limit, not the corpus. No addition to a romanized ASCII list can reach native-script text.
-- **Nothing fires and the text is ASCII-only** → the probe could have fired and did not, which
-  is the strongest form of the v3 result.
+- **Turns hold words in the Telugu or Devanagari blocks** → those words are out of reach of
+  every form in these lists, and no addition to a romanized ASCII list can reach them. Read the
+  `with_non_ascii_letters` count, not the sum of the non-ASCII buckets: a turn is only unreachable
+  for words written in another script, and `₹`, an emoji or a curly quote put nothing out of
+  reach. The run prints the symbol-only count separately for that reason.
+- **The field-keyword and field-pattern counts are the within-corpus control.** `field_mention`
+  was 18 of 135 in v2, so ASCII matching demonstrably fires on at least 18 of those turns. That
+  bounds how much of the corpus the "instrument cannot reach this text" reading can cover, and
+  the per-keyword and per-pattern counts say which matchers did the work — a budget is written
+  "80 lakhs", so `amount_pattern` carries it rather than the word "budget".
+- **Nothing fires and the words are ASCII** → no listed string occurs in the eligible text. That
+  is **not** evidence the phenomenon is absent. It leaves two things untouched: cue coverage
+  (16 romanized forms are exact strings, and "konchem" does not match "koncham"), and the
+  eligibility frame, where `MIN_TARGET_WORDS` of 3 removes exactly the shortest hedges —
+  "maybe", "around 40", "pata nahi".
+
+In every branch, remember a cue match is not a hedge. Firing tells you the matcher is lexically
+live on this text; it does not tell you the phenomenon is there, and cue recall on hedges is
+unmeasured.
 
 `--cue-diagnostics` measures `--input` only. A `--synthetic` set is excluded by construction, so
 diagnosing the real corpus cannot prime the labelling of the synthetic one.
@@ -465,7 +485,7 @@ category by a distance. The audit report exists precisely because you have to be
 ```bash
 cd experiments/EXP-000
 uv sync                      # PyYAML, openpyxl, psycopg; pytest for the tests
-uv run pytest                # 402 tests, all on fabricated data, no network, no database
+uv run pytest                # all on fabricated data, no network, no database
 
 # 1. Look before you write
 uv run python scrub.py --input ../../data/raw/arthryx \
@@ -646,8 +666,11 @@ The field count multiplies the turn count: five fields and `--n-items 80` gives 
 ### Two annotators, two orders, one item set
 
 EXP-000 is an inter-annotator design with two annotators named only **A** and **B**. No personal
-name goes into a sheet, the manifest or any other annotation artifact; which person is which
-letter is deliberately not recorded in this repository.
+name goes into a sheet, the manifest or any other annotation artifact. That is the part which
+protects the measurement, and it holds. Which person is which letter is **derivable** within this
+repository, though — this run book addresses A directly, and the experiment record names the
+guideline's approver twice. It is carried as an accepted limitation under "Known limitations" in
+the record rather than claimed as prevented.
 
 `--annotators A B` writes `sheet_A.csv` and `sheet_B.csv`. Both hold **the same items**, with the
 **turn blocks in their own seeded order**, so neither annotator can anchor on the other's
@@ -748,8 +771,12 @@ field_keywords:
   location_preference: [gachibowli, kokapet, near, area, metro]
 ```
 
-The file decides only which turns get sampled. Nothing from it reaches a sheet or `runs/`, so a
-locality list may hold real names without them leaving the machine that runs the sampler.
+The file decides only which turns get sampled. No name from it reaches a sheet, and a field
+whose list came from this option has its diagnostic counts recorded in the file's own order with
+its keywords named nowhere — so the option can be pointed at a list that stays on one machine.
+Note what that does **not** buy for the list used above: `field_keywords.yaml` is a tracked file
+in this repository, so its 24 localities are already published, and counts recorded in its order
+are readable against it. The protection is for a file you keep out of the repository.
 
 ### Two rules from the experiment record, and how the code keeps them
 

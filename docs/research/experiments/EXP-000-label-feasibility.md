@@ -194,8 +194,18 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
 - 2026-10-03: **`--cue-diagnostics`, and run records for census figures.** Instructed by
   Kapardhi, pre-labelling, prompted by the caveat in the v3 entry above: a 0 that every cue
   produces cannot separate an absent phenomenon from a probe that does not match the text.
-  The flag measures the two things that tell those apart, counts only, over the eligible
-  targets of `--input`: per-cue hit counts for every form in both lists and per-keyword counts
+  **What the per-cue counts can and cannot do, corrected after review.** While the census reads
+  hedge 0 and correction 0, every per-cue count is **entailed** to be 0 and carries no
+  information independent of the census: `cues.strata_for` sets the hedge stratum iff
+  `has_hedge_cue` matches, that is one alternation over the same forms `per_cue_hits` matches
+  one at a time, over the same eligible targets, and an alternation matches iff some alternative
+  does. This is the same mistake this record identified two entries ago for
+  `code_mixed_cue_hits` and it was reintroduced here; the correction is Claude Code's, after
+  review. The per-cue half earns its place on a corpus whose strata are not zero, where it
+  apportions them, and as a record of exactly which forms were probed. **On this corpus the
+  discriminating measurements are the other three:** the script mix, the field-keyword and
+  field-pattern counts, and the script of the probe strings themselves.
+  The flag reports, counts only, over the eligible targets of `--input`: per-cue hit counts for every form in both lists and per-keyword counts
   for every field keyword, zeros included; and the script mix of those turns, by Telugu block
   (U+0C00-U+0C7F), Devanagari (U+0900-U+097F), other non-ASCII and ASCII-only. The same two
   summaries cover the field keyword lists, and the cue and keyword strings' own script is
@@ -206,36 +216,76 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
   with the git commit, a corpus hash and a digest of the exact cue and keyword lists measured
   with, alongside `census.json` and `cue_diagnostics.json`. This is what the v2 and v3 censuses
   lacked: their figures rested on a report and could not be re-derived.
-  **A decision Claude Code made that is one line to revert.** `census.json` and
-  `cue_diagnostics.json` are now tracked by git, like `config.json` and `metrics.json` already
-  were, because a figure that lives only on one machine still rests on a report. They are
-  counts only by construction and by three tests: no corpus text, no conversation id and no
-  speaker id reaches them, and a record taken over a native-script corpus is pure ASCII. A
+  **`census.json` and `cue_diagnostics.json` are tracked by git. Kapardhi's decision,
+  2026-10-03: "Keep them tracked."** They join `config.json` and `metrics.json`, which already
+  were, so that a census figure is re-derivable from the repository rather than resting on a
+  report. Claude Code made the change first and then flagged it as one that should have been
+  asked rather than decided, since what gets tracked from client-derived data is set by
+  `.claude/rules/data-privacy.md`, which is Kapardhi's; he confirmed it. The rule's own line
+  that "only aggregates -- counts, Cohen's kappa, confusion matrices -- go into `runs/`" already
+  permitted the content; what Claude Code should not have assumed is which of those files git
+  carries.
+  "Counts only" is the intent, not the literal content: every **string value** in these records
+  is a cue, a field keyword, a field name, a script label or one of two fixed notes, and
+  `config.json` additionally carries a commit, a platform string, paths and hashes. Three tests
+  hold the property -- an allowlist over every string, no `conv_` id or `SPEAKER_` id, and a
+  record taken over a native-script corpus decoding as pure ASCII -- with two gaps worth naming:
+  the allowlist skips keys it treats as run metadata, and accepts any lower-case identifier as a
+  dict key. Neither is reachable from corpus text given the code, which is why the construction
+  matters more than the tests here. A
   `--synthetic` set's census is kept out of the tracked record, since its per-stratum counts
   are the ones Annotator A must not meet before labelling. A field whose keyword list came from
   `--field-keywords` has its counts recorded in that file's own order and its keywords named
-  nowhere: that file holds locality names this repository cannot enumerate, and tracking the
-  diagnostic would otherwise have published them. The built-in lists are named, being
-  repository content already.
-  What the diagnostic cannot do is settle the question by itself. It says whether the probe can
-  fire; if nothing fires on text that is largely non-ASCII, the reading is that the instrument
-  is the limit, and whether that reopens explanation (b) is Kapardhi's call.
+  nowhere, so that the option can be pointed at a list that stays on one machine. **It buys
+  nothing for the list the run book actually uses**, and the entry first claimed otherwise:
+  `experiments/EXP-000/field_keywords.yaml` is a tracked file naming all 24 localities, so for
+  that file the redaction protects what is already published, and the counts are readable off
+  it in order anyway. Corrected after review. The built-in lists are named, being repository
+  content already.
+  **What the diagnostic cannot do, stated after review rather than before it.** It says whether
+  the probe *did* fire on this corpus, not whether it can: a cue match is not a hedge, so
+  firing licenses "the matcher is lexically live on this text" and never "the phenomenon is
+  there". Cue recall on hedges is unmeasured anywhere in this experiment.
+  Nor is "nothing fired" binary between an absent phenomenon and a blind instrument. A third
+  cause is the sampling frame: `MIN_TARGET_WORDS` is 3 and seller turns and media placeholders
+  are ineligible, which removes exactly the turns where a hedge is shortest -- "maybe",
+  "around 40", "pata nahi" are one or two words. The v2 census counted 54 voice-note
+  placeholders beside its `too_short` rejections. A corpus-wide zero can come from the frame,
+  which is neither of the two readings.
+  And the v2/v3 counts already bound the strongest version of the instrument claim: with
+  `field_mention` 18 of 135, ASCII matching demonstrably fires on at least 18 of those turns,
+  so "the instrument cannot reach this text" could at most hold for the other 117.
+  What the script mix adds is specific: turns holding words in the Telugu or Devanagari blocks
+  are out of reach of every ASCII form, however many romanized words are added. Whether any of
+  this reopens explanation (b) is Kapardhi's call.
 
 ## Known limitations
-Flagged and accepted rather than fixed. Recorded on Kapardhi's instruction, 2026-10-03; neither
-is an open question, and neither needs action.
+Accepted rather than fixed, and no action is asked for. The two bullets below are what Kapardhi
+instructed on 2026-10-03, in his terms. Anything Claude Code adds to them is marked as such and
+is a flag, not part of his instruction.
 
-- **Annotator A approved the annotation guideline**, so A is the taxonomy's author in effect and
-  the real subset's kappa is partly guideline-approver against guideline-user rather than two
-  independent users of it. **Mitigation, named by Kapardhi: Annotator B's reading is
-  independent.** B did not approve the guideline, has seen neither the census nor any stratum
-  count, and labels the same items.
-- **Which person is Annotator A is derivable within this repository.** The run book addresses A
-  directly as the person who runs the local tools, and the privacy rule puts those runs on
-  Kapardhi's machine. Accepted by Kapardhi, 2026-10-03. The Setup section's sentence that which
-  person is which letter "is not recorded in this repository" is stronger than what holds; what
-  does hold is the part that protects the measurement, that no personal name appears in a sheet,
-  the manifest, the disagreement list or the metrics.
+- **Annotator A approved the annotation guideline**, so the real subset's kappa is partly
+  guideline-approver against guideline-user rather than two independent users of it.
+  **Mitigation, named by Kapardhi: Annotator B's reading is independent.**
+  *Flagged by Claude Code, not part of the above.* (i) Kappa is a pairwise statistic, so one
+  naive rater makes one side of the pair a genuine guideline user; it does not make the pair the
+  "two independent human annotators" the Hypothesis names. The mitigation is partial by
+  construction. (ii) Guideline approval is the narrower half of the asymmetry and the entry of
+  2026-10-02 reads the approval the other way, as settling how labels are applied rather than
+  whether the taxonomy is right. The wider half is that A also owns ADR-003, the pilot field
+  list, the cue lists, the HEDGED rule and every pre-registered measurement choice. (iii) The
+  only sourced statement about what B has seen is Kapardhi's report of 2026-10-03, that B saw
+  nothing of the synthetic stratum counts. The **real** census is published in this repository
+  and in `knowns-unknowns.md`, so B's naivety does not extend to it.
+- **Which person is Annotator A is derivable within this repository.** Accepted by Kapardhi,
+  2026-10-03. It is derivable from this record alone in two sentences: the 2026-10-02 entry
+  names Kapardhi as the guideline's approver and the entry above names Annotator A as its
+  approver. The run book also addresses A directly as the person who runs the local tools.
+  *Flagged by Claude Code, for Kapardhi to amend or leave:* the Setup sentence that which person
+  is which letter "is not recorded in this repository" is stronger than what holds, and Setup is
+  his. The part that protects the measurement does hold: no personal name appears in a sheet,
+  the manifest, the disagreement list or the metrics. The same overclaim stood in
+  `experiments/EXP-000/README.md`, which is Claude Code's to fix, and has been corrected there.
 
 ## Leakage check
 Items used here are pilot items and must not enter the eventual test split.

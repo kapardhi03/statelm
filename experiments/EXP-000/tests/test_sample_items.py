@@ -1389,7 +1389,7 @@ class TestCueDiagnostics:
         assert script["counts"]["telugu"] == script["texts"] > 0
         assert script["counts"]["ascii_only"] == 0
         assert script["shares"]["telugu"] == 1.0
-        assert "no form in these ASCII cue lists can match" in output
+        assert "written in a non-ASCII script" in output
 
     def test_a_hedge_in_native_script_is_invisible_to_the_romanized_list(
             self, devanagari_corpus):
@@ -1643,3 +1643,98 @@ class TestNoMachineLayoutInARunRecord:
         assert provenance.repo_relative(repo / "data" / "scrubbed" / "EXP-000") == \
             "data/scrubbed/EXP-000"
         assert provenance.repo_relative("/tmp/somewhere/else/scrubbed") == "scrubbed"
+
+
+#: English words with a rupee sign (U+20B9). Non-ASCII by character, fully matchable by word.
+#: In a WhatsApp property corpus this is the common shape, not a corner case.
+RUPEE_TURNS = [
+    ("agent", "Sharing the price list."),
+    ("customer", "budget is around ₹80 lakhs"),
+    ("customer", "maybe ₹95 lakhs with parking"),
+    ("agent", "Noted, thank you."),
+    ("customer", "actually make it ₹85 lakhs"),
+]
+
+
+class TestNonAsciiBySymbolIsNotNonAsciiByScript:
+    """A currency sign puts no word out of an ASCII cue list's reach.
+
+    The first version of `report_diagnostics` summed every non-ASCII bucket and said no ASCII
+    cue could match those turns. For "budget is around ₹80 lakhs" that is false twice over: the
+    hedge cue "around" matches it, and the only non-ASCII character is a symbol.
+    """
+
+    def test_a_currency_sign_alone_does_not_count_as_non_ascii_letters(self):
+        text = "budget is around ₹80 lakhs"
+        assert diagnostics.scripts_of(text) == frozenset({"other_non_ascii"})
+        assert diagnostics.has_non_ascii_letter(text) is False
+        assert cues.has_hedge_cue(text) is True, "the cue the old warning denied could match"
+
+    def test_native_script_does_count(self):
+        assert diagnostics.has_non_ascii_letter("బడ్జెట్ కొంచెం ఎక్కువ") is True
+        assert diagnostics.has_non_ascii_letter("बजट थोड़ा ज्यादा है") is True
+
+    def test_the_profile_splits_the_other_bucket(self):
+        profile = diagnostics.script_profile(["around ₹80 lakhs", "plain english here",
+                                              "mixed ₹ and కొంచెం"])
+        assert profile["counts"]["other_non_ascii"] == 2
+        assert profile["other_non_ascii_detail"] == {"with_non_ascii_letter": 1,
+                                                     "symbols_only": 1}
+        assert profile["with_non_ascii_letters"] == 1
+
+    def test_the_unmatchable_warning_is_not_printed_for_symbols(self, tmp_path):
+        """The warning is about words in another script, so a symbol must not trigger it."""
+        source = write_roled_conversations(tmp_path / "scrubbed", turns=RUPEE_TURNS, count=2)
+        fields = tmp_path / "fields.yaml"
+        fields.write_text(FIELDS, encoding="utf-8")
+        out = tmp_path / "annotation"
+        _, output = run(source, out, fields, "--cue-diagnostics")
+        assert "written in a non-ASCII script" not in output
+        assert "non-ASCII by symbol only" in output
+        report = read_record(out, "cue_diagnostics")
+        assert report["script"]["eligible_targets"]["with_non_ascii_letters"] == 0
+        assert report["no_cue_matched"] is False, "these turns do hedge, in English"
+
+    def test_the_warning_is_printed_for_native_script(self, telugu_corpus):
+        source, fields, out = telugu_corpus
+        _, output = run(source, out, fields, "--cue-diagnostics")
+        assert "written in a non-ASCII script" in output
+        assert read_record(out, "cue_diagnostics")["script"]["eligible_targets"][
+            "with_non_ascii_letters"] == 15
+
+
+class TestPerCueCountsAreEntailedZeroWhenTheStratumIs:
+    """Why the per-cue half of the diagnostic cannot discriminate on the v3 corpus.
+
+    `strata_for` sets the hedge stratum iff `has_hedge_cue` matches, which is one alternation
+    over the same forms `per_cue_hits` matches one at a time, over the same eligible targets. An
+    alternation matches iff some alternative does, so a census stratum of 0 entails every
+    per-cue count is 0. The discriminating measurements are elsewhere, and the record says so.
+    """
+
+    def test_a_zero_stratum_entails_zero_per_cue_counts(self, telugu_corpus):
+        source, fields, out = telugu_corpus
+        run(source, out, fields, "--census-only", "--cue-diagnostics")
+        census = read_record(out, "census")["census"]
+        report = read_record(out, "cue_diagnostics")
+        for stratum, cue_list in (("hedge", "hedge"), ("correction", "correction")):
+            assert census["by_stratum"][stratum] == 0
+            assert sum(report["cues"][cue_list].values()) == 0
+
+    def test_a_non_zero_stratum_names_which_forms_fired(self, seller_heavy):
+        """Where the per-cue half earns its place: apportioning a stratum that is not zero."""
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--census-only", "--cue-diagnostics")
+        census = read_record(out, "census")["census"]
+        report = read_record(out, "cue_diagnostics")
+        assert census["by_stratum"]["hedge"] > 0
+        assert report["cue_forms_that_matched"]["hedge"]
+
+    def test_the_field_patterns_are_the_within_corpus_positive_control(self, seller_heavy):
+        """field_mention > 0 shows ASCII matching fires on this corpus, bounding the claim."""
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--census-only", "--cue-diagnostics")
+        census = read_record(out, "census")["census"]
+        patterns = read_record(out, "cue_diagnostics")["field_patterns"]
+        assert census["by_stratum"]["field_mention"] > 0
+        assert sum(patterns.values()) > 0
