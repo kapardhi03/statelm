@@ -284,6 +284,28 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
   `cues.target_rejection` returning `too_short`, the same predicate that decides eligibility, so
   the two populations are exact complements and a seller turn, a media placeholder and an empty
   turn each stay out under their own reason.
+- 2026-10-03: **what the word floor excludes, measured; the floor stands.** Run
+  `20261003T164527Z-2773803`. Transcribed from Kapardhi, 2026-10-03, counts only: 151 excluded
+  short turns, 126 one-word and 25 two-word; 4 with a field mention; 0 hedge or correction cue
+  hits.
+  **Decision, transcribed from Kapardhi, 2026-10-03:** "the 3-word floor stands; it excludes at
+  most 4 substantive turns. The v3 sheets are used as built."
+  "At most 4" is the right register and is exactly 4 on the block's own definition: with 0 cue
+  hits, no excluded turn carries a cue, so the turns holding a field mention *or* a cue are the
+  4. The floor is pre-registered and unchanged, and this is the first run whose figures are
+  tied to a commit and a corpus hash rather than relayed -- the run id's `2773803` is the commit
+  that built the block it reports.
+  The corpus-wide arithmetic closes: 135 eligible + 151 too_short = **286 customer text turns**,
+  of which 18 + 4 = **22 mention a tracked field** and **0 match any hedge or correction cue**.
+  Recorded in `knowns-unknowns.md` under Known, with Kapardhi's reading that script blindness
+  and pipeline faults are ruled out.
+  **Two consequences of using the v3 sheets as built, neither of them a re-opening of the
+  decision.** First, it closes an item this record had left unmarked either way: the v3 sheets
+  are neither void nor unused, and nothing further is owed on them. Second, those sheets came
+  from the run that printed the synthetic set's stratum counts to Annotator A's terminal, so the
+  labels they produce carry that exposure. The entry of 2026-10-03 above records it and records
+  that suppression protects later runs rather than this one; using the sheets as built is what
+  makes that entry bear on a kappa rather than on a hypothetical.
 
 ## Known limitations
 Accepted rather than fixed, and no action is asked for. The two bullets below are what Kapardhi
