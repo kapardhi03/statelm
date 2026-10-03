@@ -1,0 +1,60 @@
+# EXP-000 field-mention keywords, local overrides for `sample_items.py --field-keywords`.
+#
+# These steer SAMPLING ONLY. A cue decides which eligible turns to prefer; it never reaches a
+# sheet and never means anything about a label. A false match costs a slightly less enriched
+# sample and cannot corrupt an annotation.
+#
+# IMPORTANT: a list here REPLACES the built-in list for that field, it does not merge with it.
+# So the indicator words from thresholds.FIELD_KEYWORDS["location_preference"] are repeated
+# below alongside the locality names. Without them a turn like "somewhere near the metro" would
+# stop matching location_preference, which is a loss, not a gain.
+field_keywords:
+  location_preference:
+    # Locality names, Kapardhi's list of 2026-10-03.
+    - Gachibowli
+    - Kokapet
+    - Kondapur
+    - Madhapur
+    - Hitech City
+    - Financial District
+    - Narsingi
+    - Tellapur
+    - Kollur
+    - Miyapur
+    - Bachupally
+    - Kompally
+    - Shamshabad
+    - Adibatla
+    - Tukkuguda
+    - Manikonda
+    - Puppalaguda
+    - Nanakramguda
+    - Kukatpally
+    - Uppal
+    - Ghatkesar
+    - Medchal
+    - Patancheru
+    - Shadnagar
+
+    # Spellings of the two multi-word names that are common in chat. Added by Claude Code,
+    # 2026-10-03, beyond the list above: matching is a literal phrase match, so "Hi-Tech City"
+    # would not match the entry "Hitech City".
+    - Hi-Tech City
+    - Hi Tech City
+    - Hitec City
+    - Hitech
+    - Fin District
+
+    # The built-in indicator words, repeated because this list replaces rather than merges.
+    - near
+    - nearby
+    - close to
+    - locality
+    - area
+    - vicinity
+    - side
+    - zone
+    - metro
+    - highway
+    - school
+    - office

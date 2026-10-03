@@ -94,8 +94,13 @@ uv run --project experiments/EXP-000 python experiments/EXP-000/sample_items.py 
     --input data/scrubbed/EXP-000 \
     --output data/scrubbed/EXP-000-annotation \
     --fields experiments/EXP-000/fields.yaml \
+    --field-keywords experiments/EXP-000/field_keywords.yaml \
     --n-items 80 --seed 0 --annotators A B
 ```
+
+`field_keywords.yaml` carries the Hyderabad locality names, which the built-in suffix heuristic
+cannot know. Read the census it prints before the sheets are written: if `field_mention` falls
+short of its 40%, that is the corpus telling you so while you can still act on it.
 
 The annotation directory is a **sibling** of the scrubbed conversations, not a subdirectory of
 them: the sampler refuses an output nested inside its input, since a run that could read its own
@@ -618,14 +623,24 @@ the context.
 The field-mention cues cover amounts (`80 lakhs`, `1.2 cr`, `50k`), property types (`3BHK` —
 matched with letter boundaries, since a word boundary will not see `bhk` after a digit),
 timeline words, family and decision words, and location indicators plus common Indian locality
-suffixes. **Locality names are the weak spot**: they are corpus-specific and cannot live in this
-repository, so `--field-keywords` takes a local YAML that replaces any field's list with real
-names. It is read on your machine and nothing from it reaches a sheet or `runs/`.
+suffixes. **Locality names are the weak spot**: a suffix heuristic catches `Tellapur` and
+`Kondapur` but not `Gachibowli`, `Kokapet` or `Financial District`.
+
+`field_keywords.yaml` in this directory supplies them: 24 Hyderabad localities from Kapardhi's
+list of 2026-10-03, plus a few chat spellings of the two multi-word names (`Hi-Tech City`), since
+matching is literal.
+
+**A list in that file replaces the field's built-in list rather than merging with it**, so the
+file repeats the built-in indicator words alongside the locality names. Leave them out and
+"somewhere near the metro" stops matching `location_preference`.
 
 ```yaml
 field_keywords:
-  location_preference: [gachibowli, kondapur, jayanagar]
+  location_preference: [gachibowli, kokapet, near, area, metro]
 ```
+
+The file decides only which turns get sampled. Nothing from it reaches a sheet or `runs/`, so a
+locality list may hold real names without them leaving the machine that runs the sampler.
 
 ### Two rules from the experiment record, and how the code keeps them
 

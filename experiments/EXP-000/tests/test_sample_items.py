@@ -664,3 +664,45 @@ class TestFieldKeywordOverride:
         custom.write_text("field_keywords: {}\n", encoding="utf-8")
         with pytest.raises(sample_items.SamplerError, match="non-empty"):
             run(source, out, fields, "--field-keywords", str(custom))
+
+
+class TestTheCommittedFieldKeywordsFile:
+    """field_keywords.yaml is committed, so it is part of the instrument and gets a test."""
+
+    PATH = Path(__file__).parent.parent / "field_keywords.yaml"
+
+    def test_it_loads(self):
+        merged = sample_items.load_field_keywords(self.PATH)
+        assert merged["location_preference"]
+
+    def test_it_keeps_the_built_in_indicator_words(self):
+        """The option replaces rather than merges, so dropping them would be a silent loss."""
+        merged = sample_items.load_field_keywords(self.PATH)
+        builtin = set(thresholds.FIELD_KEYWORDS["location_preference"])
+        assert builtin <= set(merged["location_preference"]), \
+            sorted(builtin - set(merged["location_preference"]))
+
+    def test_it_leaves_the_other_fields_alone(self):
+        merged = sample_items.load_field_keywords(self.PATH)
+        for field, words in thresholds.FIELD_KEYWORDS.items():
+            if field != "location_preference":
+                assert merged[field] == words, field
+
+    @pytest.mark.parametrize("text", [
+        "anything in Gachibowli", "we like Kokapet", "flat in Nanakramguda",
+        "Financial District please", "Uppal is too far", "near Hi-Tech City",
+        "Shadnagar or Adibatla", "Puppalaguda side",
+    ])
+    def test_the_localities_the_suffix_heuristic_misses_now_match(self, text):
+        merged = sample_items.load_field_keywords(self.PATH)
+        assert "location_preference" in cues.fields_mentioned(text, merged), text
+
+    def test_an_indicator_only_turn_still_matches_with_the_file_loaded(self):
+        merged = sample_items.load_field_keywords(self.PATH)
+        assert "location_preference" in cues.fields_mentioned(
+            "somewhere near the metro", merged)
+
+    def test_it_does_not_match_ordinary_sentences(self):
+        merged = sample_items.load_field_keywords(self.PATH)
+        for text in ("thanks for your time", "i will call you tomorrow"):
+            assert "location_preference" not in cues.fields_mentioned(text, merged), text
