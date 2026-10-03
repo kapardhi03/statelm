@@ -119,3 +119,90 @@ def meets_threshold(kappa: float | None) -> bool | None:
     if kappa is None:
         return None
     return kappa >= KAPPA_THRESHOLD - KAPPA_TOLERANCE
+
+
+# ---------------------------------------------------------------------------- sampling
+# Pre-registered 2026-10-02 after run 20261002T175103Z-f318529 was declared void by Kapardhi.
+# That run produced no kappa, so none of this was chosen in the light of a result: there was no
+# result. What it was chosen in the light of is a sampling failure, recorded in the experiment
+# record's Change log.
+
+#: A target turn must be the customer's. Seller turns and media placeholders remain in the
+#: context window but are never the turn being labelled. Under the guideline's rule Q3 a
+#: seller turn cannot establish a customer field, so a seller target is NO-OP by construction
+#: and carries no information about whether annotators agree.
+TARGET_ROLES = ("customer",)
+
+#: Roles that are the seller side. Both map to "seller" in a sheet: the ARTHRYX schema cannot
+#: tell a human takeover from the bot, which extract.yaml's role note states.
+SELLER_ROLES = ("agent", "bot")
+
+#: How a role is shown to an annotator. SPEAKER_n told them nothing about who was speaking,
+#: which made rule Q3 unusable. Kapardhi's decision, 2026-10-02.
+ROLE_DISPLAY = {"customer": "customer", "agent": "seller", "bot": "seller"}
+
+#: Media rows reach the scrubbed text as "[media: ...]" placeholders; there is no kind column
+#: downstream, so this prefix is the signal. A placeholder has no labellable content.
+MEDIA_PLACEHOLDER_PREFIX = "[media:"
+
+#: A target turn needs at least this many words. "ok", "yes" and a bare emoji cannot carry a
+#: field value, so they produce NO-OP whatever the annotators think.
+#: Kapardhi's decision, 2026-10-02.
+MIN_TARGET_WORDS = 3
+
+#: Enrichment quotas over the sampled turns. "random" is the remainder, drawn without a cue.
+#: Kapardhi's decision, 2026-10-02. They sum to 1.0 on purpose.
+SAMPLING_QUOTAS = {
+    "field_mention": 0.4,
+    "correction": 0.2,
+    "hedge": 0.2,
+    "random": 0.2,
+}
+
+#: The stratum name that means "no cue required"; filled last, from whatever is left.
+RANDOM_STRATUM = "random"
+
+#: Field-mention keywords, per pilot field. A match puts a turn in the field_mention stratum.
+#: These steer *sampling only* and never appear in a sheet, so a false match costs a slightly
+#: less enriched sample and cannot affect a label.
+#:
+#: Locality names are the weak spot: they are corpus-specific and cannot be enumerated here, so
+#: location relies on indicator words and common Indian locality suffixes. `--field-keywords`
+#: takes a local YAML file to extend any of these lists with real names from the corpus, which
+#: keeps that text on the researcher's machine.
+FIELD_KEYWORDS = {
+    "budget": (
+        "budget", "price", "cost", "afford", "lakh", "lakhs", "lac", "lacs", "crore", "crores",
+        "cr", "loan", "emi", "down payment", "all inclusive", "negotiable", "rupees",
+    ),
+    "property_type": (
+        "bhk", "flat", "apartment", "villa", "plot", "house", "duplex", "penthouse", "studio",
+        "independent", "row house", "builder floor", "bungalow",
+    ),
+    "location_preference": (
+        "near", "nearby", "close to", "locality", "area", "vicinity", "side", "zone",
+        "metro", "highway", "school", "office",
+    ),
+    "timeline": (
+        "possession", "ready", "immediately", "asap", "soon", "week", "weeks", "month",
+        "months", "year", "years", "quarter", "handover", "move in", "shifting", "timeline",
+        "january", "february", "march", "april", "may", "june", "july", "august",
+        "september", "october", "november", "december", "diwali", "ugadi", "pongal",
+    ),
+    "decision_maker": (
+        "wife", "husband", "spouse", "father", "mother", "dad", "mom", "parents", "brother",
+        "sister", "son", "daughter", "family", "in-laws", "partner", "uncle", "aunt",
+        "decide", "decides", "sign off", "approval", "discuss with", "check with",
+    ),
+}
+
+#: A number followed by a magnitude word, which is how a budget is usually said. Kept separate
+#: from the keyword lists because it is a pattern, not a word.
+BUDGET_AMOUNT_FIELD = "budget"
+
+#: Locality suffixes common in Indian place names, matched on a stem of at least three letters
+#: so "bad" alone does not count.
+LOCALITY_SUFFIXES = (
+    "nagar", "puram", "halli", "pura", "pur", "abad", "guda", "palli", "wadi", "ganj",
+    "colony", "layout", "enclave", "township", "vihar", "kunj", "garh",
+)

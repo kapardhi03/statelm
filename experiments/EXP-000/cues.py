@@ -1,4 +1,4 @@
-"""Selection cues for the item sampler. Pure functions, no I/O.
+"""Selection cues and target eligibility for the item sampler. Pure functions, no I/O.
 
 These decide which turns get *sampled*, never what anything means. The distinction matters:
 EXP-000's record forbids pre-labelling items or suggesting labels, so a cue match is recorded in
@@ -7,12 +7,22 @@ annotator who could see "this turn matched a hedge cue" would be primed toward H
 
 Precision therefore does not need to be high. A false cue match costs a slightly less enriched
 sample; it cannot corrupt a label.
+
+**Eligibility is a different thing from enrichment, and getting them confused voided a run.**
+A cue decides which of the *eligible* turns to prefer. Eligibility decides what can be a target
+at all, and that is not a matter of preference: under the guideline's rule Q3 a seller turn
+cannot establish a customer field, so a seller target yields NO-OP by construction and measures
+nothing about agreement. Run 20261002T175103Z-f318529 sampled over every turn, drew 10 seller
+turns out of 16, and produced 160 NO-OP labels and no kappa.
 """
 
 from __future__ import annotations
 
+import functools
 import re
 from collections.abc import Sequence
+
+import thresholds
 
 #: Phrases that often accompany a speaker revising something they said earlier.
 CORRECTION_CUES = (
@@ -27,18 +37,43 @@ HEDGE_CUES = (
     "probably", "could be", "give or take",
 )
 
-STRATA = ("correction", "hedge", "multi_speaker", "plain")
+#: Strata a target turn can belong to. "field_mention", "correction" and "hedge" carry quotas;
+#: "multi_speaker" is reported for interest and has none; "plain" means no cue matched, and such
+#: turns are drawn by the random remainder.
+STRATA = ("field_mention", "correction", "hedge", "multi_speaker", "plain")
 
 #: A turn counts as multi-speaker context when its window holds at least this many speakers.
 MULTI_SPEAKER_MINIMUM = 3
 
+#: A number next to a magnitude word: "80 lakhs", "1.2 cr", "50k". How a budget is usually said.
+_AMOUNT = re.compile(
+    r"\d[\d,.]*\s*(?:" + "|".join(re.escape(m) for m in sorted(thresholds.MAGNITUDES, key=len, reverse=True)) + r")(?!\w)",
+    re.I)
 
-def _matcher(cues: Sequence[str]) -> re.Pattern:
+#: A locality-shaped word: a stem of three or more letters ending in a common Indian suffix.
+_LOCALITY = re.compile(
+    r"(?<!\w)\w{3,}(?:" + "|".join(thresholds.LOCALITY_SUFFIXES) + r")(?!\w)", re.I)
+
+
+@functools.lru_cache(maxsize=64)
+def _matcher(cues: tuple[str, ...]) -> re.Pattern:
     return re.compile("|".join(rf"(?<!\w){re.escape(cue)}(?!\w)" for cue in cues), re.I)
 
 
-_CORRECTION = _matcher(CORRECTION_CUES)
-_HEDGE = _matcher(HEDGE_CUES)
+@functools.lru_cache(maxsize=64)
+def _field_matcher(cues: tuple[str, ...]) -> re.Pattern:
+    """Like `_matcher`, but bounded by letters rather than word characters.
+
+    "3BHK" is the commonest way a property type is written, and a word boundary will not match
+    "bhk" there: the digit is a word character, so the lookbehind fails. Letter boundaries match
+    it while still refusing "bhks" or "abhk".
+    """
+    return re.compile(
+        "|".join(rf"(?<![a-z]){re.escape(cue)}(?![a-z])" for cue in cues), re.I)
+
+
+_CORRECTION = _matcher(tuple(CORRECTION_CUES))
+_HEDGE = _matcher(tuple(HEDGE_CUES))
 
 
 def has_correction_cue(text: str) -> bool:
@@ -53,15 +88,91 @@ def distinct_speakers(rows: Sequence[dict]) -> int:
     return len({r.get("speaker_id") for r in rows if r.get("speaker_id")})
 
 
-def strata_for(turn: dict, context: Sequence[dict]) -> frozenset[str]:
+def role_of(turn: dict) -> str:
+    return str(turn.get("speaker_role") or "").strip().lower()
+
+
+def display_role(turn: dict) -> str:
+    """What the annotator sees: "customer" or "seller".
+
+    An unmapped role passes through unchanged rather than being coerced to one side, so a
+    schema that grows a third party shows up in the sheet instead of being silently absorbed.
+    """
+    role = role_of(turn)
+    return thresholds.ROLE_DISPLAY.get(role, role or "unknown")
+
+
+def is_media_placeholder(text: str) -> bool:
+    return (text or "").strip().lower().startswith(thresholds.MEDIA_PLACEHOLDER_PREFIX)
+
+
+def word_count(text: str) -> int:
+    return len((text or "").split())
+
+
+def target_rejection(turn: dict) -> str | None:
+    """Why this turn cannot be a target, or None if it can.
+
+    Returns a reason rather than a bool so the sampler can report *why* a corpus yields few
+    eligible turns. A run that finds almost nothing eligible is a fact about the corpus the
+    researcher needs before any labelling, not after.
+    """
+    if role_of(turn) not in thresholds.TARGET_ROLES:
+        return "not_customer"
+    text = turn.get("text", "")
+    if is_media_placeholder(text):
+        return "media_placeholder"
+    if not text.strip():
+        return "empty"
+    if word_count(text) < thresholds.MIN_TARGET_WORDS:
+        return "too_short"
+    return None
+
+
+def is_eligible_target(turn: dict) -> bool:
+    return target_rejection(turn) is None
+
+
+def fields_mentioned(text: str, keywords: dict[str, Sequence[str]] | None = None) -> frozenset[str]:
+    """Which pilot fields this text appears to mention. Sampling only, never a label.
+
+    A budget is matched by an amount pattern as well as by its keywords, and a location by a
+    locality-shaped word as well as by its indicator words, because neither is reliably a word
+    from a fixed list.
+    """
+    keywords = thresholds.FIELD_KEYWORDS if keywords is None else keywords
+    text = text or ""
+    found = set()
+    for field, words in keywords.items():
+        if words and _field_matcher(tuple(words)).search(text):
+            found.add(field)
+    if _AMOUNT.search(text):
+        found.add(thresholds.BUDGET_AMOUNT_FIELD)
+    if _LOCALITY.search(text):
+        found.add("location_preference")
+    return frozenset(found & set(keywords))
+
+
+def has_field_mention(text: str, keywords=None) -> bool:
+    return bool(fields_mentioned(text, keywords))
+
+
+def strata_for(turn: dict, context: Sequence[dict], *, keywords=None) -> frozenset[str]:
     """Which strata a turn belongs to. A turn can be in several, or only in "plain".
+
+    **Every cue is matched against the target turn's own text**, never against the context. That
+    was already true before run 20261002T175103Z-f318529 was voided; what made the cues select
+    seller text was that seller turns were eligible targets at all, which they no longer are.
+    A test pins the property so it stays true.
 
     "Multi-speaker turn" is read as a turn whose context window holds three or more distinct
     speakers, since a turn has exactly one speaker of its own. That is an interpretation of the
-    experiment record's wording, not something the record states.
+    experiment record's wording, not something the record states. It carries no quota.
     """
     found = set()
     text = turn.get("text", "")
+    if has_field_mention(text, keywords):
+        found.add("field_mention")
     if has_correction_cue(text):
         found.add("correction")
     if has_hedge_cue(text):

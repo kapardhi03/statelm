@@ -4,7 +4,7 @@ Status: Planned
 Owner: Kapardhi
 Created: 2026-10-01
 Decision informed: ADR-003 (keep, merge, or redefine abstention types)
-Blocked by: guideline approval (Kapardhi)
+Blocked by: nothing
 
 ## Hypothesis
 Two independent human annotators agree on NO-OP vs value vs ABSTAIN type at κ ≥ 0.6 per
@@ -66,6 +66,32 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
 - 2026-10-02: D3 resolved. Conversations are available from the ARTHRYX database; a second
   annotator is identified (Annotator B); the design is inter-annotator. The remaining blocker
   is approval of the annotation guideline.
+- 2026-10-02: **run 20261002T175103Z-f318529 declared VOID by Kapardhi.** Transcribed from
+  Kapardhi, 2026-10-02: "Void: all 160 labels NO-OP, kappa undefined. Cause is the sampling
+  design, not the annotators: 10 of 16 sampled turns were seller-side (structurally NO-OP under
+  the Q3 rule), customer turns sampled were mostly 2-16 characters or a voice note, and the
+  hedge/correction cues matched seller text. Sheets showed SPEAKER_n, not role." The run
+  directory is kept and marked with `runs/EXP-000/20261002T175103Z-f318529/VOID.md`; its numbers
+  must not be used, cited or aggregated. It produced no kappa, so it informs ADR-003 not at all.
+- 2026-10-02: sampler changes pre-registered by Kapardhi, prompted by the void run. Because that
+  run produced no kappa, none of these was chosen in the light of a result; what they were chosen
+  in the light of is the sampling failure above. Implemented in
+  `experiments/EXP-000/thresholds.py`, which names the provenance of each value.
+  (1) Targets are customer turns of real text only; seller turns and media placeholders stay in
+  the context, where guideline §3.3 needs them, but are never the turn labelled.
+  (2) A target needs at least 3 words.
+  (3) Cues are matched against the target turn's own text only; this was already true of the
+  code, and what made the cues select seller text was that seller turns were eligible targets.
+  (4) New `field_mention` stratum; quotas field_mention 40% / correction 20% / hedge 20% /
+  random 20%, shortfalls reported. The `multi_speaker` stratum keeps no quota and is reported
+  for interest only.
+  (5) Sheets show `turn_role` (customer / seller) rather than `SPEAKER_n`, in the target and the
+  context, because §3.3 turns on who spoke.
+  (6) The sampler prints the eligible-target census, total and per stratum, before writing any
+  sheet, so a corpus that cannot support the quotas is visible beforehand.
+- 2026-10-02: annotation guideline approved by Kapardhi. EXP-000 is unblocked and ready to
+  run. ADR-003 is still Proposed and D4 is still pending: the approval settles how the labels
+  are applied, not whether the taxonomy is right, which is what this experiment measures.
 - 2026-10-02: the three guideline boundary rules settled by Kapardhi and recorded in
   `EXP-000-annotation-guideline.md` §3. One of them bears on a measurement: approximations are
   VALUEs ("around 40 lakhs" -> VALUE `~40 lakhs`), so value agreement treats an approximation
