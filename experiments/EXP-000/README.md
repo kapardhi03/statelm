@@ -109,7 +109,35 @@ Reading the conversations first turns your labels into recall of the text rather
 about it, and the agreement that follows measures memory. `synthetic/README.md` is safe to read:
 it covers provenance and limits and maps no phenomenon to any conversation.
 
-First look at what the corpus can support, writing nothing:
+**First, before the census, ask whether the cue lists can fire on the corpus at all.** The v3
+census returned hedge 0 and correction 0 — and so did the 33 English forms already in the lists.
+A probe whose every form scores zero cannot tell an absent phenomenon from a probe that does not
+match the text:
+
+```bash
+uv run --project experiments/EXP-000 python experiments/EXP-000/sample_items.py \
+    --input data/scrubbed/EXP-000 \
+    --output data/scrubbed/EXP-000-annotation \
+    --fields experiments/EXP-000/fields.yaml \
+    --field-keywords experiments/EXP-000/field_keywords.yaml \
+    --cue-diagnostics
+```
+
+It writes no sheet. It prints the headline and records every count under
+`runs/EXP-000/<run-id>/` with the commit, a corpus hash and a digest of the exact cue and
+keyword lists it measured with. Read it this way:
+
+- **Some English forms fire, the romanized ones do not** → cue language is not the explanation,
+  and the v3 reading stands.
+- **Nothing fires and the script mix is largely Telugu or Devanagari** → the instrument is the
+  limit, not the corpus. No addition to a romanized ASCII list can reach native-script text.
+- **Nothing fires and the text is ASCII-only** → the probe could have fired and did not, which
+  is the strongest form of the v3 result.
+
+`--cue-diagnostics` measures `--input` only. A `--synthetic` set is excluded by construction, so
+diagnosing the real corpus cannot prime the labelling of the synthetic one.
+
+Then look at what the corpus can support, writing no sheet:
 
 ```bash
 uv run --project experiments/EXP-000 python experiments/EXP-000/sample_items.py \
@@ -120,6 +148,12 @@ uv run --project experiments/EXP-000 python experiments/EXP-000/sample_items.py 
     --field-keywords experiments/EXP-000/field_keywords.yaml \
     --census-only
 ```
+
+That now writes `runs/EXP-000/<run-id>/census.json` and `config.json` as well as printing the
+census, so the figures are tied to a commit and a corpus hash rather than to what you report
+afterwards. Both files are counts only and are tracked by git. A `--synthetic` set's census is
+deliberately left out of the record: its per-stratum counts are the ones you must not meet
+before labelling, and `runs/` is partly tracked.
 
 Then sample. The real set contributes **every** eligible field-mention turn, with no random
 padding; the synthetic set contributes 16 turns under the normal quotas:

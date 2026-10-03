@@ -21,11 +21,22 @@ MUST_BE_IGNORED = [
     "data/scrubbed/EXP-000/conv_001.jsonl",
     "data/scrubbed/EXP-000/_audit/audit.sensitive.jsonl",
     "data/scrubbed/EXP-000/summary.json",
+    # The sampler's manifest holds every item's stratum and source. It stays local: those are
+    # the counts an annotator must not meet before labelling.
+    "data/scrubbed/EXP-000-annotation/manifest.json",
+    # A run directory holds counts; anything else under it is not a summary and stays local.
+    "runs/EXP-000/20261003T000000Z-abc1234/stdout.log",
+    "runs/EXP-000/20261003T000000Z-abc1234/synthetic_census.json",
 ]
 
 MUST_NOT_BE_IGNORED = [
     "experiments/EXP-000/scrub.py",
     "docs/research/experiments/EXP-000-label-feasibility.md",
+    # Run summaries are counts only and are tracked on purpose: a figure that lives on one
+    # machine rests on a report, which is what the v2 and v3 censuses did.
+    "runs/EXP-000/20261003T000000Z-abc1234/config.json",
+    "runs/EXP-000/20261003T000000Z-abc1234/census.json",
+    "runs/EXP-000/20261003T000000Z-abc1234/cue_diagnostics.json",
 ]
 
 

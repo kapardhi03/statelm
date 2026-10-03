@@ -186,13 +186,56 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
   magnitude rather than the inference. Annotator B has seen none of it. Flagged by Claude
   Code; whether the design should change in response is Kapardhi's call, not recorded here as
   settled.
-  A larger threat than the printed counts, also flagged by Claude Code and also Kapardhi's to
-  judge: Annotator A approved the annotation guideline (entry of 2026-10-02) and so is the
-  taxonomy's author-in-effect, which makes the real subset's kappa partly guideline-approver
-  against guideline-user rather than two independent users of it. Setup above states that which
-  person is which letter is not recorded in this repository; the run book addresses Annotator A
-  directly, so within this repository it is derivable. Whether to weaken that claim or to stop
-  addressing A directly is not recorded here either way.
+  A larger threat than the printed counts, flagged by Claude Code and settled by Kapardhi on
+  2026-10-03: Annotator A approved the annotation guideline, so the real subset's kappa is
+  partly guideline-approver against guideline-user. Both that and the derivability of which
+  person is which letter are now carried as accepted limitations under **Known limitations**
+  below, with the mitigation Kapardhi named.
+- 2026-10-03: **`--cue-diagnostics`, and run records for census figures.** Instructed by
+  Kapardhi, pre-labelling, prompted by the caveat in the v3 entry above: a 0 that every cue
+  produces cannot separate an absent phenomenon from a probe that does not match the text.
+  The flag measures the two things that tell those apart, counts only, over the eligible
+  targets of `--input`: per-cue hit counts for every form in both lists and per-keyword counts
+  for every field keyword, zeros included; and the script mix of those turns, by Telugu block
+  (U+0C00-U+0C7F), Devanagari (U+0900-U+097F), other non-ASCII and ASCII-only. The same two
+  summaries cover the field keyword lists, and the cue and keyword strings' own script is
+  reported too, because an ASCII probe cannot match a native-script spelling however well its
+  words are chosen. A synthetic set is excluded by construction, so diagnosing the real corpus
+  cannot prime the labelling of the synthetic one.
+  `--census-only` and `--cue-diagnostics` now each write `runs/EXP-000/<run-id>/config.json`
+  with the git commit, a corpus hash and a digest of the exact cue and keyword lists measured
+  with, alongside `census.json` and `cue_diagnostics.json`. This is what the v2 and v3 censuses
+  lacked: their figures rested on a report and could not be re-derived.
+  **A decision Claude Code made that is one line to revert.** `census.json` and
+  `cue_diagnostics.json` are now tracked by git, like `config.json` and `metrics.json` already
+  were, because a figure that lives only on one machine still rests on a report. They are
+  counts only by construction and by three tests: no corpus text, no conversation id and no
+  speaker id reaches them, and a record taken over a native-script corpus is pure ASCII. A
+  `--synthetic` set's census is kept out of the tracked record, since its per-stratum counts
+  are the ones Annotator A must not meet before labelling. A field whose keyword list came from
+  `--field-keywords` has its counts recorded in that file's own order and its keywords named
+  nowhere: that file holds locality names this repository cannot enumerate, and tracking the
+  diagnostic would otherwise have published them. The built-in lists are named, being
+  repository content already.
+  What the diagnostic cannot do is settle the question by itself. It says whether the probe can
+  fire; if nothing fires on text that is largely non-ASCII, the reading is that the instrument
+  is the limit, and whether that reopens explanation (b) is Kapardhi's call.
+
+## Known limitations
+Flagged and accepted rather than fixed. Recorded on Kapardhi's instruction, 2026-10-03; neither
+is an open question, and neither needs action.
+
+- **Annotator A approved the annotation guideline**, so A is the taxonomy's author in effect and
+  the real subset's kappa is partly guideline-approver against guideline-user rather than two
+  independent users of it. **Mitigation, named by Kapardhi: Annotator B's reading is
+  independent.** B did not approve the guideline, has seen neither the census nor any stratum
+  count, and labels the same items.
+- **Which person is Annotator A is derivable within this repository.** The run book addresses A
+  directly as the person who runs the local tools, and the privacy rule puts those runs on
+  Kapardhi's machine. Accepted by Kapardhi, 2026-10-03. The Setup section's sentence that which
+  person is which letter "is not recorded in this repository" is stronger than what holds; what
+  does hold is the part that protects the measurement, that no personal name appears in a sheet,
+  the manifest, the disagreement list or the metrics.
 
 ## Leakage check
 Items used here are pilot items and must not enter the eventual test split.
