@@ -43,7 +43,7 @@ Nothing here runs in a Claude session: steps 2 to 5 all touch client text.
 
 ```bash
 uv sync --project experiments/EXP-000
-uv run --project experiments/EXP-000 pytest experiments/EXP-000/tests -q   # 459, invented data
+uv run --project experiments/EXP-000 pytest experiments/EXP-000/tests -q   # 519, invented data
 ```
 
 ### 1. Look at the schema (safe to paste into a Claude session)
@@ -89,14 +89,46 @@ sensitive as the input.
 
 ### 4. Sample the annotation items
 
+**Do not read `experiments/EXP-000/synthetic/*.jsonl` before you label.** You are Annotator A.
+Reading the conversations first turns your labels into recall of the text rather than a judgement
+about it, and the agreement that follows measures memory. `synthetic/README.md` is safe to read:
+it covers provenance and limits and maps no phenomenon to any conversation.
+
+First look at what the corpus can support, writing nothing:
+
 ```bash
 uv run --project experiments/EXP-000 python experiments/EXP-000/sample_items.py \
     --input data/scrubbed/EXP-000 \
+    --synthetic experiments/EXP-000/synthetic \
     --output data/scrubbed/EXP-000-annotation \
     --fields experiments/EXP-000/fields.yaml \
     --field-keywords experiments/EXP-000/field_keywords.yaml \
-    --n-items 80 --seed 0 --annotators A B
+    --census-only
 ```
+
+Then sample. The real set contributes **every** eligible field-mention turn, with no random
+padding; the synthetic set contributes 16 turns under the normal quotas:
+
+```bash
+uv run --project experiments/EXP-000 python experiments/EXP-000/sample_items.py \
+    --input data/scrubbed/EXP-000 \
+    --synthetic experiments/EXP-000/synthetic \
+    --output data/scrubbed/EXP-000-annotation \
+    --fields experiments/EXP-000/fields.yaml \
+    --field-keywords experiments/EXP-000/field_keywords.yaml \
+    --all-stratum field_mention --no-random-topup \
+    --synthetic-turns 16 --seed 0 --annotators A B
+```
+
+It prints the total item count before writing a single sheet. With `--all-stratum` the real set's
+size comes from the corpus rather than from `--n-items`, so the total can exceed the request and
+the run says when it does.
+
+**Nothing in a sheet says which subset an item is from.** The source is in the manifest, and
+sheet-facing conversation ids are per-run aliases (`c001`, `c002`, …) drawn from one namespace
+across both sets — a `syn_` prefix in an item id would tell an annotator the turn was
+model-written as plainly as a column would. `pilot_items.json` keeps the true ids, since
+test-split exclusion has to match the real corpus.
 
 `field_keywords.yaml` carries the Hyderabad locality names, which the built-in suffix heuristic
 cannot know. Read the census it prints before the sheets are written: if `field_mention` falls
@@ -112,8 +144,15 @@ output is a run that can corrupt itself. `data/scrubbed/EXP-000-annotation/` is 
 ```bash
 uv run --project experiments/EXP-000 python experiments/EXP-000/agreement.py \
     --sheets data/scrubbed/EXP-000-annotation/sheet_A.csv \
-             data/scrubbed/EXP-000-annotation/sheet_B.csv
+             data/scrubbed/EXP-000-annotation/sheet_B.csv \
+    --manifest data/scrubbed/EXP-000-annotation/manifest.json
 ```
+
+`--manifest` is what splits the result. Without it you get one combined κ, and a combined κ over
+a mixed item set is the figure most likely to mislead: on a test run the combined number read
+NOT REFUTED while the real subset read REFUTED, because the synthetic items agreed far more
+often. **Only the real subset's verdict bears on ADR-003**; the synthetic one is printed as
+"guideline usability, not evidence for ADR-003".
 
 Writes aggregates to `runs/EXP-000/<run-id>/` and the disagreement list to
 `data/scrubbed/EXP-000/`.

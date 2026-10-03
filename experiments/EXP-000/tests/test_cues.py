@@ -206,3 +206,42 @@ class TestCuesLookOnlyAtTheTargetTurn:
                                           "speaker_id": "SPEAKER_3"}]
         assert "multi_speaker" in cues.strata_for(target, context)
         assert "multi_speaker" not in thresholds.SAMPLING_QUOTAS
+
+
+class TestCodeMixedCues:
+    """Romanized Telugu and Hindi forms, Kapardhi's list of 2026-10-03.
+
+    Added because the v2 census found 0 correction and 0 hedge matches across 135 eligible
+    customer turns, in a deployment where customers code-mix.
+    """
+
+    @pytest.mark.parametrize("text", [
+        "konchem flexible undi", "budget 80 lakhs approx ga", "emo, villa kuda chuddam",
+        "90 lakhs anukuntunna", "repu alochistanu", "exact amount telidu",
+        "shayad thoda zyada", "lagbhag 1 crore", "dekhte hain next week", "pata nahi abhi",
+    ])
+    def test_a_code_mixed_hedge_matches(self, text):
+        assert cues.has_hedge_cue(text), text
+
+    @pytest.mark.parametrize("text", [
+        "kaadu, 90 lakhs ani cheppa", "ledu ledu, 3BHK kavali",
+        "matlab I meant the other one", "nahi nahi, next month",
+    ])
+    def test_a_code_mixed_correction_matches(self, text):
+        assert cues.has_correction_cue(text), text
+
+    def test_they_are_recorded_separately_for_the_census(self):
+        """So a re-run can say whether the English-only lists were the problem."""
+        assert cues.has_code_mixed_cue("konchem alochistanu")
+        assert not cues.has_code_mixed_cue("maybe around 80 lakhs")
+        assert set(cues.CODE_MIXED_CUES) <= set(cues.HEDGE_CUES) | set(cues.CORRECTION_CUES)
+
+    def test_plain_english_turns_are_unaffected(self):
+        assert cues.has_hedge_cue("maybe around 80 lakhs")
+        assert cues.has_correction_cue("actually I meant 90")
+        assert not cues.has_hedge_cue("budget is 80 lakhs")
+
+    def test_a_cue_inside_a_longer_word_does_not_match(self):
+        assert not cues.has_hedge_cue("emotional")
+        assert not cues.has_hedge_cue("thodaram")
+        assert not cues.has_correction_cue("changes")

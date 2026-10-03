@@ -213,8 +213,10 @@ class TestSampling:
         run(source, out, fields, "--n-items", "8")
         payload = json.loads((out / "pilot_items.json").read_text(encoding="utf-8"))
         assert "must never enter the final test split" in payload["purpose"]
+        # `source` joined the record so exclusion can tell a real turn from a synthetic one.
+        # It is still ids only: the point of this test is that no conversation text is here.
         assert payload["turns"] and all(
-            set(t) == {"conversation_id", "turn_index"} for t in payload["turns"])
+            set(t) == {"conversation_id", "turn_index", "source"} for t in payload["turns"])
         body = (out / "pilot_items.json").read_text(encoding="utf-8")
         assert "Gachibowli" not in body and "40 lakhs" not in body
 
@@ -528,7 +530,7 @@ class TestOnlyCustomerTurnsAreTargets:
             tmp_path / "scrubbed", turns=[("agent", "we have many options for you")] * 6)
         fields = tmp_path / "fields.yaml"
         fields.write_text(FIELDS, encoding="utf-8")
-        with pytest.raises(sample_items.SamplerError, match="no turn in this corpus"):
+        with pytest.raises(sample_items.SamplerError, match="no turn in either corpus"):
             run(source, tmp_path / "out", fields)
 
     def test_that_error_names_the_rejection_counts(self, tmp_path):
@@ -706,3 +708,234 @@ class TestTheCommittedFieldKeywordsFile:
         merged = sample_items.load_field_keywords(self.PATH)
         for text in ("thanks for your time", "i will call you tomorrow"):
             assert "location_preference" not in cues.fields_mentioned(text, merged), text
+
+
+SYNTHETIC_TURNS = [
+    ("agent", "Hello, thanks for the enquiry about our project."),
+    ("customer", "konchem flexible, around 85 lakhs anukuntunna"),
+    ("agent", "Noted. Any preferred area?"),
+    ("customer", "kaadu kaadu, I meant 95 lakhs"),
+    ("customer", "3BHK near Kondapur would suit us"),
+    ("agent", "I will share two options."),
+    ("customer", "my wife has to decide finally"),
+    ("customer", "possession by next Diwali maybe"),
+]
+
+
+@pytest.fixture
+def two_sources(tmp_path):
+    real = write_roled_conversations(tmp_path / "real", count=3)
+    syn = write_roled_conversations(tmp_path / "syn", turns=SYNTHETIC_TURNS, count=3)
+    # Rename the synthetic conversations so their ids differ, as the real sets do.
+    for path in sorted(syn.glob("*.jsonl")):
+        body = path.read_text(encoding="utf-8").replace("conv_", "syn_")
+        path.write_text(body, encoding="utf-8")
+        path.rename(syn / path.name.replace("conv_", "syn_"))
+    fields = tmp_path / "fields.yaml"
+    fields.write_text(FIELDS, encoding="utf-8")
+    return real, syn, fields, tmp_path / "annotation"
+
+
+def run_two(real, syn, fields, out, *extra):
+    buffer = io.StringIO()
+    code = sample_items.main(
+        ["--input", str(real), "--synthetic", str(syn), "--output", str(out),
+         "--fields", str(fields), *extra], out=buffer)
+    return code, buffer.getvalue()
+
+
+class TestAllStratum:
+    def test_it_takes_every_turn_in_the_stratum(self, seller_heavy):
+        source, fields, out = seller_heavy
+        _, output = run(source, out, fields, "--all-stratum", "field_mention",
+                        "--no-random-topup")
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        census, enrichment = manifest["corpus_census"], manifest["enrichment"]
+        assert enrichment["achieved"]["field_mention"] == census["by_stratum"]["field_mention"]
+        assert enrichment["all_strata"] == ["field_mention"]
+
+    def test_it_ignores_n_items_for_that_stratum(self, seller_heavy):
+        """"Take every" has to win over a share of a target, or the flag means nothing."""
+        source, fields, out = seller_heavy
+        _, output = run(source, out, fields, "--all-stratum", "field_mention",
+                        "--no-random-topup", "--n-items", "5")
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        eligible = manifest["corpus_census"]["by_stratum"]["field_mention"]
+        assert manifest["enrichment"]["achieved"]["field_mention"] == eligible
+        assert "exceeds --n-items 5" in output
+
+    def test_no_random_topup_adds_no_cue_free_turns(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--all-stratum", "field_mention", "--no-random-topup")
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        assert manifest["enrichment"]["achieved"]["random"] == 0
+        assert manifest["enrichment"]["random_topup"] is False
+
+    def test_an_unknown_stratum_is_rejected_by_the_parser(self, seller_heavy):
+        source, fields, out = seller_heavy
+        with pytest.raises(SystemExit):
+            run(source, out, fields, "--all-stratum", "not_a_stratum")
+
+
+class TestCensusOnly:
+    def test_it_writes_nothing(self, seller_heavy):
+        source, fields, out = seller_heavy
+        code, output = run(source, out, fields, "--census-only")
+        assert code == 0
+        assert not out.exists()
+        assert "nothing was written" in output
+
+    def test_it_still_prints_the_census(self, seller_heavy):
+        source, fields, out = seller_heavy
+        _, output = run(source, out, fields, "--census-only")
+        assert "eligible targets" in output
+        assert "eligible per stratum" in output
+
+
+class TestTwoSources:
+    def test_both_sets_contribute_items(self, two_sources):
+        real, syn, fields, out = two_sources
+        code, output = run_two(real, syn, fields, out, "--synthetic-turns", "4",
+                               "--annotators", "A", "B")
+        assert code == 0
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        by_source = manifest["items_by_source"]
+        assert by_source["real"] > 0 and by_source["synthetic"] > 0
+
+    def test_the_item_count_is_printed_before_the_sheets(self, two_sources):
+        real, syn, fields, out = two_sources
+        _, output = run_two(real, syn, fields, out, "--synthetic-turns", "4")
+        assert "ITEMS TO BE WRITTEN" in output
+        count_at = output.index("ITEMS TO BE WRITTEN")
+        sheets_at = output.index("sheets: ")
+        assert count_at < sheets_at, "the count must precede the sheet line"
+
+    def test_no_sheet_reveals_the_source(self, two_sources):
+        real, syn, fields, out = two_sources
+        run_two(real, syn, fields, out, "--synthetic-turns", "4", "--annotators", "A", "B")
+        for name in ("A", "B"):
+            body = (out / f"sheet_{name}.csv").read_text(encoding="utf-8")
+            assert "source" not in body.lower()
+            assert "synthetic" not in body.lower()
+            assert "syn_" not in body, "the id prefix would leak the source"
+            assert "conv_" not in body
+            assert "source" not in read_sheet(out / f"sheet_{name}.csv")[0]
+
+    def test_sheet_ids_are_aliases_from_one_namespace(self, two_sources):
+        """A `syn_` prefix would tell an annotator the turn was model-written."""
+        real, syn, fields, out = two_sources
+        run_two(real, syn, fields, out, "--synthetic-turns", "4")
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        alias = manifest["conversation_alias"]
+        assert alias
+        assert all(a.startswith("c") and a[1:].isdigit() for a in alias)
+        true_ids = set(alias.values())
+        assert any(t.startswith("conv_") for t in true_ids)
+        assert any(t.startswith("syn_") for t in true_ids)
+        shown = {row["conversation_id"] for row in read_sheet(out / "sheet_A.csv")}
+        assert shown <= set(alias)
+
+    def test_the_manifest_maps_every_item_to_a_source(self, two_sources):
+        real, syn, fields, out = two_sources
+        run_two(real, syn, fields, out, "--synthetic-turns", "4")
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        ids = {row["item_id"] for row in read_sheet(out / "sheet_A.csv")}
+        assert set(manifest["item_source"]) == ids
+        assert set(manifest["item_source"].values()) == {"real", "synthetic"}
+
+    def test_pilot_items_keep_the_true_ids(self, two_sources):
+        """Test-split exclusion has to match the real corpus, not a per-run alias."""
+        real, syn, fields, out = two_sources
+        run_two(real, syn, fields, out, "--synthetic-turns", "4")
+        pilot = json.loads((out / "pilot_items.json").read_text(encoding="utf-8"))
+        ids = {t["conversation_id"] for t in pilot["turns"]}
+        assert any(i.startswith("conv_") for i in ids)
+        assert any(i.startswith("syn_") for i in ids)
+        assert {t["source"] for t in pilot["turns"]} == {"real", "synthetic"}
+
+    def test_a_colliding_conversation_id_is_a_loud_error(self, tmp_path):
+        real = write_roled_conversations(tmp_path / "real", count=2)
+        syn = write_roled_conversations(tmp_path / "syn", turns=SYNTHETIC_TURNS, count=2)
+        fields = tmp_path / "fields.yaml"
+        fields.write_text(FIELDS, encoding="utf-8")
+        with pytest.raises(sample_items.SamplerError, match="appear in both"):
+            run_two(real, syn, fields, tmp_path / "out")
+
+    def test_the_synthetic_census_is_reported_separately(self, two_sources):
+        real, syn, fields, out = two_sources
+        _, output = run_two(real, syn, fields, out, "--synthetic-turns", "4")
+        assert "--- synthetic set:" in output
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        assert manifest["synthetic_census"]["source"] == "synthetic"
+        assert manifest["corpus_census"]["source"] == "real"
+
+
+class TestTheCommittedSyntheticSet:
+    ROOT = Path(__file__).parent.parent / "synthetic"
+
+    def conversations(self):
+        return sorted(self.ROOT.glob("*.jsonl"))
+
+    def rows(self):
+        return [json.loads(line) for path in self.conversations()
+                for line in path.read_text(encoding="utf-8").splitlines() if line]
+
+    def test_there_are_twenty_conversations(self):
+        assert len(self.conversations()) == 20
+
+    def test_every_record_is_marked_synthetic_with_its_generator(self):
+        for row in self.rows():
+            assert row["provenance"]["source"] == "synthetic"
+            assert row["provenance"]["generator"] == "claude-opus-5"
+            assert row["provenance"]["labeler"] is None
+
+    def test_it_carries_no_labels_and_no_hints(self):
+        """Not in the text, not in a sidecar, not in a filename."""
+        texts = " ".join(row["text"] for row in self.rows()).lower()
+        for token in ("no-op", "abstain", "hedged", "intended", "stratum", "this turn tests"):
+            assert token not in texts, token
+        for path in self.conversations():
+            assert path.stem.startswith("syn_") and path.stem[4:].isdigit(), path.name
+
+    def test_no_phenomenon_is_clustered_in_one_conversation(self):
+        """One phenomenon per file would label by position as surely as a column would."""
+        carrying = {"hedge": set(), "correction": set(), "field": set()}
+        for row in self.rows():
+            if row["speaker_role"] != "customer":
+                continue
+            cid, text = row["conversation_id"], row["text"]
+            if cues.has_hedge_cue(text):
+                carrying["hedge"].add(cid)
+            if cues.has_correction_cue(text):
+                carrying["correction"].add(cid)
+            if cues.fields_mentioned(text):
+                carrying["field"].add(cid)
+        for name, conversations in carrying.items():
+            assert len(conversations) >= 3, (name, sorted(conversations))
+
+    def test_it_contains_code_mixed_material(self):
+        hits = sum(1 for row in self.rows() if cues.has_code_mixed_cue(row["text"]))
+        assert hits >= 5, hits
+
+    def test_it_has_both_roles_and_enough_eligible_targets(self):
+        rows = self.rows()
+        roles = {row["speaker_role"] for row in rows}
+        assert roles == {"customer", "agent"}
+        eligible = sum(1 for row in rows if cues.is_eligible_target(row))
+        assert eligible >= 16, eligible
+
+    def test_the_readme_states_the_limit_without_mapping_phenomena(self):
+        readme = (self.ROOT / "README.md").read_text(encoding="utf-8")
+        assert "not evidence for ADR-003" in readme
+        assert "Do not read the conversations before labelling" in readme
+        # Naming the id range while describing the file-naming scheme is fine. What must not
+        # happen is a conversation id appearing alongside a phenomenon, which would map one to
+        # the other and prime the annotator as surely as a label would.
+        phenomena = ("hedge", "correction", "conflict", "ambiguous", "vague", "unit",
+                     "code-mix", "approximation")
+        ids = {row["conversation_id"] for row in self.rows()}
+        for line in readme.splitlines():
+            lowered = line.lower()
+            named = [cid for cid in ids if cid in line]
+            if named and any(word in lowered for word in phenomena):
+                raise AssertionError(f"README maps {named} to a phenomenon: {line!r}")
