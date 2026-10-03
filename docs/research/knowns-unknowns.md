@@ -21,6 +21,17 @@ or a literature row as evidence.
   2026-10-03, counts only. His reading, recorded as his: cue-language blindness does not
   explain the absence, which leaves genuine absence from the text channel and the 54 voice
   notes as the remaining explanations. What is measured here is a cue match, not a hedge.
+- **Across all 286 customer text turns in this deployment, 22 mention a tracked field and 0
+  match any hedge or correction cue. Script blindness and pipeline faults are ruled out.**
+  Transcribed from Kapardhi, 2026-10-03; the ruling-out is his reading, recorded as his.
+  EXP-000 runs: 135 eligible targets (18 field mentions) plus 151 turns below the 3-word floor
+  (4 field mentions, run `20261003T164527Z-2773803`), and the two populations are exact
+  complements by the sampler's own eligibility predicate, so 286 is every customer turn of real
+  text in the corpus. The measurements his reading rests on: `ascii_only` 121 of 135 eligible
+  targets with `telugu` 1, so the writing system was not blocking the probe; and field mentions
+  and the amount pattern firing on both populations, so text is arriving and is matchable.
+  What is measured is a cue match, not a hedge, and 0 cue matches across 286 turns is the
+  largest-denominator form of that result rather than a new kind of evidence.
 
 ## Unknown (to test)
 - Whether H-A / H-B / H-C hold
@@ -28,48 +39,62 @@ or a literature row as evidence.
 - Human agreement on abstention types (EXP-000)
 - Size threshold for the joint task
 - How hedged values should be labeled
-- Whether the cue lists can detect these phenomena in this text at all. The 33 English hedge
-  and correction forms in the lists — "around", "maybe", "up to", "at least", "flexible",
-  "actually", "sorry", "change" among them — matched 0 of the same 135 eligible customer turns.
-  No cue in either language has been observed to fire on this corpus, so the probe has not been
-  shown capable of firing, and a probe that has never fired cannot separate "the phenomenon is
-  absent" from "the probe does not match this text" — or from the text not being what the
-  pipeline is assumed to deliver. This bears directly on the ruling-out of (b) below.
-  **Partly answered, 2026-10-03.** Of the two measurements raised here, one was run and the
-  other turned out not to be a measurement. Script: Kapardhi's script-mix run reported
-  `ascii_only` 121 of 135 eligible targets and `telugu` 1, and his reading, recorded as his, is
-  that script blindness is ruled out -- so on the great majority of the corpus the writing
-  system was not what blocked the probe. Per-cue hit counts: entailed to be 0 while the census
-  reads hedge 0 and correction 0, because the stratum is one alternation over the same forms,
-  so they carry nothing the census did not.
-  What stays open is narrower than when this was raised: **cue coverage**, since the 16
-  romanized forms are exact strings ("konchem" does not match "koncham") and recall on hedges is
-  unmeasured anywhere in this experiment; and the **eligibility frame**, since the 3-word floor
-  excludes the turns where a hedge is shortest. `--cue-diagnostics` now measures that excluded
-  population directly, counts only. Raised by Claude Code, 2026-10-03, and updated the same day.
-- Why real customer turns are state-sparse. Three explanations; (b) ruled out on Kapardhi's
-  reading of the v3 census, 2026-10-03, two remaining:
-  (a) **voice notes** carry the hedging and self-correction, so the text channel systematically
-  lacks them. 54 of the rejected turns were voice-note placeholders. This is a sampling-frame
-  limit rather than a cue limit: better cue lists cannot recover it, transcription could.
-  Raised by Claude Code, 2026-10-03.
+- **Whether hedging and revision occur in voice notes, occur in phrasing the cue lists cannot
+  see, or are genuinely rare in bot-led WhatsApp sales chats.** Kapardhi's framing, 2026-10-03.
+  These three replace the earlier (a)/(b)/(c) list and the separate question of whether the cue
+  lists can fire at all, which the measurements below have narrowed into them.
+  (1) **Voice notes.** 54 of the rejected turns were voice-note placeholders. A sampling-frame
+  limit rather than a cue limit: no cue list recovers it, transcription could. Raised by Claude
+  Code, 2026-10-03.
+  (2) **Phrasing the cue lists cannot see.** Distinct from the ruled-out (b) below, and the
+  distinction matters: (b) was that the lists were in the wrong *language*, which adding
+  romanized forms tested and refuted. This is that the phenomenon is expressed in ways no word
+  list catches at all -- syntactically ("I will have to check with my wife", "let me see"), or
+  in spellings the exact-match forms miss, since "konchem" does not match "koncham". Recall on
+  hedges is unmeasured anywhere in this experiment, so a word list's miss rate here is unknown
+  rather than small.
+  (3) **Genuinely rare in bot-led WhatsApp sales chats**, where customers state figures flatly
+  and negotiate by phone, and where the seller side is a bot with human takeover the schema
+  cannot distinguish. 22 field mentions with 0 hedge or correction matches across 286 turns is
+  consistent with this.
+  What the measurements have settled, so these three are what is left. Script: `ascii_only` 121
+  of 135 eligible targets, `telugu` 1, and Kapardhi's reading that script blindness is ruled
+  out. Pipeline: his reading that a fault is ruled out, text arriving and matching on both
+  populations. The eligibility frame: the 3-word floor excludes 151 turns of which 4 are
+  substantive, and on Kapardhi's decision of 2026-10-03 the floor stands, so the frame is no
+  longer an open explanation. Per-cue hit counts, raised as a measurement that might separate
+  these, are not one: they are entailed to be 0 while the census reads hedge 0 and correction 0,
+  because the stratum is one alternation over the same forms.
   (b) ~~**English-only cues** missed code-mixed hedges and corrections.~~ **Ruled out on
   Kapardhi's reading, 2026-10-03.** The romanized Telugu and Hindi forms were added and the
-  census re-run on the same corpus returned correction 0 and hedge 0, unchanged. Kept here
-  rather than deleted because a hypothesis that was tested and failed is a result, and because
-  it is the reason the cue lists now hold those forms. The caveat above is not settled against
-  it: the ruling-out rests on 16 exact-match romanized strings, and nothing has yet shown that
-  any cue, in any language, matches this corpus.
-  (c) the **phenomenon is genuinely rare** in WhatsApp sales chat, where customers state figures
-  flatly and negotiate by phone. 10 budget mentions with 0 hedge matches is consistent with this.
-  On Kapardhi's reading, (a) and (c) are the live pair, and they are not separable from text
-  alone: (a) predicts the hedges are recoverable by transcription, (c) predicts they are not.
-  Nothing in the current corpus distinguishes them.
+  census re-run on the same corpus returned correction 0 and hedge 0, unchanged. Kept rather
+  than deleted because a hypothesis that was tested and failed is a result, and because it is
+  why the cue lists hold those forms now.
+  None of (1), (2) and (3) is separable from this corpus's text: (1) predicts transcription
+  recovers the hedges, (2) predicts a different instrument on the same text would, (3) predicts
+  neither would. Nothing measured so far distinguishes them.
 - Whether agreement measured on model-authored conversations transfers to real ones at all
   (EXP-000's synthetic subset is reported separately for exactly this reason)
 - Gap between gold and predicted prior state (exposure bias)
 
 ## Risks
+- **The abstention part of the research question may not be testable on this deployment's text.
+  Flagged for the Stage 1 decisions, D2 and D4.** Kapardhi, 2026-10-03. Across all 286 customer
+  text turns, 0 match any hedge or correction cue, and script blindness, cue language, pipeline
+  faults and the eligibility frame are each ruled out or settled.
+  Stated carefully, because a cue match is not a label and this file must not trade one for the
+  other. The 0 is a fact about **enrichment**, not about what the annotators will write: the
+  real subset is the 18 field-mention turns taken whole, and no cue selected any of them for
+  carrying a hedge or a revision. Whether an individual turn earns `ABSTAIN:insufficient`,
+  `ABSTAIN:ambiguous` or `ABSTAIN:conflicting` is the annotators' judgment and is not predicted
+  by a cue list. What the 0 does mean is that nothing enriched the sample for those three
+  categories, so against the pre-registered floor of 10 items per category counted as n_either,
+  each is more likely to read "not interpretable" than to yield a kappa. That is the shape of
+  the risk, not a derivation of the result.
+  It bears on **D2** (contribution ordering: a benchmark-first claim needs a corpus that can
+  carry the benchmark) and on **D4** (accepting ADR-003, since typed abstention is what this
+  corpus may not be able to exercise). Recorded here and not in `STATE.md`'s Decisions pending,
+  which is Kapardhi's to edit.
 - Solo annotation: inter-annotator agreement impossible alone
 - Synthetic-data circularity: same frontier model as generator, baseline, and judge
 - No real conversations for the test set
