@@ -216,13 +216,15 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
   with the git commit, a corpus hash and a digest of the exact cue and keyword lists measured
   with, alongside `census.json` and `cue_diagnostics.json`. This is what the v2 and v3 censuses
   lacked: their figures rested on a report and could not be re-derived.
-  **A decision Claude Code made that is one line to revert, and should probably have been asked
-  rather than decided.** `census.json` and `cue_diagnostics.json` are now tracked by git, like
-  `config.json` and `metrics.json` already were, because a figure that lives only on one machine
-  still rests on a report. That reason is a research-process argument, not an engineering one,
-  and what gets tracked from client-derived data is set by `.claude/rules/data-privacy.md`,
-  which is Kapardhi's. Flagged by Claude Code after review; the revert is the two `!runs/**/`
-  lines in `.gitignore`.
+  **`census.json` and `cue_diagnostics.json` are tracked by git. Kapardhi's decision,
+  2026-10-03: "Keep them tracked."** They join `config.json` and `metrics.json`, which already
+  were, so that a census figure is re-derivable from the repository rather than resting on a
+  report. Claude Code made the change first and then flagged it as one that should have been
+  asked rather than decided, since what gets tracked from client-derived data is set by
+  `.claude/rules/data-privacy.md`, which is Kapardhi's; he confirmed it. The rule's own line
+  that "only aggregates -- counts, Cohen's kappa, confusion matrices -- go into `runs/`" already
+  permitted the content; what Claude Code should not have assumed is which of those files git
+  carries.
   "Counts only" is the intent, not the literal content: every **string value** in these records
   is a cue, a field keyword, a field name, a script label or one of two fixed notes, and
   `config.json` additionally carries a commit, a platform string, paths and hashes. Three tests
