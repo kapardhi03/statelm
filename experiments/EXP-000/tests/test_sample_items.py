@@ -17,6 +17,7 @@ import pytest
 
 import cues
 import sample_items
+import thresholds
 
 FIELDS = """
 fields:
@@ -133,7 +134,9 @@ class TestSheets:
         with_context = [r for r in rows if r["context"]]
         assert with_context
         row = with_context[0]
-        assert "SPEAKER_" in row["context"]
+        assert "SPEAKER_" not in row["context"]
+        assert any(line.startswith(("customer:", "seller:"))
+                   for line in row["context"].splitlines())
         assert row["turn_text"] not in row["context"]
 
     def test_each_annotator_gets_the_same_items(self, workspace):
@@ -196,7 +199,7 @@ class TestSampling:
         source.mkdir()
         (source / "conv_001.jsonl").write_text("".join(
             json.dumps({"conversation_id": "conv_001", "turn_index": i, "speaker_id": "SPEAKER_1",
-                        "speaker_role": "customer", "text": "plain statement"}) + "\n"
+                        "speaker_role": "customer", "text": "plain statement here"}) + "\n"
             for i in range(6)), encoding="utf-8")
         fields = tmp_path / "fields.yaml"
         fields.write_text(FIELDS, encoding="utf-8")
@@ -251,7 +254,7 @@ class TestInputsAndGuards:
         (source / "conv_001.jsonl").write_text("".join(
             json.dumps({"conversation_id": "conv_001", "turn_index": i,
                         "speaker_id": "SPEAKER_1", "speaker_role": "customer",
-                        "text": "" if i % 2 else "real text"}) + "\n"
+                        "text": "" if i % 2 else "real text here"}) + "\n"
             for i in range(6)), encoding="utf-8")
         fields = tmp_path / "fields.yaml"
         fields.write_text(FIELDS, encoding="utf-8")
@@ -441,3 +444,223 @@ class TestInterAnnotatorSheetOrder:
                 body = path.read_text(encoding="utf-8")
                 assert "Kapardhi" not in body, path.name
                 assert "kapardhi" not in body.lower(), path.name
+
+
+#: A corpus shaped like the one that voided run 20261002T175103Z-f318529: mostly seller turns,
+#: short customer replies, a media placeholder. Invented text throughout.
+SELLER_HEAVY = [
+    ("agent", "Hello! Thanks for your interest in the project."),
+    ("agent", "We have 2BHK and 3BHK options, maybe I can share a brochure?"),
+    ("customer", "ok"),
+    ("agent", "Here are the floor plans, around 1200 sq ft each."),
+    ("customer", "[media: voice note]"),
+    ("agent", "Sorry, I meant the east-facing units are the available ones."),
+    ("customer", "budget is around 80 lakhs, maybe a bit more"),
+    ("agent", "Noted. Possession is by March."),
+    ("customer", "we need a 3BHK near Kondapur actually"),
+    ("agent", "I can arrange a site visit."),
+    ("customer", "yes"),
+    ("customer", "my wife has to decide, probably next month"),
+]
+
+
+def write_roled_conversations(root: Path, turns=SELLER_HEAVY, count: int = 3) -> Path:
+    root.mkdir(parents=True, exist_ok=True)
+    for c in range(1, count + 1):
+        rows = [
+            {"conversation_id": f"conv_{c:03d}", "turn_index": i, "timestamp": None,
+             "timestamp_raw": "", "speaker_role": role,
+             "speaker_id": "SPEAKER_1" if role == "customer" else "SPEAKER_2",
+             "text": text, "provenance": {"source": "human"}}
+            for i, (role, text) in enumerate(turns)
+        ]
+        (root / f"conv_{c:03d}.jsonl").write_text(
+            "".join(json.dumps(r) + "\n" for r in rows), encoding="utf-8")
+    return root
+
+
+@pytest.fixture
+def seller_heavy(tmp_path):
+    source = write_roled_conversations(tmp_path / "scrubbed")
+    fields = tmp_path / "fields.yaml"
+    fields.write_text(FIELDS, encoding="utf-8")
+    return source, fields, tmp_path / "annotation"
+
+
+class TestOnlyCustomerTurnsAreTargets:
+    """The failure that voided run 20261002T175103Z-f318529."""
+
+    def test_every_target_is_a_customer_turn(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--annotators", "A", "B")
+        for name in ("A", "B"):
+            roles = {row["turn_role"] for row in read_sheet(out / f"sheet_{name}.csv")}
+            assert roles == {"customer"}, roles
+
+    def test_no_media_placeholder_is_ever_a_target(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields)
+        for row in read_sheet(out / "sheet_A.csv"):
+            assert not row["turn_text"].startswith("[media:"), row["turn_text"]
+
+    def test_no_target_is_shorter_than_the_floor(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields)
+        for row in read_sheet(out / "sheet_A.csv"):
+            assert len(row["turn_text"].split()) >= thresholds.MIN_TARGET_WORDS, row["turn_text"]
+
+    def test_seller_turns_are_still_in_the_context(self, seller_heavy):
+        """They are needed there: guideline §3.3 turns on who said a thing."""
+        source, fields, out = seller_heavy
+        run(source, out, fields)
+        contexts = "\n".join(row["context"] for row in read_sheet(out / "sheet_A.csv"))
+        assert "seller:" in contexts
+        assert "customer:" in contexts
+
+    def test_media_placeholders_are_still_visible_in_the_context(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields)
+        contexts = "\n".join(row["context"] for row in read_sheet(out / "sheet_A.csv"))
+        assert "[media: voice note]" in contexts
+
+    def test_a_corpus_of_only_seller_turns_is_a_loud_error(self, tmp_path):
+        source = write_roled_conversations(
+            tmp_path / "scrubbed", turns=[("agent", "we have many options for you")] * 6)
+        fields = tmp_path / "fields.yaml"
+        fields.write_text(FIELDS, encoding="utf-8")
+        with pytest.raises(sample_items.SamplerError, match="no turn in this corpus"):
+            run(source, tmp_path / "out", fields)
+
+    def test_that_error_names_the_rejection_counts(self, tmp_path):
+        source = write_roled_conversations(
+            tmp_path / "scrubbed", turns=[("agent", "we have many options"), ("customer", "ok")])
+        fields = tmp_path / "fields.yaml"
+        fields.write_text(FIELDS, encoding="utf-8")
+        with pytest.raises(sample_items.SamplerError) as caught:
+            run(source, tmp_path / "out", fields)
+        assert "not_customer" in str(caught.value)
+        assert "too_short" in str(caught.value)
+
+
+class TestSheetsShowRolesNotSpeakerIds:
+    def test_the_column_is_turn_role(self):
+        assert "turn_role" in sample_items.SHEET_COLUMNS
+        assert "turn_speaker" not in sample_items.SHEET_COLUMNS
+
+    def test_no_speaker_id_appears_anywhere_in_a_sheet(self, seller_heavy):
+        """The voided run's sheets showed SPEAKER_n, which made rule §3.3 unusable."""
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--annotators", "A", "B")
+        for name in ("A", "B"):
+            body = (out / f"sheet_{name}.csv").read_text(encoding="utf-8")
+            assert "SPEAKER_" not in body
+
+    def test_the_context_is_labelled_by_role_too(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields)
+        for row in read_sheet(out / "sheet_A.csv"):
+            for line in row["context"].splitlines():
+                assert line.split(":")[0] in {"customer", "seller"}, line
+
+
+class TestTheCensusIsPrintedBeforeSheetsExist:
+    def test_it_reports_totals_and_rejections(self, seller_heavy):
+        source, fields, out = seller_heavy
+        code, output = run(source, out, fields)
+        assert code == 0
+        assert "turns read: 36" in output
+        assert "eligible targets" in output
+        assert "not_customer" in output and "too_short" in output
+        assert "media_placeholder" in output
+
+    def test_it_reports_eligibility_per_stratum_and_per_field(self, seller_heavy):
+        source, fields, out = seller_heavy
+        _, output = run(source, out, fields)
+        assert "eligible per stratum" in output
+        assert "field mentions among eligible" in output
+
+    def test_it_warns_when_the_corpus_cannot_supply_the_quotas(self, seller_heavy):
+        source, fields, out = seller_heavy
+        _, output = run(source, out, fields, "--n-items", "400")
+        assert "WARNING" in output
+
+    def test_the_census_is_in_the_manifest(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields)
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        census = manifest["corpus_census"]
+        assert census["turns_total"] == 36
+        assert census["eligible_targets"] == census["turns_total"] - sum(
+            census["rejected"].values())
+        assert census["rejected"]["not_customer"] > 0
+
+    def test_the_census_holds_no_conversation_text(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields)
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        assert "lakhs" not in json.dumps(manifest["corpus_census"])
+
+
+class TestQuotas:
+    def test_the_pre_registered_quotas_are_what_the_sampler_uses(self):
+        assert sample_items.DEFAULT_QUOTAS == dict(thresholds.SAMPLING_QUOTAS)
+        assert sample_items.DEFAULT_QUOTAS == {
+            "field_mention": 0.4, "correction": 0.2, "hedge": 0.2, "random": 0.2}
+
+    def test_random_is_the_remainder_not_a_cue(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields)
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        enrichment = manifest["enrichment"]
+        assert "random" in enrichment["targets"]
+        # Every eligible turn is available to the random remainder, cue or not.
+        assert enrichment["eligible_per_stratum"]["random"] >= \
+            enrichment["eligible_per_stratum"]["field_mention"]
+
+    def test_a_shortfall_is_reported_per_stratum(self, seller_heavy):
+        source, fields, out = seller_heavy
+        _, output = run(source, out, fields, "--n-items", "200")
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        assert any(manifest["enrichment"]["shortfall"].values())
+        assert "shortfall" in output
+
+    def test_multi_speaker_has_no_quota_but_is_still_reported(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields)
+        manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+        assert "multi_speaker" not in manifest["enrichment"]["quotas"]
+        assert "multi_speaker" in manifest["corpus_census"]["by_stratum"]
+
+    def test_the_settings_record_the_eligibility_rules(self, seller_heavy):
+        source, fields, out = seller_heavy
+        run(source, out, fields)
+        settings = json.loads((out / "manifest.json").read_text(encoding="utf-8"))["settings"]
+        assert settings["target_roles"] == ["customer"]
+        assert settings["min_target_words"] == 3
+        assert settings["field_keywords_overridden"] is False
+
+
+class TestFieldKeywordOverride:
+    def test_a_local_file_can_add_locality_names(self, seller_heavy, tmp_path):
+        source, fields, out = seller_heavy
+        custom = tmp_path / "keywords.yaml"
+        custom.write_text("field_keywords:\n  location_preference: [kondapur, gachibowli]\n",
+                          encoding="utf-8")
+        code, _ = run(source, out, fields, "--field-keywords", str(custom))
+        assert code == 0
+        settings = json.loads((out / "manifest.json").read_text(encoding="utf-8"))["settings"]
+        assert settings["field_keywords_overridden"] is True
+
+    def test_an_unknown_field_is_an_error(self, seller_heavy, tmp_path):
+        source, fields, out = seller_heavy
+        custom = tmp_path / "bad.yaml"
+        custom.write_text("field_keywords:\n  not_a_field: [x]\n", encoding="utf-8")
+        with pytest.raises(sample_items.SamplerError, match="not in the pilot field list"):
+            run(source, out, fields, "--field-keywords", str(custom))
+
+    def test_an_empty_file_is_an_error(self, seller_heavy, tmp_path):
+        source, fields, out = seller_heavy
+        custom = tmp_path / "empty.yaml"
+        custom.write_text("field_keywords: {}\n", encoding="utf-8")
+        with pytest.raises(sample_items.SamplerError, match="non-empty"):
+            run(source, out, fields, "--field-keywords", str(custom))

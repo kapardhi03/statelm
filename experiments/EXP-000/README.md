@@ -43,7 +43,7 @@ Nothing here runs in a Claude session: steps 2 to 5 all touch client text.
 
 ```bash
 uv sync --project experiments/EXP-000
-uv run --project experiments/EXP-000 pytest experiments/EXP-000/tests -q   # 402, invented data
+uv run --project experiments/EXP-000 pytest experiments/EXP-000/tests -q   # 459, invented data
 ```
 
 ### 1. Look at the schema (safe to paste into a Claude session)
@@ -115,10 +115,12 @@ Writes aggregates to `runs/EXP-000/<run-id>/` and the disagreement list to
 
 ### Before step 4: the guideline
 
-**The annotation guideline is still marked DRAFT and is EXP-000's one recorded blocker.** Nobody
-labels anything until you have approved
-`docs/research/experiments/EXP-000-annotation-guideline.md`. Both annotators need it, and
-`labels_reference.txt` alongside it.
+`docs/research/experiments/EXP-000-annotation-guideline.md` was **approved on 2026-10-02** and is
+the labelling instrument. Both annotators need it, with `labels_reference.txt` alongside.
+
+If a label definition has to change after labelling has begun, that needs a change-log entry in
+the guideline *and* a decision about the items already labelled under the old wording. Changing a
+definition mid-run and leaving the earlier items in place would mix two instruments in one κ.
 
 ### What you keep, what you hand over, what never leaves
 
@@ -510,6 +512,7 @@ uv run python sample_items.py --input ../../data/scrubbed/EXP-000 \
 | `--n-items` | 80 | Target `(field, turn)` items, trimmed down to a whole number of turns |
 | `--seed` | 0 | Seeds both the quota draws and the random top-up |
 | `--context-turns` | 6 | Preceding turns shown with each item |
+| `--field-keywords` | none | local YAML replacing a field's keyword list, for locality names |
 | `--annotators` | `A B` | One sheet per name, space- or comma-separated |
 
 ### `fields.yaml`: the five pilot fields
@@ -553,6 +556,76 @@ shuffle — and a test asserts that every number it reports is identical whether
 shuffled or in order. With one turn, or with more annotators than there are distinct
 permutations, no distinct order exists for everyone; the run reports that rather than
 pretending.
+
+### What can be a target, and why that is not a matter of taste
+
+**Only a customer turn of real text can be the turn being labelled.** Seller turns and
+`[media: ...]` placeholders stay in the context window, where the annotator needs them to apply
+guideline §3.3, but are never the target.
+
+This is not an enrichment preference, it is eligibility. Under §3.3 a seller turn cannot
+establish a customer field, so a seller target is NO-OP by construction and carries no
+information about whether two annotators agree. Run `20261002T175103Z-f318529` sampled over every
+turn, drew 10 seller turns out of 16, and produced 160 NO-OP labels and no κ at all. It is marked
+void in `runs/EXP-000/20261002T175103Z-f318529/VOID.md`.
+
+A target is rejected for one of four reasons, and the count for each is reported:
+
+| Reason | Meaning |
+|---|---|
+| `not_customer` | a seller turn; structurally NO-OP under §3.3 |
+| `media_placeholder` | `[media: voice note]` and the rest: no labellable content |
+| `empty` | no text |
+| `too_short` | under `MIN_TARGET_WORDS` (3); "ok" and "yes" cannot carry a field value |
+
+**The census prints before any sheet is written**, so a corpus that cannot supply the quotas is
+visible while that is still actionable:
+
+```
+turns read: 36
+eligible targets (customer, text, >= 3 words): 15
+  not eligible: media_placeholder 3, not_customer 15, too_short 3
+eligible per stratum: {'field_mention': 15, 'correction': 3, 'hedge': 9}
+field mentions among eligible: {'budget': 3, 'property_type': 6, ...}
+turns needed for --n-items 80 over 5 fields: 16
+WARNING: only 15 eligible target(s) for 16 needed; the sample will be smaller than requested
+```
+
+### Sheets show roles, not speaker ids
+
+The `turn_role` column and every context line read `customer` or `seller`. The voided run's
+sheets showed `SPEAKER_n`, which left the annotators unable to apply §3.3 at all — the rule turns
+on who spoke. `agent` and `bot` both display as `seller`, because the ARTHRYX schema cannot tell
+a human takeover from the bot; an unmapped role displays as itself rather than being coerced to
+one side.
+
+### Enrichment quotas
+
+| Stratum | Quota | Cue |
+|---|---|---|
+| `field_mention` | 40% | the turn mentions one of the five pilot fields |
+| `correction` | 20% | "actually", "I meant", ... |
+| `hedge` | 20% | "around", "maybe", "might", ... |
+| `random` | 20% | none: the remainder, drawn from everything eligible |
+
+`multi_speaker` is still computed and reported, with no quota.
+
+**Every cue is matched against the target turn's own text, never the context.** That was already
+true before the void run; what made the cues appear to select seller text was that seller turns
+were eligible targets. A test pins the property so a future change cannot quietly start reading
+the context.
+
+The field-mention cues cover amounts (`80 lakhs`, `1.2 cr`, `50k`), property types (`3BHK` —
+matched with letter boundaries, since a word boundary will not see `bhk` after a digit),
+timeline words, family and decision words, and location indicators plus common Indian locality
+suffixes. **Locality names are the weak spot**: they are corpus-specific and cannot live in this
+repository, so `--field-keywords` takes a local YAML that replaces any field's list with real
+names. It is read on your machine and nothing from it reaches a sheet or `runs/`.
+
+```yaml
+field_keywords:
+  location_preference: [gachibowli, kondapur, jayanagar]
+```
 
 ### Two rules from the experiment record, and how the code keeps them
 
