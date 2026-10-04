@@ -1,0 +1,42 @@
+{
+  "experiment": "EXP-000",
+  "step": "census+cue_diagnostics",
+  "run_id": "20261003T164527Z-2773803",
+  "git_commit": "2773803bbb8c3e39324d262204b3170fedf713a5",
+  "git_tree_dirty": true,
+  "python": "3.14.3",
+  "platform": "macOS-15.6.1-arm64-arm-64bit-Mach-O",
+  "model_name": null,
+  "model_revision": null,
+  "prompt_template_hash": null,
+  "inputs": {
+    "input_dir": "data/scrubbed/EXP-000-v2",
+    "corpus": {
+      "files": 47,
+      "sha256": "e50b0d40f9a082dc9c69eeddbfab887f01033fb9b8cf549bd13f755f7f643bc6"
+    }
+  },
+  "probe": {
+    "sha256": "3c1b9ce421f266bae4d172eca5efed11bbece8a6eafeead3b2dc4e5bb503a80c",
+    "correction_forms": 18,
+    "hedge_forms": 31,
+    "code_mixed_forms": 16,
+    "field_keyword_forms": {
+      "budget": 17,
+      "decision_maker": 23,
+      "location_preference": 41,
+      "property_type": 13,
+      "timeline": 31
+    }
+  },
+  "field_keywords_overridden": true,
+  "context_turns": 6,
+  "n_items_requested": 80,
+  "fields": [
+    "budget",
+    "property_type",
+    "location_preference",
+    "timeline",
+    "decision_maker"
+  ]
+}
