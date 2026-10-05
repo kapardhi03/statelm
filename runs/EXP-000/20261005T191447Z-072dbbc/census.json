@@ -1,0 +1,49 @@
+{
+  "source": "real",
+  "census": {
+    "turns_total": 623,
+    "eligible_targets": 135,
+    "rejected": {
+      "not_customer": 283,
+      "too_short": 151,
+      "media_placeholder": 54
+    },
+    "media_placeholder_kinds": {
+      "voice": 29,
+      "image": 20,
+      "video": 1,
+      "document": 0,
+      "contact": 2,
+      "unsupported": 2,
+      "other": 0
+    },
+    "by_stratum": {
+      "field_mention": 18,
+      "correction": 0,
+      "hedge": 0,
+      "multi_speaker": 0,
+      "plain": 117
+    },
+    "field_mentions": {
+      "budget": 10,
+      "property_type": 3,
+      "location_preference": 3,
+      "timeline": 1,
+      "decision_maker": 2
+    },
+    "code_mixed_cue_hits": 0,
+    "source": "real"
+  },
+  "target_roles": [
+    "customer"
+  ],
+  "min_target_words": 3,
+  "quotas": {
+    "field_mention": 0.4,
+    "correction": 0.2,
+    "hedge": 0.2,
+    "random": 0.2
+  },
+  "synthetic_set_present": false,
+  "synthetic_census_note": "A --synthetic set's census is deliberately not recorded here. Its per-stratum counts are what Annotator A must not see before labelling; they stay in the sampler's manifest, which is not tracked."
+}

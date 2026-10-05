@@ -1,0 +1,403 @@
+{
+  "eligible_targets": 135,
+  "cues": {
+    "correction": {
+      "actually": 0,
+      "sorry": 0,
+      "i meant": 0,
+      "i mean": 0,
+      "no wait": 0,
+      "scratch that": 0,
+      "instead": 0,
+      "correction": 0,
+      "my mistake": 0,
+      "rather than": 0,
+      "not that": 0,
+      "change that": 0,
+      "ignore that": 0,
+      "change": 0,
+      "kaadu": 0,
+      "ledu ledu": 0,
+      "matlab": 0,
+      "nahi nahi": 0
+    },
+    "hedge": {
+      "around": 0,
+      "approximately": 0,
+      "roughly": 0,
+      "maybe": 0,
+      "might": 0,
+      "perhaps": 0,
+      "or so": 0,
+      "ballpark": 0,
+      "up to": 0,
+      "at least": 0,
+      "somewhere": 0,
+      "thereabouts": 0,
+      "flexible": 0,
+      "depends": 0,
+      "not sure": 0,
+      "probably": 0,
+      "could be": 0,
+      "give or take": 0,
+      "around about": 0,
+      "konchem": 0,
+      "approx ga": 0,
+      "emo": 0,
+      "anukuntunna": 0,
+      "chuddam": 0,
+      "alochistanu": 0,
+      "telidu": 0,
+      "shayad": 0,
+      "lagbhag": 0,
+      "thoda": 0,
+      "dekhte hain": 0,
+      "pata nahi": 0
+    }
+  },
+  "cue_forms_that_matched": {
+    "correction": [],
+    "hedge": []
+  },
+  "code_mixed_forms": [
+    "alochistanu",
+    "anukuntunna",
+    "approx ga",
+    "chuddam",
+    "dekhte hain",
+    "emo",
+    "kaadu",
+    "konchem",
+    "lagbhag",
+    "ledu ledu",
+    "matlab",
+    "nahi nahi",
+    "pata nahi",
+    "shayad",
+    "telidu",
+    "thoda"
+  ],
+  "no_cue_matched": true,
+  "field_keywords": {
+    "budget": {
+      "source": "built_in",
+      "hits": {
+        "budget": 5,
+        "price": 3,
+        "cost": 1,
+        "afford": 0,
+        "lakh": 0,
+        "lakhs": 3,
+        "lac": 0,
+        "lacs": 0,
+        "crore": 0,
+        "crores": 0,
+        "cr": 1,
+        "loan": 0,
+        "emi": 0,
+        "down payment": 0,
+        "all inclusive": 0,
+        "negotiable": 1,
+        "rupees": 0
+      }
+    },
+    "property_type": {
+      "source": "built_in",
+      "hits": {
+        "bhk": 0,
+        "flat": 0,
+        "apartment": 0,
+        "villa": 0,
+        "plot": 2,
+        "house": 1,
+        "duplex": 0,
+        "penthouse": 0,
+        "studio": 0,
+        "independent": 0,
+        "row house": 0,
+        "builder floor": 0,
+        "bungalow": 0
+      }
+    },
+    "location_preference": {
+      "source": "field_keywords_file",
+      "forms": 41,
+      "hits_in_file_order": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "timeline": {
+      "source": "built_in",
+      "hits": {
+        "possession": 0,
+        "ready": 0,
+        "immediately": 0,
+        "asap": 0,
+        "soon": 0,
+        "week": 0,
+        "weeks": 0,
+        "month": 0,
+        "months": 0,
+        "year": 1,
+        "years": 0,
+        "quarter": 0,
+        "handover": 0,
+        "move in": 0,
+        "shifting": 0,
+        "timeline": 0,
+        "january": 0,
+        "february": 0,
+        "march": 0,
+        "april": 0,
+        "may": 0,
+        "june": 0,
+        "july": 0,
+        "august": 0,
+        "september": 0,
+        "october": 0,
+        "november": 0,
+        "december": 0,
+        "diwali": 0,
+        "ugadi": 0,
+        "pongal": 0
+      }
+    },
+    "decision_maker": {
+      "source": "built_in",
+      "hits": {
+        "wife": 0,
+        "husband": 1,
+        "spouse": 0,
+        "father": 0,
+        "mother": 0,
+        "dad": 0,
+        "mom": 0,
+        "parents": 0,
+        "brother": 0,
+        "sister": 0,
+        "son": 0,
+        "daughter": 0,
+        "family": 0,
+        "in-laws": 0,
+        "partner": 0,
+        "uncle": 0,
+        "aunt": 0,
+        "decide": 0,
+        "decides": 0,
+        "sign off": 0,
+        "approval": 0,
+        "discuss with": 1,
+        "check with": 0
+      }
+    }
+  },
+  "field_patterns": {
+    "amount_pattern": 4,
+    "locality_suffix_pattern": 1
+  },
+  "script": {
+    "eligible_targets": {
+      "texts": 135,
+      "counts": {
+        "telugu": 1,
+        "devanagari": 6,
+        "other_non_ascii": 9,
+        "ascii_only": 121
+      },
+      "shares": {
+        "telugu": 0.0074,
+        "devanagari": 0.0444,
+        "other_non_ascii": 0.0667,
+        "ascii_only": 0.8963
+      },
+      "with_non_ascii_letters": 7,
+      "other_non_ascii_detail": {
+        "with_non_ascii_letter": 2,
+        "symbols_only": 7
+      }
+    },
+    "field_mentioning_targets": {
+      "texts": 18,
+      "counts": {
+        "telugu": 0,
+        "devanagari": 0,
+        "other_non_ascii": 4,
+        "ascii_only": 14
+      },
+      "shares": {
+        "telugu": 0.0,
+        "devanagari": 0.0,
+        "other_non_ascii": 0.2222,
+        "ascii_only": 0.7778
+      },
+      "with_non_ascii_letters": 0,
+      "other_non_ascii_detail": {
+        "with_non_ascii_letter": 0,
+        "symbols_only": 4
+      }
+    },
+    "cue_strings": {
+      "texts": 49,
+      "counts": {
+        "telugu": 0,
+        "devanagari": 0,
+        "other_non_ascii": 0,
+        "ascii_only": 49
+      },
+      "shares": {
+        "telugu": 0.0,
+        "devanagari": 0.0,
+        "other_non_ascii": 0.0,
+        "ascii_only": 1.0
+      },
+      "with_non_ascii_letters": 0,
+      "other_non_ascii_detail": {
+        "with_non_ascii_letter": 0,
+        "symbols_only": 0
+      }
+    },
+    "field_keyword_strings": {
+      "texts": 125,
+      "counts": {
+        "telugu": 0,
+        "devanagari": 0,
+        "other_non_ascii": 0,
+        "ascii_only": 125
+      },
+      "shares": {
+        "telugu": 0.0,
+        "devanagari": 0.0,
+        "other_non_ascii": 0.0,
+        "ascii_only": 1.0
+      },
+      "with_non_ascii_letters": 0,
+      "other_non_ascii_detail": {
+        "with_non_ascii_letter": 0,
+        "symbols_only": 0
+      }
+    }
+  },
+  "note": "Every form in both cue lists scored zero on these texts. A probe that never fires cannot separate an absent phenomenon from a probe that does not match the text, so this count does not support either reading on its own.",
+  "excluded_by_word_floor": {
+    "population": "customer text turns rejected as too_short",
+    "min_target_words": 3,
+    "turns": 151,
+    "word_counts": {
+      "1": 126,
+      "2": 25
+    },
+    "field_mentions": {
+      "budget": 2,
+      "property_type": 1,
+      "location_preference": 1,
+      "timeline": 0,
+      "decision_maker": 1
+    },
+    "field_patterns": {
+      "amount_pattern": 0,
+      "locality_suffix_pattern": 1
+    },
+    "cues": {
+      "correction": {
+        "actually": 0,
+        "sorry": 0,
+        "i meant": 0,
+        "i mean": 0,
+        "no wait": 0,
+        "scratch that": 0,
+        "instead": 0,
+        "correction": 0,
+        "my mistake": 0,
+        "rather than": 0,
+        "not that": 0,
+        "change that": 0,
+        "ignore that": 0,
+        "change": 0,
+        "kaadu": 0,
+        "ledu ledu": 0,
+        "matlab": 0,
+        "nahi nahi": 0
+      },
+      "hedge": {
+        "around": 0,
+        "approximately": 0,
+        "roughly": 0,
+        "maybe": 0,
+        "might": 0,
+        "perhaps": 0,
+        "or so": 0,
+        "ballpark": 0,
+        "up to": 0,
+        "at least": 0,
+        "somewhere": 0,
+        "thereabouts": 0,
+        "flexible": 0,
+        "depends": 0,
+        "not sure": 0,
+        "probably": 0,
+        "could be": 0,
+        "give or take": 0,
+        "around about": 0,
+        "konchem": 0,
+        "approx ga": 0,
+        "emo": 0,
+        "anukuntunna": 0,
+        "chuddam": 0,
+        "alochistanu": 0,
+        "telidu": 0,
+        "shayad": 0,
+        "lagbhag": 0,
+        "thoda": 0,
+        "dekhte hain": 0,
+        "pata nahi": 0
+      }
+    },
+    "cue_forms_that_matched": {
+      "correction": [],
+      "hedge": []
+    },
+    "with_field_mention": 4,
+    "with_hedge_or_correction_cue": 0,
+    "note": "Counts only, and no threshold. Whether this many short-but-substantive turns is too many for the word floor to stand is Kapardhi's call, not a number this tool decides."
+  }
+}
