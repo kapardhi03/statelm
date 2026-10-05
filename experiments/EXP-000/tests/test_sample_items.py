@@ -1881,3 +1881,129 @@ class TestTheExcludedBlockCarriesNoText:
         content = (only_run_dir(out) / "cue_diagnostics.json").read_text(encoding="utf-8")
         for text in ("50 lakhs", "3 BHK", "thanks", "voice note"):
             assert text not in content, text
+
+
+#: One turn per placeholder the extractor writes, plus one outside the vocabulary and one
+#: ordinary short turn. Every placeholder is a customer turn, since `target_rejection` checks
+#: role first and a seller turn never reaches the media branch at all.
+MEDIA_KIND_TURNS = [
+    ("agent", "Sharing everything now."),
+    ("customer", "[media: voice note]"),
+    ("customer", "[media: voice note]"),
+    ("customer", "[media: image]"),
+    ("customer", "[MEDIA: Video]"),
+    ("customer", "[media: document]"),
+    ("customer", "[media: contact card]"),
+    ("customer", "[media: unsupported]"),
+    ("customer", "[media: sticker]"),
+    ("customer", "ok"),
+    ("customer", "we want three bedrooms near the metro"),
+]
+
+
+@pytest.fixture
+def media_kinds_corpus(tmp_path):
+    source = write_roled_conversations(tmp_path / "scrubbed", turns=MEDIA_KIND_TURNS, count=2)
+    fields = tmp_path / "fields.yaml"
+    fields.write_text(FIELDS, encoding="utf-8")
+    return source, fields, tmp_path / "annotation"
+
+
+class TestMediaPlaceholderKinds:
+    """The census breaks the media rejections down by kind without losing the total.
+
+    The records had been reading all 54 rejected placeholders in the real corpus as voice notes
+    while the census counted them under one `media_placeholder` total, so the share that was
+    speech was a characterisation rather than a measurement. Explanation (1) in
+    `knowns-unknowns.md` needs them to be speech, which is why the kind has to be a number.
+    """
+
+    def test_the_kinds_sum_to_the_rejection_total(self, media_kinds_corpus):
+        """The invariant: no placeholder is dropped and none is counted twice."""
+        source, fields, out = media_kinds_corpus
+        run(source, out, fields, "--census-only")
+        census = read_record(out, "census")["census"]
+        kinds = census["media_placeholder_kinds"]
+        assert sum(kinds.values()) == census["rejected"]["media_placeholder"]
+
+    def test_the_total_is_unchanged_by_the_breakdown(self, media_kinds_corpus):
+        """Old runs stay comparable: `rejected` keeps the one key it always had."""
+        source, fields, out = media_kinds_corpus
+        run(source, out, fields, "--census-only")
+        census = read_record(out, "census")["census"]
+        # 8 placeholders per conversation x 2 conversations.
+        assert census["rejected"]["media_placeholder"] == 16
+        assert set(census["rejected"]) == {"not_customer", "media_placeholder", "too_short"}
+
+    def test_each_kind_is_counted_under_its_own_name(self, media_kinds_corpus):
+        source, fields, out = media_kinds_corpus
+        run(source, out, fields, "--census-only")
+        kinds = read_record(out, "census")["census"]["media_placeholder_kinds"]
+        assert kinds == {"voice": 4, "image": 2, "video": 2, "document": 2,
+                         "contact": 2, "unsupported": 2, "other": 2}
+
+    def test_every_kind_is_present_including_zeros(self, seller_heavy):
+        """A kind absent from the corpus reads as 0, not as a missing key."""
+        source, fields, out = seller_heavy
+        run(source, out, fields, "--census-only")
+        kinds = read_record(out, "census")["census"]["media_placeholder_kinds"]
+        assert sorted(kinds) == sorted(thresholds.MEDIA_KINDS)
+        assert all(isinstance(count, int) for count in kinds.values())
+
+    def test_an_unknown_placeholder_is_other_not_dropped(self, media_kinds_corpus):
+        """A new media type in the source schema must surface, not vanish into a total."""
+        source, fields, out = media_kinds_corpus
+        run(source, out, fields, "--census-only")
+        census = read_record(out, "census")["census"]
+        assert census["media_placeholder_kinds"]["other"] == 2
+        assert sum(census["media_placeholder_kinds"].values()) == \
+            census["rejected"]["media_placeholder"]
+
+    def test_the_vocabulary_matches_what_the_extractor_writes(self):
+        """The one place this can drift: extract.yaml is the only writer of these strings."""
+        config = (Path(__file__).resolve().parents[1] / "extract.yaml").read_text(
+            encoding="utf-8")
+        for placeholder in thresholds.MEDIA_PLACEHOLDER_KINDS:
+            assert f'"{placeholder}"' in config, placeholder
+
+    def test_it_prints_the_breakdown(self, media_kinds_corpus):
+        source, fields, out = media_kinds_corpus
+        _, output = run(source, out, fields, "--census-only")
+        assert "of the 16 media placeholder(s):" in output
+        assert "voice 4" in output and "other 2" in output
+
+    def test_a_corpus_with_no_media_prints_no_breakdown(self, code_mixed_only):
+        """CODE_MIXED_ONLY holds no placeholder, so the line must be absent rather than empty.
+
+        An earlier version of this test used a fixture that does contain a voice note, so it
+        asserted nothing. Caught before this landed.
+        """
+        source, fields, out = code_mixed_only
+        _, output = run(source, out, fields, "--census-only")
+        assert "media placeholder(s):" not in output
+        census = read_record(out, "census")["census"]
+        assert "media_placeholder" not in census["rejected"]
+        assert sum(census["media_placeholder_kinds"].values()) == 0
+
+    def test_the_kind_counts_reach_the_tracked_record(self, media_kinds_corpus):
+        """It is a count, so it belongs in census.json, which is tracked."""
+        source, fields, out = media_kinds_corpus
+        run(source, out, fields, "--census-only")
+        content = (only_run_dir(out) / "census.json").read_text(encoding="utf-8")
+        assert '"media_placeholder_kinds"' in content
+        assert "[media:" not in content, "kinds are names, never the placeholder text"
+
+
+def test_report_census_tolerates_a_census_without_the_kind_breakdown(capsys):
+    """A census dict from before the breakdown existed must not print an empty line.
+
+    `report_census` is handed whatever dict it is given, and an older run record lacks the key.
+    """
+    import io
+    legacy = {"turns_total": 10, "eligible_targets": 2,
+              "rejected": {"media_placeholder": 3}, "by_stratum": {}, "field_mentions": {}}
+    buffer = io.StringIO()
+    sample_items.report_census(legacy, n_items=4, fields=2, out=buffer)
+    output = buffer.getvalue()
+    assert "media_placeholder 3" in output
+    assert "media placeholder(s):" not in output

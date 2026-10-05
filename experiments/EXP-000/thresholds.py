@@ -145,6 +145,32 @@ ROLE_DISPLAY = {"customer": "customer", "agent": "seller", "bot": "seller"}
 #: downstream, so this prefix is the signal. A placeholder has no labellable content.
 MEDIA_PLACEHOLDER_PREFIX = "[media:"
 
+#: Each placeholder the extractor writes, mapped to the kind the census counts it under.
+#: Source: the `kinds.placeholders` block of `experiments/EXP-000/extract.yaml`, which is the
+#: only writer of these strings; the kind column itself is excluded from the extract, so the
+#: placeholder text is the only surviving evidence of what a media turn was.
+#:
+#: The breakdown exists because the records had been reading all 54 rejected placeholders in the
+#: v2/v3 corpus as voice notes, and the census could not support that: it counted them under one
+#: `media_placeholder` total. Explanation (1) in `knowns-unknowns.md` needs them to be speech,
+#: so the share that is speech has to be a measured number rather than a characterisation.
+#: Kapardhi's instruction, 2026-10-05.
+MEDIA_PLACEHOLDER_KINDS = {
+    "[media: voice note]": "voice",
+    "[media: image]": "image",
+    "[media: video]": "video",
+    "[media: document]": "document",
+    "[media: contact card]": "contact",
+    "[media: unsupported]": "unsupported",
+}
+
+#: Where a placeholder outside the vocabulary above is counted. A new media type in the source
+#: schema must surface as a number the researcher can see, not be folded into one of the six.
+MEDIA_KIND_OTHER = "other"
+
+#: Reporting order, and the keys the census always emits, zeros included.
+MEDIA_KINDS = ("voice", "image", "video", "document", "contact", "unsupported", MEDIA_KIND_OTHER)
+
 #: A target turn needs at least this many words. "ok", "yes" and a bare emoji cannot carry a
 #: field value, so they produce NO-OP whatever the annotators think.
 #: Kapardhi's decision, 2026-10-02.
