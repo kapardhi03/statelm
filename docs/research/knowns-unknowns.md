@@ -71,8 +71,17 @@ or a literature row as evidence.
   unsupported 2, video 1, document 0, other 0. The seven kinds sum to the 54, so none is
   unaccounted for. A sampling-frame limit rather than a cue limit: no cue list recovers a voice
   note, transcription could. Raised by Claude Code, 2026-10-03; the kind measured 2026-10-05.
-  This explanation needs speech, and 29 is the measured number of voice notes. **What the 29
-  means for the explanation is Kapardhi's reading and is not recorded here.**
+  **Transcribed from Kapardhi, 2026-10-06, his reading of the split:** "Explanation (1) is not
+  ruled out. 29 voice notes sit beside 135 substantive customer text turns (about 18%), and
+  voice is where loose, hedged speech is most likely. It is the only one of the three
+  explanations testable directly, by listening to the 29 notes locally. Whatever that shows, 47
+  conversations cannot carry an abstention benchmark on their own: even 29 of 29 would be too
+  few. The real corpus is at most a validation slice. This bears on D2, which stays open until
+  EXP-000 has labels."
+  Figures checked against the run file, so a later reader need not re-derive them: 29 and 135
+  are `media_placeholder_kinds.voice` and `eligible_targets`, and 47 is
+  `inputs.corpus.files` in `config.json`, one conversation per file. "About 18%" is 29 of 164,
+  voice as a share of substantive text plus voice; 29 of 135 alone is 21.5%.
   (2) **Phrasing the cue lists cannot see.** Distinct from the ruled-out (b) below, and the
   distinction matters: (b) was that the lists were in the wrong *language*, which adding
   romanized forms tested and refuted. This is that the phenomenon is expressed in ways no word
@@ -122,6 +131,12 @@ or a literature row as evidence.
   carry the benchmark) and on **D4** (accepting ADR-003, since typed abstention is what this
   corpus may not be able to exercise). Recorded here and not in `STATE.md`'s Decisions pending,
   which is Kapardhi's to edit.
+  **Narrowed by Kapardhi, 2026-10-06**, in his reading of the media split recorded under
+  explanation (1): "47 conversations cannot carry an abstention benchmark on their own: even 29
+  of 29 would be too few. The real corpus is at most a validation slice. This bears on D2,
+  which stays open until EXP-000 has labels." So the risk is no longer only that the abstention
+  question may be untestable on this text; on his reading the corpus is too small to carry the
+  benchmark whatever the 29 voice notes turn out to contain.
 - Solo annotation: inter-annotator agreement impossible alone
 - Synthetic-data circularity: same frontier model as generator, baseline, and judge
 - No real conversations for the test set
