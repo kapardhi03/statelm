@@ -130,6 +130,20 @@ def is_media_placeholder(text: str) -> bool:
     return (text or "").strip().lower().startswith(thresholds.MEDIA_PLACEHOLDER_PREFIX)
 
 
+def media_kind(text: str) -> str | None:
+    """Which media kind a placeholder is, or None when the text is not a placeholder at all.
+
+    Compared against the exact strings `extract.yaml` writes, stripped and lowercased, the same
+    normalization `is_media_placeholder` applies to the prefix. A placeholder whose text is not
+    in the vocabulary counts as `other` rather than being dropped: the point of the breakdown is
+    that an unrecognised media type shows up as a number instead of disappearing into a total.
+    """
+    if not is_media_placeholder(text):
+        return None
+    return thresholds.MEDIA_PLACEHOLDER_KINDS.get(
+        (text or "").strip().lower(), thresholds.MEDIA_KIND_OTHER)
+
+
 def word_count(text: str) -> int:
     return len((text or "").split())
 

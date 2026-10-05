@@ -183,6 +183,9 @@ def candidate_turns(conversations: dict[str, list[dict]], *, context_turns: int,
         "turns_total": 0,
         "eligible_targets": 0,
         "rejected": {},
+        #: Breaks `rejected["media_placeholder"]` down by kind without replacing it: the total
+        #: stays where it was so a census from before this existed is still comparable.
+        "media_placeholder_kinds": {kind: 0 for kind in thresholds.MEDIA_KINDS},
         "by_stratum": {name: 0 for name in cues.STRATA},
         "field_mentions": {field: 0 for field in (keywords or thresholds.FIELD_KEYWORDS)},
         "code_mixed_cue_hits": 0,
@@ -194,6 +197,9 @@ def candidate_turns(conversations: dict[str, list[dict]], *, context_turns: int,
             reason = cues.target_rejection(turn)
             if reason is not None:
                 census["rejected"][reason] = census["rejected"].get(reason, 0) + 1
+                if reason == cues.REJECT_MEDIA_PLACEHOLDER:
+                    kind = cues.media_kind(turn.get("text", ""))
+                    census["media_placeholder_kinds"][kind] += 1
                 continue
             context = rows[max(0, position - context_turns):position]
             strata = cues.strata_for(turn, context, keywords=keywords)
@@ -502,6 +508,14 @@ def report_census(census: dict, *, n_items: int, fields: int, out,
         shown = ", ".join(f"{reason} {count}"
                           for reason, count in sorted(census["rejected"].items()))
         print(f"  not eligible: {shown}", file=out)
+    #: Printed whenever any media turn was rejected, and not gated on `strata`: a media kind is
+    #: a property of a turn that can never be a target, so it primes no label.
+    media_total = census["rejected"].get(cues.REJECT_MEDIA_PLACEHOLDER, 0)
+    kinds = census.get("media_placeholder_kinds") or {}
+    breakdown = ", ".join(f"{kind} {kinds.get(kind, 0)}"
+                          for kind in thresholds.MEDIA_KINDS if kinds.get(kind))
+    if media_total and breakdown:
+        print(f"  of the {media_total} media placeholder(s): {breakdown}", file=out)
     if strata:
         print(f"eligible per stratum: "
               f"{ {k: v for k, v in census['by_stratum'].items() if v} }", file=out)

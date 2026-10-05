@@ -89,16 +89,16 @@ is counts only.
 ```bash
 # Look before writing
 uv run --project experiments/EXP-000 python experiments/EXP-000/scrub.py \
-    --input data/raw --output data/scrubbed/EXP-000 \
+    --input data/raw --output data/scrubbed/EXP-000-v2 \
     --columns experiments/EXP-000/columns.yaml --dry-run
 
 # Write, then re-scan the output for anything missed
 uv run --project experiments/EXP-000 python experiments/EXP-000/scrub.py \
-    --input data/raw --output data/scrubbed/EXP-000 \
+    --input data/raw --output data/scrubbed/EXP-000-v2 \
     --columns experiments/EXP-000/columns.yaml --check
 ```
 
-Then **read `data/scrubbed/EXP-000/_audit/audit.sensitive.jsonl`**, satisfy yourself the
+Then **read `data/scrubbed/EXP-000-v2/_audit/audit.sensitive.jsonl`**, satisfy yourself the
 redactions are right, and delete it. It holds the original text of every replacement, so it is as
 sensitive as the input.
 
@@ -121,14 +121,21 @@ of which forms were probed, and it earns its keep on a corpus whose strata are n
 measurements that discriminate here are the **script mix**, the **field-keyword and
 field-pattern counts**, and the **script of the probe strings**:
 
+Run both halves in one go, from the repository root. This is the command to re-run after the
+media-kind breakdown landed, and it writes no sheet and no annotation artifact:
+
 ```bash
 uv run --project experiments/EXP-000 python experiments/EXP-000/sample_items.py \
-    --input data/scrubbed/EXP-000 \
-    --output data/scrubbed/EXP-000-annotation \
+    --input data/scrubbed/EXP-000-v2 \
+    --output data/scrubbed/EXP-000-v3-annotation \
     --fields experiments/EXP-000/fields.yaml \
     --field-keywords experiments/EXP-000/field_keywords.yaml \
-    --cue-diagnostics
+    --census-only --cue-diagnostics
 ```
+
+One run directory comes out of that, holding `config.json`, `census.json` and
+`cue_diagnostics.json`, with `step` reading `census+cue_diagnostics`. `--output` is required by
+the parser and is checked for containment, but nothing is written to it under either flag.
 
 It writes no sheet. It prints the headline and records every count under
 `runs/EXP-000/<run-id>/` with the commit, a corpus hash and a digest of the exact cue and
@@ -173,13 +180,21 @@ Then look at what the corpus can support, writing no sheet:
 
 ```bash
 uv run --project experiments/EXP-000 python experiments/EXP-000/sample_items.py \
-    --input data/scrubbed/EXP-000 \
+    --input data/scrubbed/EXP-000-v2 \
     --synthetic experiments/EXP-000/synthetic \
-    --output data/scrubbed/EXP-000-annotation \
+    --output data/scrubbed/EXP-000-v3-annotation \
     --fields experiments/EXP-000/fields.yaml \
     --field-keywords experiments/EXP-000/field_keywords.yaml \
     --census-only
 ```
+
+The census also breaks `media_placeholder` down by kind — voice, image, video, document,
+contact, unsupported, other — while keeping the one total it always had, so a census taken
+before that existed is still comparable. The kinds come from the placeholder vocabulary
+`extract.yaml` writes, and a placeholder outside it counts as `other` rather than vanishing.
+That matters for one open question: explanation (1) in `knowns-unknowns.md` needs the rejected
+media turns to be speech, and until this run the records called all of them voice notes on the
+strength of a total that did not say so.
 
 That now writes `runs/EXP-000/<run-id>/census.json` and `config.json` as well as printing the
 census, so the figures are tied to a commit and a corpus hash rather than to what you report
@@ -192,9 +207,9 @@ padding; the synthetic set contributes 16 turns under the normal quotas:
 
 ```bash
 uv run --project experiments/EXP-000 python experiments/EXP-000/sample_items.py \
-    --input data/scrubbed/EXP-000 \
+    --input data/scrubbed/EXP-000-v2 \
     --synthetic experiments/EXP-000/synthetic \
-    --output data/scrubbed/EXP-000-annotation \
+    --output data/scrubbed/EXP-000-v3-annotation \
     --fields experiments/EXP-000/fields.yaml \
     --field-keywords experiments/EXP-000/field_keywords.yaml \
     --all-stratum field_mention --no-random-topup \
@@ -232,16 +247,16 @@ is for the **real** set, whose census is printed in full; the synthetic set is a
 
 The annotation directory is a **sibling** of the scrubbed conversations, not a subdirectory of
 them: the sampler refuses an output nested inside its input, since a run that could read its own
-output is a run that can corrupt itself. `data/scrubbed/EXP-000-annotation/` is still inside
+output is a run that can corrupt itself. `data/scrubbed/EXP-000-v3-annotation/` is still inside
 `data/scrubbed/`, so it is gitignored.
 
 ### 5. After both sheets come back, measure agreement
 
 ```bash
 uv run --project experiments/EXP-000 python experiments/EXP-000/agreement.py \
-    --sheets data/scrubbed/EXP-000-annotation/sheet_A.csv \
-             data/scrubbed/EXP-000-annotation/sheet_B.csv \
-    --manifest data/scrubbed/EXP-000-annotation/manifest.json
+    --sheets data/scrubbed/EXP-000-v3-annotation/sheet_A.csv \
+             data/scrubbed/EXP-000-v3-annotation/sheet_B.csv \
+    --manifest data/scrubbed/EXP-000-v3-annotation/manifest.json
 ```
 
 `--manifest` is what splits the result. Without it you get one combined κ, and a combined κ over
@@ -251,7 +266,8 @@ often. **Only the real subset's verdict bears on ADR-003**; the synthetic one is
 "guideline usability, not evidence for ADR-003".
 
 Writes aggregates to `runs/EXP-000/<run-id>/` and the disagreement list to
-`data/scrubbed/EXP-000/`.
+**`data/scrubbed/EXP-000/`** — which is not the corpus directory and not the sheet directory.
+See the flag note below; this is `--disagreements-dir`'s unchanged default.
 
 ### Before step 4: the guideline
 
@@ -268,16 +284,16 @@ definition mid-run and leaving the earlier items in place would mix two instrume
 |---|---|
 | `data/raw/arthryx_messages.csv` | **Keep. Never share.** Unredacted client conversations. |
 | `data/raw/arthryx_messages.meta.json` | Keep. Counts only; safe to copy into `runs/EXP-000/`. |
-| `data/scrubbed/EXP-000/conv_*.jsonl` | **Keep. Never share.** Scrubbed is still client text. |
-| `data/scrubbed/EXP-000/summary.json` | Keep. Counts only; safe to copy into `runs/EXP-000/`. |
-| `data/scrubbed/EXP-000/_audit/audit.sensitive.jsonl` | **Read it, then delete it.** Contains unredacted PII by design. |
-| `data/scrubbed/EXP-000-annotation/sheet_A.csv` | **Yours.** You are Annotator A. |
-| `data/scrubbed/EXP-000-annotation/sheet_B.csv` | **This is the one file Annotator B gets.** Plus the approved guideline and `labels_reference.txt`. |
-| `data/scrubbed/EXP-000-annotation/manifest.json` | **Keep. Never show an annotator.** It records which cue caused each turn to be sampled, which would prime the label. |
-| `data/scrubbed/EXP-000-annotation/pilot_items.json` | Keep. The ids to exclude from the eventual test split. |
-| `data/scrubbed/EXP-000-annotation/labels_reference.txt` | Give to both annotators, with the guideline. |
+| `data/scrubbed/EXP-000-v2/conv_*.jsonl` | **Keep. Never share.** Scrubbed is still client text. |
+| `data/scrubbed/EXP-000-v2/summary.json` | Keep. Counts only; safe to copy into `runs/EXP-000/`. |
+| `data/scrubbed/EXP-000-v2/_audit/audit.sensitive.jsonl` | **Read it, then delete it.** Contains unredacted PII by design. |
+| `data/scrubbed/EXP-000-v3-annotation/sheet_A.csv` | **Yours.** You are Annotator A. |
+| `data/scrubbed/EXP-000-v3-annotation/sheet_B.csv` | **This is the one file Annotator B gets.** Plus the approved guideline and `labels_reference.txt`. |
+| `data/scrubbed/EXP-000-v3-annotation/manifest.json` | **Keep. Never show an annotator.** It records which cue caused each turn to be sampled, which would prime the label. |
+| `data/scrubbed/EXP-000-v3-annotation/pilot_items.json` | Keep. The ids to exclude from the eventual test split. |
+| `data/scrubbed/EXP-000-v3-annotation/labels_reference.txt` | Give to both annotators, with the guideline. |
 | `runs/EXP-000/<run-id>/metrics.json`, `config.json` | Keep and commit. Aggregates only. |
-| `data/scrubbed/EXP-000/disagreements_*.jsonl` | **Keep. Never commit.** Item ids, both labels, and both values for a value mismatch. |
+| `data/scrubbed/EXP-000/disagreements_*.jsonl` | **Keep. Never commit.** Item ids, both labels, and both values for a value mismatch. Note the directory: the default is neither the corpus nor the sheets. |
 
 Everything under `data/raw/` and `data/scrubbed/` is gitignored, verified by
 `tests/test_gitignore.py`. `runs/**` is ignored except `metrics.json`, `config.json` and a few
@@ -501,12 +517,12 @@ uv run pytest                # all on fabricated data, no network, no database
 
 # 1. Look before you write
 uv run python scrub.py --input ../../data/raw/arthryx \
-                       --output ../../data/scrubbed/EXP-000 \
+                       --output ../../data/scrubbed/EXP-000-v2 \
                        --columns columns.yaml --dry-run
 
 # 2. Write, and re-scan the output for anything missed
 uv run python scrub.py --input ../../data/raw/arthryx \
-                       --output ../../data/scrubbed/EXP-000 \
+                       --output ../../data/scrubbed/EXP-000-v2 \
                        --columns columns.yaml --check
 ```
 
@@ -536,7 +552,7 @@ appears in `summary.json` — a format problem is visible, never silent.
 ## What it writes
 
 ```
-data/scrubbed/EXP-000/
+data/scrubbed/EXP-000-v2/
   conv_001.jsonl                  one per conversation, scrubbed
   summary.json                    counts only; safe to copy into runs/EXP-000/
   _audit/
@@ -647,8 +663,8 @@ Reads the scrubbed JSONL, samples turns, and writes one sheet per annotator with
 conversation text, so it never runs in a Claude session.
 
 ```bash
-uv run python sample_items.py --input ../../data/scrubbed/EXP-000 \
-                              --output ../../data/scrubbed/EXP-000-annotation \
+uv run python sample_items.py --input ../../data/scrubbed/EXP-000-v2 \
+                              --output ../../data/scrubbed/EXP-000-v3-annotation \
                               --fields fields.yaml --n-items 80 --seed 0
 ```
 
@@ -888,7 +904,16 @@ uv run python agreement.py --passes pass_1.csv pass_2.csv
 | `--bootstrap` | 2000 | resamples per interval |
 | `--allow-partial-overlap` | off | measure the shared items when the sheets differ, and record it |
 | `--out-root` | `runs/EXP-000` | aggregates only |
-| `--disagreements-dir` | `data/scrubbed/EXP-000` | must be inside `data/scrubbed/` |
+| `--disagreements-dir` | `data/scrubbed/EXP-000` | must be inside `data/scrubbed/`; see the note below |
+
+**`--disagreements-dir`'s default is flagged, not changed.** It resolves to
+`data/scrubbed/EXP-000`, which after the corpus was renamed to `EXP-000-v2` is a directory that
+holds nothing else. It does not fail when absent: `write_disagreements` calls
+`mkdir(parents=True, exist_ok=True)`, so the first agreement run **creates** a third
+`data/scrubbed/EXP-000/` beside the corpus and the sheets and puts one file in it. Verified on a
+fabricated tree, 2026-10-05. Left as it is pending Kapardhi's call, since changing a default
+that decides where client-derived content lands is his; pass `--disagreements-dir` explicitly if
+you want it elsewhere.
 
 ### The mode is structural, not a flag
 
