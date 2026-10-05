@@ -342,6 +342,25 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
   media turns to be speech, and 29 is now the measured number rather than a characterisation.
   Whether that is enough for the explanation is Kapardhi's reading; this entry transcribes the
   count and stops.
+- 2026-10-06: **Kapardhi's reading of the media split.** Transcribed from Kapardhi,
+  2026-10-06, verbatim: "Explanation (1) is not ruled out. 29 voice notes sit beside 135
+  substantive customer text turns (about 18%), and voice is where loose, hedged speech is most
+  likely. It is the only one of the three explanations testable directly, by listening to the 29
+  notes locally. Whatever that shows, 47 conversations cannot carry an abstention benchmark on
+  their own: even 29 of 29 would be too few. The real corpus is at most a validation slice. This
+  bears on D2, which stays open until EXP-000 has labels."
+  Recorded under explanation (1) in `knowns-unknowns.md`, and the Risks entry there is narrowed
+  to match: the risk is no longer only that the abstention question may be untestable on this
+  text, but that on his reading the corpus cannot carry the benchmark whatever the 29 notes hold.
+  His three figures check against run `20261005T191447Z-072dbbc`: 29 is
+  `media_placeholder_kinds.voice`, 135 is `eligible_targets`, and 47 is `inputs.corpus.files`,
+  one conversation per file. "About 18%" is 29 of 164, voice as a share of substantive text plus
+  voice; 29 of 135 alone is 21.5%. Noted so the denominator is on the record rather than
+  re-derived later, not as a correction.
+  Claude Code adds nothing to the reading. One consequence for this experiment's own scope,
+  which is engineering rather than interpretation: "at most a validation slice" is about what the
+  corpus can support downstream and changes nothing about EXP-000's measurement, whose Result,
+  Interpretation and Decision stay empty until the sheets are labelled.
 
 ## Known limitations
 Accepted rather than fixed, and no action is asked for. The two bullets below are what Kapardhi
