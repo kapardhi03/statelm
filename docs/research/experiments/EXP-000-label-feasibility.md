@@ -323,6 +323,25 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
   labels they produce carry that exposure. The entry of 2026-10-03 above records it and records
   that suppression protects later runs rather than this one; using the sheets as built is what
   makes that entry bear on a kappa rather than on a hypothetical.
+- 2026-10-05: **media placeholders measured by kind.** Run
+  `20261005T191447Z-072dbbc`, clean tree, same corpus as the two 2026-10-03 runs (47 files,
+  `sha256 e50b0d40...`) and the same probe (`sha256 3c1b9ce4...`). Transcribed from
+  `census.media_placeholder_kinds`, counts only: **voice 29**, image 20, contact 2,
+  unsupported 2, video 1, document 0, other 0. The seven kinds sum to the 54 that
+  `rejected.media_placeholder` records, so none is unaccounted for, and the voice share is
+  29 of 54, or 53.7%.
+  Nothing else in the census moved: 623 turns read, 135 eligible, `field_mention` 18 with the
+  same per-field split, `correction` 0, `hedge` 0, `code_mixed_cue_hits` 0. This run adds the
+  breakdown and nothing else.
+  **One figure this reconciles against.** The entry of 2026-10-03 transcribes Kapardhi's count
+  as "54 voice-note placeholders", and the v2 Known bullet in `knowns-unknowns.md` carried the
+  same wording. That was recorded before any breakdown existed; the measured number of voice
+  notes is 29, not 54. His transcription is left as he gave it, with the measured figure beside
+  it in both files.
+  **What the 29 means is not recorded here.** Explanation (1) under Unknown needs the rejected
+  media turns to be speech, and 29 is now the measured number rather than a characterisation.
+  Whether that is enough for the explanation is Kapardhi's reading; this entry transcribes the
+  count and stops.
 
 ## Known limitations
 Accepted rather than fixed, and no action is asked for. The two bullets below are what Kapardhi

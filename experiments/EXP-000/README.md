@@ -265,9 +265,9 @@ NOT REFUTED while the real subset read REFUTED, because the synthetic items agre
 often. **Only the real subset's verdict bears on ADR-003**; the synthetic one is printed as
 "guideline usability, not evidence for ADR-003".
 
-Writes aggregates to `runs/EXP-000/<run-id>/` and the disagreement list to
-**`data/scrubbed/EXP-000/`** — which is not the corpus directory and not the sheet directory.
-See the flag note below; this is `--disagreements-dir`'s unchanged default.
+Writes aggregates to `runs/EXP-000/<run-id>/` and the disagreement list **beside sheet A**,
+so with the sheets above that is `data/scrubbed/EXP-000-v3-annotation/`. Nothing new is created:
+the sheet was read from that directory a moment earlier.
 
 ### Before step 4: the guideline
 
@@ -293,7 +293,7 @@ definition mid-run and leaving the earlier items in place would mix two instrume
 | `data/scrubbed/EXP-000-v3-annotation/pilot_items.json` | Keep. The ids to exclude from the eventual test split. |
 | `data/scrubbed/EXP-000-v3-annotation/labels_reference.txt` | Give to both annotators, with the guideline. |
 | `runs/EXP-000/<run-id>/metrics.json`, `config.json` | Keep and commit. Aggregates only. |
-| `data/scrubbed/EXP-000/disagreements_*.jsonl` | **Keep. Never commit.** Item ids, both labels, and both values for a value mismatch. Note the directory: the default is neither the corpus nor the sheets. |
+| `data/scrubbed/EXP-000-v3-annotation/disagreements_*.jsonl` | **Keep. Never commit.** Item ids, both labels, and both values for a value mismatch. Lands beside sheet A. |
 
 Everything under `data/raw/` and `data/scrubbed/` is gitignored, verified by
 `tests/test_gitignore.py`. `runs/**` is ignored except `metrics.json`, `config.json` and a few
@@ -904,16 +904,16 @@ uv run python agreement.py --passes pass_1.csv pass_2.csv
 | `--bootstrap` | 2000 | resamples per interval |
 | `--allow-partial-overlap` | off | measure the shared items when the sheets differ, and record it |
 | `--out-root` | `runs/EXP-000` | aggregates only |
-| `--disagreements-dir` | `data/scrubbed/EXP-000` | must be inside `data/scrubbed/`; see the note below |
+| `--disagreements-dir` | the directory holding the first sheet | must be inside `data/scrubbed/` |
 
-**`--disagreements-dir`'s default is flagged, not changed.** It resolves to
-`data/scrubbed/EXP-000`, which after the corpus was renamed to `EXP-000-v2` is a directory that
-holds nothing else. It does not fail when absent: `write_disagreements` calls
-`mkdir(parents=True, exist_ok=True)`, so the first agreement run **creates** a third
-`data/scrubbed/EXP-000/` beside the corpus and the sheets and puts one file in it. Verified on a
-fabricated tree, 2026-10-05. Left as it is pending Kapardhi's call, since changing a default
-that decides where client-derived content lands is his; pass `--disagreements-dir` explicitly if
-you want it elsewhere.
+**`--disagreements-dir` defaults to the directory holding the first sheet.** Kapardhi's
+decision, 2026-10-05. It used to be `data/scrubbed/EXP-000`, which after the corpus was renamed
+to `EXP-000-v2` named nothing that existed — and because `write_disagreements` calls
+`mkdir(parents=True, exist_ok=True)` the first run would have *created* a third directory there
+holding one file, beside the corpus and the sheets. Defaulting beside sheet A creates nothing,
+since the sheet was read from that directory a moment earlier. Containment is unchanged and
+still refuses anything outside `data/scrubbed/`, including a sheet that lives outside it, so an
+explicit `--disagreements-dir` is no looser than it was.
 
 ### The mode is structural, not a flag
 
@@ -945,7 +945,7 @@ runs/EXP-000/<run-id>/
   metrics.json      kappas, intervals, counts, confusion matrix, verdict. AGGREGATES ONLY.
   config.json       commit, seed, sheet hashes, every pre-registered number
 
-data/scrubbed/EXP-000/
+data/scrubbed/EXP-000-v3-annotation/        (whichever directory holds sheet A)
   disagreements_<run-id>.jsonl    item ids, both labels, and both values for a value mismatch
 ```
 
