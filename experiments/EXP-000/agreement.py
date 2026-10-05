@@ -577,9 +577,9 @@ def main(argv=None, *, runs_root=None, scrubbed_root=None, out=sys.stdout) -> in
                         help="one annotator's two passes: intra-annotator agreement")
     parser.add_argument("--out-root", type=Path, default=here / ".." / ".." / "runs" / EXPERIMENT,
                         help="runs/EXP-000; aggregates only")
-    parser.add_argument("--disagreements-dir", type=Path,
-                        default=here / ".." / ".." / "data" / "scrubbed" / EXPERIMENT,
-                        help="must be inside data/scrubbed/")
+    parser.add_argument("--disagreements-dir", type=Path, default=None,
+                        help="where the disagreement list goes; defaults to the directory "
+                             "holding the first sheet, and must be inside data/scrubbed/")
     parser.add_argument("--run-id", default=None)
     parser.add_argument("--seed", type=int, default=thresholds.BOOTSTRAP_SEED)
     parser.add_argument("--bootstrap", type=int, default=thresholds.BOOTSTRAP_RESAMPLES,
@@ -603,8 +603,16 @@ def main(argv=None, *, runs_root=None, scrubbed_root=None, out=sys.stdout) -> in
     run_id = args.run_id or provenance.new_run_id()
     run_dir = safety.assert_in_runs(Path(args.out_root).expanduser().resolve() / run_id,
                                     EXPERIMENT, allowed_root=runs_root)
+    #: Kapardhi's decision, 2026-10-05: the default is the directory holding the first sheet.
+    #: It used to be `data/scrubbed/EXP-000`, which after the corpus was renamed to `EXP-000-v2`
+    #: named nothing that existed -- and `write_disagreements` calls `mkdir(parents=True)`, so
+    #: the first run would have created a third directory there holding one file. Defaulting
+    #: beside sheet A creates nothing: the sheet was just read from that directory. Containment
+    #: is still checked and still refuses anything outside `data/scrubbed/`, which is what
+    #: keeps an explicit `--disagreements-dir` honest.
+    disagreements_dir = args.disagreements_dir or paths[0].parent
     disagreement_path = safety.assert_in_data_scrubbed(
-        Path(args.disagreements_dir).expanduser().resolve() / f"disagreements_{run_id}.jsonl",
+        Path(disagreements_dir).expanduser().resolve() / f"disagreements_{run_id}.jsonl",
         allowed_root=scrubbed_root)
 
     sources = load_item_sources(args.manifest) if args.manifest else {}

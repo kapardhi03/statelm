@@ -763,3 +763,77 @@ class TestPerSourceReporting:
             body = (run_dir / name).read_text(encoding="utf-8")
             assert CANARY not in body
             assert "c001#" not in body
+
+
+class TestTheDisagreementsDirDefault:
+    """The default is the directory holding the first sheet. Kapardhi's decision, 2026-10-05.
+
+    It used to be `data/scrubbed/EXP-000`. After the corpus was renamed to `EXP-000-v2` that
+    named nothing which existed, and because `write_disagreements` calls `mkdir(parents=True)`
+    the first run would have created a third directory there holding one file, beside the
+    corpus and the sheets. Defaulting beside sheet A creates nothing, since the sheet was read
+    from that directory a moment earlier.
+    """
+
+    LABELS = ("NO-OP", "VALUE", "ABSTAIN:ambiguous", "ABSTAIN:insufficient")
+
+    @staticmethod
+    def sheets_inside_scrubbed(workspace, items):
+        """Sheets under the scrubbed root, which is where the real ones live."""
+        return write_sheets(workspace["scrubbed"] / "EXP-000-v3-annotation", items)
+
+    def test_the_default_lands_beside_sheet_a(self, workspace):
+        paths = self.sheets_inside_scrubbed(workspace, spread(self.LABELS))
+        buffer = io.StringIO()
+        code = agreement.main(
+            ["--sheets", str(paths[0]), str(paths[1]),
+             "--out-root", str(workspace["runs"]), "--bootstrap", "10"],
+            runs_root=workspace["runs"], scrubbed_root=workspace["scrubbed"], out=buffer)
+        assert code == 0
+        written = sorted(paths[0].parent.glob("disagreements_*.jsonl"))
+        assert len(written) == 1, sorted(paths[0].parent.iterdir())
+        assert written[0].parent == paths[0].parent
+
+    def test_the_default_creates_no_new_directory(self, workspace):
+        """The whole point: nothing appears under data/scrubbed/ that was not there before."""
+        paths = self.sheets_inside_scrubbed(workspace, spread(self.LABELS))
+        before = {p.name for p in workspace["scrubbed"].iterdir()}
+        agreement.main(
+            ["--sheets", str(paths[0]), str(paths[1]),
+             "--out-root", str(workspace["runs"]), "--bootstrap", "10"],
+            runs_root=workspace["runs"], scrubbed_root=workspace["scrubbed"],
+            out=io.StringIO())
+        assert {p.name for p in workspace["scrubbed"].iterdir()} == before
+        assert not (workspace["scrubbed"] / "EXP-000").exists(), "the old default's directory"
+
+    def test_an_explicit_dir_still_wins(self, workspace):
+        paths = self.sheets_inside_scrubbed(workspace, spread(self.LABELS))
+        elsewhere = workspace["scrubbed"] / "somewhere-else"
+        agreement.main(
+            ["--sheets", str(paths[0]), str(paths[1]),
+             "--out-root", str(workspace["runs"]),
+             "--disagreements-dir", str(elsewhere), "--bootstrap", "10"],
+            runs_root=workspace["runs"], scrubbed_root=workspace["scrubbed"],
+            out=io.StringIO())
+        assert sorted(elsewhere.glob("disagreements_*.jsonl"))
+        assert not sorted(paths[0].parent.glob("disagreements_*.jsonl"))
+
+    def test_a_sheet_outside_data_scrubbed_is_still_refused(self, workspace, tmp_path):
+        """Containment is not weakened by the new default: it is the same check, later."""
+        outside = write_sheets(tmp_path / "not-scrubbed", spread(self.LABELS))
+        with pytest.raises(safety.OutsideOutputRoot, match="data/scrubbed"):
+            agreement.main(
+                ["--sheets", str(outside[0]), str(outside[1]),
+                 "--out-root", str(workspace["runs"]), "--bootstrap", "10"],
+                runs_root=workspace["runs"], scrubbed_root=workspace["scrubbed"],
+                out=io.StringIO())
+
+    def test_intra_annotator_passes_default_beside_the_first_pass(self, workspace):
+        """`--passes` resolves the same way; the first path is the first path either way."""
+        paths = self.sheets_inside_scrubbed(workspace, spread(self.LABELS))
+        agreement.main(
+            ["--passes", str(paths[0]), str(paths[1]),
+             "--out-root", str(workspace["runs"]), "--bootstrap", "10"],
+            runs_root=workspace["runs"], scrubbed_root=workspace["scrubbed"],
+            out=io.StringIO())
+        assert sorted(paths[0].parent.glob("disagreements_*.jsonl"))

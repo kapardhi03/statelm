@@ -17,8 +17,11 @@ or a literature row as evidence.
   hypothesis.
   Confirmed against `runs/EXP-000/20261003T163331Z-b860436/census.json`, 2026-10-05: 623 turns
   read, 135 eligible, `field_mention` 18 with that exact per-field split, `correction` 0,
-  `hedge` 0, `code_mixed_cue_hits` 0. The 54 is recorded there as `media_placeholder`, whose
-  kind is not broken down; see explanation (1) under Unknown.
+  `hedge` 0, `code_mixed_cue_hits` 0. The 54 is recorded there as `media_placeholder`.
+  Its kinds were measured on 2026-10-05 in run `20261005T191447Z-072dbbc`: **voice 29**,
+  image 20, contact 2, unsupported 2, video 1, document 0, other 0. The line above says the 54
+  "were voice-note placeholders", transcribed on 2026-10-03 before any breakdown existed; the
+  measured voice count is 29. Kapardhi's transcription is left as he gave it.
 - Kapardhi's romanized Telugu and Hindi cue forms matched 0 of 135 eligible customer turns
   (EXP-000 v3 census, 2026-10-03; the same corpus as v2, so not an independent sample):
   field_mention 18, correction 0, hedge 0, unchanged from v2. Transcribed from Kapardhi,
@@ -62,16 +65,14 @@ or a literature row as evidence.
   see, or are genuinely rare in bot-led WhatsApp sales chats.** Kapardhi's framing, 2026-10-03.
   These three replace the earlier (a)/(b)/(c) list and the separate question of whether the cue
   lists can fire at all, which the measurements below have narrowed into them.
-  (1) **Voice notes.** 54 of the rejected turns were media placeholders. A sampling-frame limit
-  rather than a cue limit: no cue list recovers it, transcription could. Raised by Claude Code,
-  2026-10-03.
-  **The kind is not established, noted 2026-10-05.** The census records
-  `rejected.media_placeholder: 54` and breaks it down no further, while this file and the record
-  have been calling those 54 *voice notes*. The placeholder vocabulary covers voice note, image,
-  video, document, contact card and unsupported, so 54 is the confirmed count of media turns and
-  the share of them that are voice notes is unmeasured. This explanation needs them to be voice
-  notes, or at least speech, so the count supports it less specifically than the wording implied.
-  Kapardhi's transcribed figures are left as he gave them.
+  (1) **Voice notes.** Of the 54 rejected media placeholders, **29 are voice notes: 29 of 54,
+  or 53.7%.** Transcribed from `runs/EXP-000/20261005T191447Z-072dbbc/census.json`,
+  `census.media_placeholder_kinds`, 2026-10-05. The remainder: image 20, contact 2,
+  unsupported 2, video 1, document 0, other 0. The seven kinds sum to the 54, so none is
+  unaccounted for. A sampling-frame limit rather than a cue limit: no cue list recovers a voice
+  note, transcription could. Raised by Claude Code, 2026-10-03; the kind measured 2026-10-05.
+  This explanation needs speech, and 29 is the measured number of voice notes. **What the 29
+  means for the explanation is Kapardhi's reading and is not recorded here.**
   (2) **Phrasing the cue lists cannot see.** Distinct from the ruled-out (b) below, and the
   distinction matters: (b) was that the lists were in the wrong *language*, which adding
   romanized forms tested and refuted. This is that the phenomenon is expressed in ways no word
