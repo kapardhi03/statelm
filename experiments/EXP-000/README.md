@@ -143,7 +143,11 @@ keyword lists it measured with. Read it this way:
   was 18 of 135 in v2, so ASCII matching demonstrably fires on at least 18 of those turns. That
   bounds how much of the corpus the "instrument cannot reach this text" reading can cover, and
   the per-keyword and per-pattern counts say which matchers did the work — a budget is written
-  "80 lakhs", so `amount_pattern` carries it rather than the word "budget".
+  "80 lakhs" — though on this corpus that expectation was wrong, and the run file says so:
+  `amount_pattern` fired on 4 eligible turns while 10 carried a budget mention, and the keywords
+  that fired were "budget" 5, "price" 3, "lakhs" 3, "cost" 1, "cr" 1, "negotiable" 1. The
+  keywords carry budget here, not the amount regex. Checked 2026-10-05 against
+  `runs/EXP-000/20261003T164527Z-2773803/cue_diagnostics.json`.
 - **Nothing fires and the words are ASCII** → no listed string occurs in the eligible text. That
   is **not** evidence the phenomenon is absent. It leaves two things untouched: cue coverage
   (16 romanized forms are exact strings, and "konchem" does not match "koncham"), and the

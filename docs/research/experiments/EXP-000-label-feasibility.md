@@ -216,6 +216,15 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
   with the git commit, a corpus hash and a digest of the exact cue and keyword lists measured
   with, alongside `census.json` and `cue_diagnostics.json`. This is what the v2 and v3 censuses
   lacked: their figures rested on a report and could not be re-derived.
+  **No longer, as of commit `b031a8d`.** Kapardhi pushed `runs/EXP-000/20261003T163331Z-b860436/`
+  and `runs/EXP-000/20261003T164527Z-2773803/`, so every census and cue-diagnostic figure in this
+  record is now re-derivable from a tracked file rather than from a relayed count. Both runs read
+  one corpus (47 files, `sha256 e50b0d40...`) against one probe
+  (`sha256 3c1b9ce4...`, 18 correction and 31 hedge forms of which 16 code-mixed), so they are
+  directly comparable. Two provenance caveats: `20261003T164527Z-2773803` carries
+  `git_tree_dirty: true`, so its commit alone does not pin the code, though its probe digest is
+  identical to the clean run's and therefore the word lists were the same; and both runs read
+  `data/scrubbed/EXP-000-v2`, not the `data/scrubbed/EXP-000` the run book names.
   **`census.json` and `cue_diagnostics.json` are tracked by git. Kapardhi's decision,
   2026-10-03: "Keep them tracked."** They join `config.json` and `metrics.json`, which already
   were, so that a census figure is re-derivable from the repository rather than resting on a
@@ -261,10 +270,16 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
 - 2026-10-03: **script blindness ruled out; the word floor is now the open frame question.**
   Transcribed from Kapardhi, 2026-10-03, counts only: the script-mix diagnostic ruled out script
   blindness, `ascii_only` 121 of 135 eligible targets, `telugu` 1. His reading, recorded as his.
-  The two figures he reported account for 122 of the 135; the remaining 13 sit in the
-  `devanagari` and `other_non_ascii` buckets, and the run record's `other_non_ascii_detail`
-  says whether they are symbol-only (a currency sign, which leaves every word matchable) rather
-  than another script. Not transcribed because he did not report it.
+  **Corrected against the run file, 2026-10-05.** This entry first said his two figures account
+  for 122 of the 135 and "the remaining 13" sit in the other buckets. That arithmetic was wrong:
+  only `ascii_only` is exclusive, while `telugu`, `devanagari` and `other_non_ascii` are
+  "contains", so they overlap and do not sum to the complement. From
+  `runs/EXP-000/20261003T164527Z-2773803/cue_diagnostics.json`, `script.eligible_targets`:
+  `ascii_only` 121, so **14** of the 135 hold some non-ASCII character, not 13. Those 14 split
+  into `with_non_ascii_letters` **7** and `other_non_ascii_detail.symbols_only` **7** — the
+  second group being a currency sign or similar, which leaves every word matchable. The bucket
+  counts themselves are `telugu` 1, `devanagari` 6, `other_non_ascii` 9, which is 16 memberships
+  over those 14 turns.
   What this settles and what it leaves. 121 eligible targets are pure ASCII and every cue form
   scored zero on them, so the probe was not blocked by the writing system on the great majority
   of the corpus. By the entry above, that is **not** evidence the phenomenon is absent: it
@@ -294,7 +309,9 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
   hits, no excluded turn carries a cue, so the turns holding a field mention *or* a cue are the
   4. The floor is pre-registered and unchanged, and this is the first run whose figures are
   tied to a commit and a corpus hash rather than relayed -- the run id's `2773803` is the commit
-  that built the block it reports.
+  that built the block it reports. Verified against the pushed file on 2026-10-05: its
+  `excluded_by_word_floor` block reads turns 151, `word_counts` {"1": 126, "2": 25},
+  `with_field_mention` 4, `with_hedge_or_correction_cue` 0, every figure as transcribed.
   The corpus-wide arithmetic closes: 135 eligible + 151 too_short = **286 customer text turns**,
   of which 18 + 4 = **22 mention a tracked field** and **0 match any hedge or correction cue**.
   Recorded in `knowns-unknowns.md` under Known, with Kapardhi's reading that script blindness
