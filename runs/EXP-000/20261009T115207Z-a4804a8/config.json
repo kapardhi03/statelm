@@ -1,0 +1,61 @@
+{
+  "experiment": "EXP-000",
+  "step": "agreement",
+  "agreement_type": "inter_annotator",
+  "run_id": "20261009T115207Z-a4804a8",
+  "git_commit": "a4804a8f9132206454a0f60fd219469f70ac395b",
+  "git_tree_dirty": false,
+  "seed": 0,
+  "python": "3.14.3",
+  "platform": "macOS-15.6.1-arm64-arm-64bit-Mach-O",
+  "model_name": null,
+  "model_revision": null,
+  "prompt_template_hash": null,
+  "inputs": {
+    "sheet_a": {
+      "name": "sheet_A.csv",
+      "sha256": "ecc5ff6583db0a2cc9536fc59fb7061abafe3b7f6ed7899de6fead2ff11a0734"
+    },
+    "sheet_b": {
+      "name": "sheet_B.csv",
+      "sha256": "9feb65674e62544b7f3504dad5f23b6eab65133641ca10df85dc81a78ea5090b"
+    }
+  },
+  "alignment": {
+    "n_items_compared": 170,
+    "n_conversations": 22,
+    "items_only_in_sheet_a": 0,
+    "items_only_in_sheet_b": 0,
+    "items_excluded_unlabelled": 0,
+    "partial_overlap_allowed": false
+  },
+  "thresholds": {
+    "kappa_threshold": 0.6,
+    "kappa_tolerance": 1e-09,
+    "min_category_n": 10,
+    "abstention_types": [
+      "ABSTAIN:insufficient",
+      "ABSTAIN:ambiguous",
+      "ABSTAIN:conflicting"
+    ],
+    "undefined_replicate_max_fraction": 0.05,
+    "hedged_rule": "a"
+  },
+  "bootstrap": {
+    "resamples": 2000,
+    "ci_level": 0.95,
+    "primary_unit": "conversation",
+    "secondary_unit": "item",
+    "method": "percentile"
+  },
+  "value_normalizations": {
+    "primary": "strict",
+    "secondary": "number_aware"
+  },
+  "notes": [
+    "No model is involved, so model_name, model_revision and prompt_template_hash are null. The convention's fields are kept rather than omitted so a reader can see they were considered.",
+    "The >=3 seeds convention does not apply: nothing is trained. The bootstrap is seeded and the seed is recorded.",
+    "ADR-003 (typed abstention) was Proposed when these numbers were pre-registered. EXP-000 is the experiment that tests it.",
+    "HEDGED records the tentative value in the value column (\"might stretch to 45\" -> label HEDGED, value 45)."
+  ]
+}

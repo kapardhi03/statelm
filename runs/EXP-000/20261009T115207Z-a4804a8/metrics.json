@@ -1,0 +1,1282 @@
+{
+  "experiment": "EXP-000",
+  "agreement_type": "inter_annotator",
+  "run_id": "20261009T115207Z-a4804a8",
+  "n_items_compared": 170,
+  "n_conversations": 22,
+  "items_only_in_sheet_a": 0,
+  "items_only_in_sheet_b": 0,
+  "items_excluded_unlabelled": 0,
+  "partial_overlap_allowed": false,
+  "overall": {
+    "kappa": 1.0,
+    "percent_agreement": 1.0,
+    "kappa_undefined_reason": null,
+    "primary_unit": "conversation",
+    "ci_conversation": {
+      "level": 0.95,
+      "unit": "conversation",
+      "resamples": 2000,
+      "seed": 0,
+      "undefined_replicates": 0,
+      "undefined_fraction": 0.0,
+      "low": 1.0,
+      "high": 1.0,
+      "interpretable": true,
+      "reason": null
+    },
+    "ci_item": {
+      "level": 0.95,
+      "unit": "item",
+      "resamples": 2000,
+      "seed": 0,
+      "undefined_replicates": 0,
+      "undefined_fraction": 0.0,
+      "low": 1.0,
+      "high": 1.0,
+      "interpretable": true,
+      "reason": null
+    }
+  },
+  "per_category": {
+    "NO-OP": {
+      "kappa": 1.0,
+      "is_abstention_type": false,
+      "interpretable": true,
+      "reason": null,
+      "n_rater_a": 141,
+      "n_rater_b": 141,
+      "n_either": 141,
+      "n_both": 141,
+      "primary_unit": "conversation",
+      "ci_conversation": {
+        "level": 0.95,
+        "unit": "conversation",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 0,
+        "undefined_fraction": 0.0,
+        "low": 1.0,
+        "high": 1.0,
+        "interpretable": true,
+        "reason": null
+      },
+      "ci_item": {
+        "level": 0.95,
+        "unit": "item",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 0,
+        "undefined_fraction": 0.0,
+        "low": 1.0,
+        "high": 1.0,
+        "interpretable": true,
+        "reason": null
+      }
+    },
+    "VALUE": {
+      "kappa": 1.0,
+      "is_abstention_type": false,
+      "interpretable": true,
+      "reason": null,
+      "n_rater_a": 19,
+      "n_rater_b": 19,
+      "n_either": 19,
+      "n_both": 19,
+      "primary_unit": "conversation",
+      "ci_conversation": {
+        "level": 0.95,
+        "unit": "conversation",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 0,
+        "undefined_fraction": 0.0,
+        "low": 1.0,
+        "high": 1.0,
+        "interpretable": true,
+        "reason": null
+      },
+      "ci_item": {
+        "level": 0.95,
+        "unit": "item",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 0,
+        "undefined_fraction": 0.0,
+        "low": 1.0,
+        "high": 1.0,
+        "interpretable": true,
+        "reason": null
+      }
+    },
+    "ABSTAIN:insufficient": {
+      "kappa": 1.0,
+      "is_abstention_type": true,
+      "interpretable": false,
+      "reason": "n_either 3 < 10; reported for completeness, not interpretable",
+      "n_rater_a": 3,
+      "n_rater_b": 3,
+      "n_either": 3,
+      "n_both": 3,
+      "primary_unit": "conversation",
+      "ci_conversation": {
+        "level": 0.95,
+        "unit": "conversation",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 85,
+        "undefined_fraction": 0.0425,
+        "low": 1.0,
+        "high": 1.0,
+        "interpretable": true,
+        "reason": null
+      },
+      "ci_item": {
+        "level": 0.95,
+        "unit": "item",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 80,
+        "undefined_fraction": 0.04,
+        "low": 1.0,
+        "high": 1.0,
+        "interpretable": true,
+        "reason": null
+      }
+    },
+    "ABSTAIN:ambiguous": {
+      "kappa": 1.0,
+      "is_abstention_type": true,
+      "interpretable": false,
+      "reason": "n_either 2 < 10; reported for completeness, not interpretable",
+      "n_rater_a": 2,
+      "n_rater_b": 2,
+      "n_either": 2,
+      "n_both": 2,
+      "primary_unit": "conversation",
+      "ci_conversation": {
+        "level": 0.95,
+        "unit": "conversation",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 252,
+        "undefined_fraction": 0.126,
+        "low": 1.0,
+        "high": 1.0,
+        "interpretable": false,
+        "reason": "252/2000 resamples had an undefined statistic (> 5%); the interval covers only the rest"
+      },
+      "ci_item": {
+        "level": 0.95,
+        "unit": "item",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 227,
+        "undefined_fraction": 0.1135,
+        "low": 1.0,
+        "high": 1.0,
+        "interpretable": false,
+        "reason": "227/2000 resamples had an undefined statistic (> 5%); the interval covers only the rest"
+      }
+    },
+    "ABSTAIN:conflicting": {
+      "kappa": null,
+      "is_abstention_type": true,
+      "interpretable": false,
+      "reason": "n_either 0 < 10; reported for completeness, not interpretable",
+      "n_rater_a": 0,
+      "n_rater_b": 0,
+      "n_either": 0,
+      "n_both": 0,
+      "primary_unit": "conversation",
+      "ci_conversation": {
+        "level": 0.95,
+        "unit": "conversation",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 2000,
+        "undefined_fraction": 1.0,
+        "low": null,
+        "high": null,
+        "interpretable": false,
+        "reason": "every resample gave an undefined statistic"
+      },
+      "ci_item": {
+        "level": 0.95,
+        "unit": "item",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 2000,
+        "undefined_fraction": 1.0,
+        "low": null,
+        "high": null,
+        "interpretable": false,
+        "reason": "every resample gave an undefined statistic"
+      }
+    },
+    "HEDGED": {
+      "kappa": 1.0,
+      "is_abstention_type": false,
+      "interpretable": false,
+      "reason": "n_either 5 < 10; reported for completeness, not interpretable",
+      "n_rater_a": 5,
+      "n_rater_b": 5,
+      "n_either": 5,
+      "n_both": 5,
+      "primary_unit": "conversation",
+      "ci_conversation": {
+        "level": 0.95,
+        "unit": "conversation",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 9,
+        "undefined_fraction": 0.0045,
+        "low": 1.0,
+        "high": 1.0,
+        "interpretable": true,
+        "reason": null
+      },
+      "ci_item": {
+        "level": 0.95,
+        "unit": "item",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 10,
+        "undefined_fraction": 0.005,
+        "low": 1.0,
+        "high": 1.0,
+        "interpretable": true,
+        "reason": null
+      }
+    }
+  },
+  "confusion_matrix": {
+    "labels": [
+      "NO-OP",
+      "VALUE",
+      "ABSTAIN:insufficient",
+      "ABSTAIN:ambiguous",
+      "ABSTAIN:conflicting",
+      "HEDGED"
+    ],
+    "rows_are": "sheet_a",
+    "columns_are": "sheet_b",
+    "counts": [
+      [
+        141,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        19,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        3,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        2,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        5
+      ]
+    ]
+  },
+  "label_use": {
+    "sheet_a": {
+      "NO-OP": 141,
+      "VALUE": 19,
+      "ABSTAIN:insufficient": 3,
+      "HEDGED": 5,
+      "ABSTAIN:ambiguous": 2
+    },
+    "sheet_b": {
+      "NO-OP": 141,
+      "VALUE": 19,
+      "ABSTAIN:insufficient": 3,
+      "HEDGED": 5,
+      "ABSTAIN:ambiguous": 2
+    }
+  },
+  "value_agreement": {
+    "n_both_value": 19,
+    "primary_normalization": "strict",
+    "strict": {
+      "agreement": 1.0,
+      "n": 19,
+      "primary_unit": "conversation",
+      "ci_conversation": {
+        "level": 0.95,
+        "unit": "conversation",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 0,
+        "undefined_fraction": 0.0,
+        "low": 1.0,
+        "high": 1.0,
+        "interpretable": true,
+        "reason": null
+      },
+      "ci_item": {
+        "level": 0.95,
+        "unit": "item",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 0,
+        "undefined_fraction": 0.0,
+        "low": 1.0,
+        "high": 1.0,
+        "interpretable": true,
+        "reason": null
+      }
+    },
+    "number_aware": {
+      "agreement": 1.0,
+      "n": 19,
+      "primary_unit": "conversation",
+      "ci_conversation": {
+        "level": 0.95,
+        "unit": "conversation",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 0,
+        "undefined_fraction": 0.0,
+        "low": 1.0,
+        "high": 1.0,
+        "interpretable": true,
+        "reason": null
+      },
+      "ci_item": {
+        "level": 0.95,
+        "unit": "item",
+        "resamples": 2000,
+        "seed": 0,
+        "undefined_replicates": 0,
+        "undefined_fraction": 0.0,
+        "low": 1.0,
+        "high": 1.0,
+        "interpretable": true,
+        "reason": null
+      }
+    }
+  },
+  "verdict": {
+    "subset": "combined",
+    "reads_as": "mixed real and synthetic items; reported for completeness and bears on ADR-003 no more than its synthetic share allows",
+    "bears_on_adr_003": false,
+    "threshold": 0.6,
+    "threshold_source": "EXP-000 Metric section",
+    "threshold_tolerance": 1e-09,
+    "applies_to": [
+      "ABSTAIN:insufficient",
+      "ABSTAIN:ambiguous",
+      "ABSTAIN:conflicting"
+    ],
+    "per_abstention_type": {
+      "ABSTAIN:insufficient": {
+        "verdict": "NOT INTERPRETABLE",
+        "kappa": 1.0,
+        "n_either": 3,
+        "reason": "n_either 3 < 10; reported for completeness, not interpretable"
+      },
+      "ABSTAIN:ambiguous": {
+        "verdict": "NOT INTERPRETABLE",
+        "kappa": 1.0,
+        "n_either": 2,
+        "reason": "n_either 2 < 10; reported for completeness, not interpretable"
+      },
+      "ABSTAIN:conflicting": {
+        "verdict": "NOT INTERPRETABLE",
+        "kappa": null,
+        "n_either": 0,
+        "reason": "n_either 0 < 10; reported for completeness, not interpretable"
+      }
+    },
+    "hypothesis": "cannot be evaluated",
+    "because": "ABSTAIN:insufficient, ABSTAIN:ambiguous, ABSTAIN:conflicting rest(s) on fewer than 10 items",
+    "note": "A verdict against a pre-registered threshold is not a Result. Result, Interpretation and Decision in the experiment record are a human's to fill."
+  },
+  "by_source": {
+    "real": {
+      "overall": {
+        "kappa": 1.0,
+        "percent_agreement": 1.0,
+        "kappa_undefined_reason": null,
+        "primary_unit": "conversation",
+        "ci_conversation": {
+          "level": 0.95,
+          "unit": "conversation",
+          "resamples": 2000,
+          "seed": 0,
+          "undefined_replicates": 0,
+          "undefined_fraction": 0.0,
+          "low": 1.0,
+          "high": 1.0,
+          "interpretable": true,
+          "reason": null
+        },
+        "ci_item": {
+          "level": 0.95,
+          "unit": "item",
+          "resamples": 2000,
+          "seed": 0,
+          "undefined_replicates": 0,
+          "undefined_fraction": 0.0,
+          "low": 1.0,
+          "high": 1.0,
+          "interpretable": true,
+          "reason": null
+        }
+      },
+      "per_category": {
+        "NO-OP": {
+          "kappa": 1.0,
+          "is_abstention_type": false,
+          "interpretable": true,
+          "reason": null,
+          "n_rater_a": 80,
+          "n_rater_b": 80,
+          "n_either": 80,
+          "n_both": 80,
+          "primary_unit": "conversation",
+          "ci_conversation": {
+            "level": 0.95,
+            "unit": "conversation",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 0,
+            "undefined_fraction": 0.0,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          },
+          "ci_item": {
+            "level": 0.95,
+            "unit": "item",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 0,
+            "undefined_fraction": 0.0,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          }
+        },
+        "VALUE": {
+          "kappa": 1.0,
+          "is_abstention_type": false,
+          "interpretable": false,
+          "reason": "n_either 8 < 10; reported for completeness, not interpretable",
+          "n_rater_a": 8,
+          "n_rater_b": 8,
+          "n_either": 8,
+          "n_both": 8,
+          "primary_unit": "conversation",
+          "ci_conversation": {
+            "level": 0.95,
+            "unit": "conversation",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 8,
+            "undefined_fraction": 0.004,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          },
+          "ci_item": {
+            "level": 0.95,
+            "unit": "item",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 0,
+            "undefined_fraction": 0.0,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          }
+        },
+        "ABSTAIN:insufficient": {
+          "kappa": 1.0,
+          "is_abstention_type": true,
+          "interpretable": false,
+          "reason": "n_either 2 < 10; reported for completeness, not interpretable",
+          "n_rater_a": 2,
+          "n_rater_b": 2,
+          "n_either": 2,
+          "n_both": 2,
+          "primary_unit": "conversation",
+          "ci_conversation": {
+            "level": 0.95,
+            "unit": "conversation",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 220,
+            "undefined_fraction": 0.11,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": false,
+            "reason": "220/2000 resamples had an undefined statistic (> 5%); the interval covers only the rest"
+          },
+          "ci_item": {
+            "level": 0.95,
+            "unit": "item",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 275,
+            "undefined_fraction": 0.1375,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": false,
+            "reason": "275/2000 resamples had an undefined statistic (> 5%); the interval covers only the rest"
+          }
+        },
+        "ABSTAIN:ambiguous": {
+          "kappa": null,
+          "is_abstention_type": true,
+          "interpretable": false,
+          "reason": "n_either 0 < 10; reported for completeness, not interpretable",
+          "n_rater_a": 0,
+          "n_rater_b": 0,
+          "n_either": 0,
+          "n_both": 0,
+          "primary_unit": "conversation",
+          "ci_conversation": {
+            "level": 0.95,
+            "unit": "conversation",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 2000,
+            "undefined_fraction": 1.0,
+            "low": null,
+            "high": null,
+            "interpretable": false,
+            "reason": "every resample gave an undefined statistic"
+          },
+          "ci_item": {
+            "level": 0.95,
+            "unit": "item",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 2000,
+            "undefined_fraction": 1.0,
+            "low": null,
+            "high": null,
+            "interpretable": false,
+            "reason": "every resample gave an undefined statistic"
+          }
+        },
+        "ABSTAIN:conflicting": {
+          "kappa": null,
+          "is_abstention_type": true,
+          "interpretable": false,
+          "reason": "n_either 0 < 10; reported for completeness, not interpretable",
+          "n_rater_a": 0,
+          "n_rater_b": 0,
+          "n_either": 0,
+          "n_both": 0,
+          "primary_unit": "conversation",
+          "ci_conversation": {
+            "level": 0.95,
+            "unit": "conversation",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 2000,
+            "undefined_fraction": 1.0,
+            "low": null,
+            "high": null,
+            "interpretable": false,
+            "reason": "every resample gave an undefined statistic"
+          },
+          "ci_item": {
+            "level": 0.95,
+            "unit": "item",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 2000,
+            "undefined_fraction": 1.0,
+            "low": null,
+            "high": null,
+            "interpretable": false,
+            "reason": "every resample gave an undefined statistic"
+          }
+        },
+        "HEDGED": {
+          "kappa": null,
+          "is_abstention_type": false,
+          "interpretable": false,
+          "reason": "n_either 0 < 10; reported for completeness, not interpretable",
+          "n_rater_a": 0,
+          "n_rater_b": 0,
+          "n_either": 0,
+          "n_both": 0,
+          "primary_unit": "conversation",
+          "ci_conversation": {
+            "level": 0.95,
+            "unit": "conversation",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 2000,
+            "undefined_fraction": 1.0,
+            "low": null,
+            "high": null,
+            "interpretable": false,
+            "reason": "every resample gave an undefined statistic"
+          },
+          "ci_item": {
+            "level": 0.95,
+            "unit": "item",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 2000,
+            "undefined_fraction": 1.0,
+            "low": null,
+            "high": null,
+            "interpretable": false,
+            "reason": "every resample gave an undefined statistic"
+          }
+        }
+      },
+      "confusion_matrix": {
+        "labels": [
+          "NO-OP",
+          "VALUE",
+          "ABSTAIN:insufficient",
+          "ABSTAIN:ambiguous",
+          "ABSTAIN:conflicting",
+          "HEDGED"
+        ],
+        "rows_are": "sheet_a",
+        "columns_are": "sheet_b",
+        "counts": [
+          [
+            80,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            8,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            2,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ]
+      },
+      "label_use": {
+        "sheet_a": {
+          "NO-OP": 80,
+          "VALUE": 8,
+          "ABSTAIN:insufficient": 2
+        },
+        "sheet_b": {
+          "NO-OP": 80,
+          "VALUE": 8,
+          "ABSTAIN:insufficient": 2
+        }
+      },
+      "value_agreement": {
+        "n_both_value": 8,
+        "primary_normalization": "strict",
+        "strict": {
+          "agreement": 1.0,
+          "n": 8,
+          "primary_unit": "conversation",
+          "ci_conversation": {
+            "level": 0.95,
+            "unit": "conversation",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 0,
+            "undefined_fraction": 0.0,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          },
+          "ci_item": {
+            "level": 0.95,
+            "unit": "item",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 0,
+            "undefined_fraction": 0.0,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          }
+        },
+        "number_aware": {
+          "agreement": 1.0,
+          "n": 8,
+          "primary_unit": "conversation",
+          "ci_conversation": {
+            "level": 0.95,
+            "unit": "conversation",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 0,
+            "undefined_fraction": 0.0,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          },
+          "ci_item": {
+            "level": 0.95,
+            "unit": "item",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 0,
+            "undefined_fraction": 0.0,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          }
+        }
+      },
+      "n_items_compared": 90,
+      "n_conversations": 10,
+      "verdict": {
+        "subset": "real",
+        "reads_as": "bears on ADR-003",
+        "bears_on_adr_003": true,
+        "threshold": 0.6,
+        "threshold_source": "EXP-000 Metric section",
+        "threshold_tolerance": 1e-09,
+        "applies_to": [
+          "ABSTAIN:insufficient",
+          "ABSTAIN:ambiguous",
+          "ABSTAIN:conflicting"
+        ],
+        "per_abstention_type": {
+          "ABSTAIN:insufficient": {
+            "verdict": "NOT INTERPRETABLE",
+            "kappa": 1.0,
+            "n_either": 2,
+            "reason": "n_either 2 < 10; reported for completeness, not interpretable"
+          },
+          "ABSTAIN:ambiguous": {
+            "verdict": "NOT INTERPRETABLE",
+            "kappa": null,
+            "n_either": 0,
+            "reason": "n_either 0 < 10; reported for completeness, not interpretable"
+          },
+          "ABSTAIN:conflicting": {
+            "verdict": "NOT INTERPRETABLE",
+            "kappa": null,
+            "n_either": 0,
+            "reason": "n_either 0 < 10; reported for completeness, not interpretable"
+          }
+        },
+        "hypothesis": "cannot be evaluated",
+        "because": "ABSTAIN:insufficient, ABSTAIN:ambiguous, ABSTAIN:conflicting rest(s) on fewer than 10 items",
+        "note": "A verdict against a pre-registered threshold is not a Result. Result, Interpretation and Decision in the experiment record are a human's to fill."
+      }
+    },
+    "synthetic": {
+      "overall": {
+        "kappa": 1.0,
+        "percent_agreement": 1.0,
+        "kappa_undefined_reason": null,
+        "primary_unit": "conversation",
+        "ci_conversation": {
+          "level": 0.95,
+          "unit": "conversation",
+          "resamples": 2000,
+          "seed": 0,
+          "undefined_replicates": 0,
+          "undefined_fraction": 0.0,
+          "low": 1.0,
+          "high": 1.0,
+          "interpretable": true,
+          "reason": null
+        },
+        "ci_item": {
+          "level": 0.95,
+          "unit": "item",
+          "resamples": 2000,
+          "seed": 0,
+          "undefined_replicates": 0,
+          "undefined_fraction": 0.0,
+          "low": 1.0,
+          "high": 1.0,
+          "interpretable": true,
+          "reason": null
+        }
+      },
+      "per_category": {
+        "NO-OP": {
+          "kappa": 1.0,
+          "is_abstention_type": false,
+          "interpretable": true,
+          "reason": null,
+          "n_rater_a": 61,
+          "n_rater_b": 61,
+          "n_either": 61,
+          "n_both": 61,
+          "primary_unit": "conversation",
+          "ci_conversation": {
+            "level": 0.95,
+            "unit": "conversation",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 0,
+            "undefined_fraction": 0.0,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          },
+          "ci_item": {
+            "level": 0.95,
+            "unit": "item",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 0,
+            "undefined_fraction": 0.0,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          }
+        },
+        "VALUE": {
+          "kappa": 1.0,
+          "is_abstention_type": false,
+          "interpretable": true,
+          "reason": null,
+          "n_rater_a": 11,
+          "n_rater_b": 11,
+          "n_either": 11,
+          "n_both": 11,
+          "primary_unit": "conversation",
+          "ci_conversation": {
+            "level": 0.95,
+            "unit": "conversation",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 0,
+            "undefined_fraction": 0.0,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          },
+          "ci_item": {
+            "level": 0.95,
+            "unit": "item",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 0,
+            "undefined_fraction": 0.0,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          }
+        },
+        "ABSTAIN:insufficient": {
+          "kappa": 1.0,
+          "is_abstention_type": true,
+          "interpretable": false,
+          "reason": "n_either 1 < 10; reported for completeness, not interpretable",
+          "n_rater_a": 1,
+          "n_rater_b": 1,
+          "n_either": 1,
+          "n_both": 1,
+          "primary_unit": "conversation",
+          "ci_conversation": {
+            "level": 0.95,
+            "unit": "conversation",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 674,
+            "undefined_fraction": 0.337,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": false,
+            "reason": "674/2000 resamples had an undefined statistic (> 5%); the interval covers only the rest"
+          },
+          "ci_item": {
+            "level": 0.95,
+            "unit": "item",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 716,
+            "undefined_fraction": 0.358,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": false,
+            "reason": "716/2000 resamples had an undefined statistic (> 5%); the interval covers only the rest"
+          }
+        },
+        "ABSTAIN:ambiguous": {
+          "kappa": 1.0,
+          "is_abstention_type": true,
+          "interpretable": false,
+          "reason": "n_either 2 < 10; reported for completeness, not interpretable",
+          "n_rater_a": 2,
+          "n_rater_b": 2,
+          "n_either": 2,
+          "n_both": 2,
+          "primary_unit": "conversation",
+          "ci_conversation": {
+            "level": 0.95,
+            "unit": "conversation",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 227,
+            "undefined_fraction": 0.1135,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": false,
+            "reason": "227/2000 resamples had an undefined statistic (> 5%); the interval covers only the rest"
+          },
+          "ci_item": {
+            "level": 0.95,
+            "unit": "item",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 268,
+            "undefined_fraction": 0.134,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": false,
+            "reason": "268/2000 resamples had an undefined statistic (> 5%); the interval covers only the rest"
+          }
+        },
+        "ABSTAIN:conflicting": {
+          "kappa": null,
+          "is_abstention_type": true,
+          "interpretable": false,
+          "reason": "n_either 0 < 10; reported for completeness, not interpretable",
+          "n_rater_a": 0,
+          "n_rater_b": 0,
+          "n_either": 0,
+          "n_both": 0,
+          "primary_unit": "conversation",
+          "ci_conversation": {
+            "level": 0.95,
+            "unit": "conversation",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 2000,
+            "undefined_fraction": 1.0,
+            "low": null,
+            "high": null,
+            "interpretable": false,
+            "reason": "every resample gave an undefined statistic"
+          },
+          "ci_item": {
+            "level": 0.95,
+            "unit": "item",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 2000,
+            "undefined_fraction": 1.0,
+            "low": null,
+            "high": null,
+            "interpretable": false,
+            "reason": "every resample gave an undefined statistic"
+          }
+        },
+        "HEDGED": {
+          "kappa": 1.0,
+          "is_abstention_type": false,
+          "interpretable": false,
+          "reason": "n_either 5 < 10; reported for completeness, not interpretable",
+          "n_rater_a": 5,
+          "n_rater_b": 5,
+          "n_either": 5,
+          "n_both": 5,
+          "primary_unit": "conversation",
+          "ci_conversation": {
+            "level": 0.95,
+            "unit": "conversation",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 2,
+            "undefined_fraction": 0.001,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          },
+          "ci_item": {
+            "level": 0.95,
+            "unit": "item",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 8,
+            "undefined_fraction": 0.004,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          }
+        }
+      },
+      "confusion_matrix": {
+        "labels": [
+          "NO-OP",
+          "VALUE",
+          "ABSTAIN:insufficient",
+          "ABSTAIN:ambiguous",
+          "ABSTAIN:conflicting",
+          "HEDGED"
+        ],
+        "rows_are": "sheet_a",
+        "columns_are": "sheet_b",
+        "counts": [
+          [
+            61,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            11,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            2,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            5
+          ]
+        ]
+      },
+      "label_use": {
+        "sheet_a": {
+          "HEDGED": 5,
+          "NO-OP": 61,
+          "VALUE": 11,
+          "ABSTAIN:insufficient": 1,
+          "ABSTAIN:ambiguous": 2
+        },
+        "sheet_b": {
+          "HEDGED": 5,
+          "NO-OP": 61,
+          "VALUE": 11,
+          "ABSTAIN:insufficient": 1,
+          "ABSTAIN:ambiguous": 2
+        }
+      },
+      "value_agreement": {
+        "n_both_value": 11,
+        "primary_normalization": "strict",
+        "strict": {
+          "agreement": 1.0,
+          "n": 11,
+          "primary_unit": "conversation",
+          "ci_conversation": {
+            "level": 0.95,
+            "unit": "conversation",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 0,
+            "undefined_fraction": 0.0,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          },
+          "ci_item": {
+            "level": 0.95,
+            "unit": "item",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 0,
+            "undefined_fraction": 0.0,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          }
+        },
+        "number_aware": {
+          "agreement": 1.0,
+          "n": 11,
+          "primary_unit": "conversation",
+          "ci_conversation": {
+            "level": 0.95,
+            "unit": "conversation",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 0,
+            "undefined_fraction": 0.0,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          },
+          "ci_item": {
+            "level": 0.95,
+            "unit": "item",
+            "resamples": 2000,
+            "seed": 0,
+            "undefined_replicates": 0,
+            "undefined_fraction": 0.0,
+            "low": 1.0,
+            "high": 1.0,
+            "interpretable": true,
+            "reason": null
+          }
+        }
+      },
+      "n_items_compared": 80,
+      "n_conversations": 12,
+      "verdict": {
+        "subset": "synthetic",
+        "reads_as": "guideline usability, not evidence for ADR-003",
+        "bears_on_adr_003": false,
+        "threshold": 0.6,
+        "threshold_source": "EXP-000 Metric section",
+        "threshold_tolerance": 1e-09,
+        "applies_to": [
+          "ABSTAIN:insufficient",
+          "ABSTAIN:ambiguous",
+          "ABSTAIN:conflicting"
+        ],
+        "per_abstention_type": {
+          "ABSTAIN:insufficient": {
+            "verdict": "NOT INTERPRETABLE",
+            "kappa": 1.0,
+            "n_either": 1,
+            "reason": "n_either 1 < 10; reported for completeness, not interpretable"
+          },
+          "ABSTAIN:ambiguous": {
+            "verdict": "NOT INTERPRETABLE",
+            "kappa": 1.0,
+            "n_either": 2,
+            "reason": "n_either 2 < 10; reported for completeness, not interpretable"
+          },
+          "ABSTAIN:conflicting": {
+            "verdict": "NOT INTERPRETABLE",
+            "kappa": null,
+            "n_either": 0,
+            "reason": "n_either 0 < 10; reported for completeness, not interpretable"
+          }
+        },
+        "hypothesis": "cannot be evaluated",
+        "because": "ABSTAIN:insufficient, ABSTAIN:ambiguous, ABSTAIN:conflicting rest(s) on fewer than 10 items",
+        "note": "A verdict against a pre-registered threshold is not a Result. Result, Interpretation and Decision in the experiment record are a human's to fill."
+      }
+    }
+  },
+  "items_by_source": {
+    "real": 90,
+    "synthetic": 80
+  },
+  "adr_003_subset": "real",
+  "notes": [
+    "No model is involved, so model_name, model_revision and prompt_template_hash are null. The convention's fields are kept rather than omitted so a reader can see they were considered.",
+    "The >=3 seeds convention does not apply: nothing is trained. The bootstrap is seeded and the seed is recorded.",
+    "ADR-003 (typed abstention) was Proposed when these numbers were pre-registered. EXP-000 is the experiment that tests it.",
+    "HEDGED records the tentative value in the value column (\"might stretch to 45\" -> label HEDGED, value 45)."
+  ]
+}
