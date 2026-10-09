@@ -13,8 +13,10 @@ full state or history.
 **Accepted on Kapardhi's instruction, 2026-10-09, resolving the ledger half of D4.**
 Transcribed from Kapardhi, 2026-10-09, verbatim: "D4: change ADR-002's status to Accepted.
 ADR-003 stays Proposed until label feasibility is measured on constructed data." The Decision
-paragraph above is unchanged; no assumption, failure mode or consequence below was tested by
-this acceptance.
+paragraph above is unchanged.
+*Flagged by Claude Code, not part of his instruction:* no assumption, failure mode or consequence
+below was tested by this acceptance; the ledger is accepted as a design decision, and the
+gold-vs-predicted prior-state gap named under Evidence is still untested.
 
 ## Why
 - Keeps model output and derived state distinct.

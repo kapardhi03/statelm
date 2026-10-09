@@ -18,18 +18,14 @@ Detail lives in the linked files, not here.
 
 ## Decisions pending (Kapardhi)
 
-None. All four are resolved and were moved here on his instruction; the 2026-10-09 decisions are
-transcribed verbatim in EXP-000's Change log.
-
-- D1, 2026-10-09 — ≤4B primary, size curve at ~1B / ~4B / ~8B, as proposed.
-- D2, 2026-10-09 — benchmark first, model second (ADR-001 → Accepted); the benchmark is built
-  from constructed conversations, real chats are at most a validation slice.
-- D4, 2026-10-09 — ADR-002 → Accepted; ADR-003 stays Proposed until label feasibility is
-  measured on constructed data.
-- D3, 2026-10-02 — conversations available; second annotator identified (Annotator B);
-  inter-annotator design. **"Second annotator identified (Annotator B)" no longer holds**
-  (Kapardhi, 2026-10-09): no human second annotator is available. Noted beside it rather than
-  deleted, on his instruction.
+None. D1, D2 and D4 were decided 2026-10-09, D3 on 2026-10-02; verbatim text in EXP-000's
+Change log. Only the D3 note here was instructed; the rest is Claude Code's record.
+**D1** ≤4B primary, size curve at ~1B / ~4B / ~8B, as proposed. **D2** benchmark first, model
+second; ADR-001 Accepted. **D4** ADR-002 Accepted; ADR-003 stays Proposed until label
+feasibility is measured on constructed data. **D3** conversations available; second annotator
+identified (Annotator B); inter-annotator design (left the pending list on his instruction,
+2026-10-02) — **that Annotator B clause no longer holds** (Kapardhi, 2026-10-09): no human
+second annotator is available. Noted beside it rather than deleted, on his instruction.
 
 ## ADRs
 
@@ -47,10 +43,10 @@ Nothing may be built on a Proposed ADR as if it were Accepted.
 
 | ID | Title | Status | Blocked by |
 |---|---|---|---|
-| EXP-000 | Label feasibility (abstention agreement) | Closed (no result) | closed 2026-10-09 |
+| EXP-000 | Label feasibility (abstention agreement) | Closed (no result) | — (no Annotator B) |
 | EXP-001 | Headroom probe (frontier vs small) | Planned | EXP-000 |
 | EXP-002 | Schema novelty audit on SGD / SGD-X | Done | nothing |
-| EXP-003 | Label feasibility, constructed conversations | Draft | his review; 2nd annotator |
+| EXP-003 | Label feasibility, constructed conversations | Planned | Annotator B (labelling only) |
 
 ## Tooling
 
