@@ -1,13 +1,20 @@
 # ADR-002: Temporal memory is a deterministic ledger outside the model
 
-Status: Proposed
+Status: Accepted
 Date: 2026-10-01
 Supersedes: none
+Status changed on Kapardhi's instruction, 2026-10-09 (was Proposed).
 
 ## Decision
 The model emits only turn-level operations. Current state and field history are computed by a
 deterministic `Apply(Z_{t-1}, ops)` over an append-only, versioned ledger. The model never outputs
 full state or history.
+
+**Accepted on Kapardhi's instruction, 2026-10-09, resolving the ledger half of D4.**
+Transcribed from Kapardhi, 2026-10-09, verbatim: "D4: change ADR-002's status to Accepted.
+ADR-003 stays Proposed until label feasibility is measured on constructed data." The Decision
+paragraph above is unchanged; no assumption, failure mode or consequence below was tested by
+this acceptance.
 
 ## Why
 - Keeps model output and derived state distinct.
