@@ -1,6 +1,6 @@
 # EXP-000: Label feasibility (abstention agreement)
 
-Status: Planned
+Status: Closed (no result)
 Owner: Kapardhi
 Created: 2026-10-01
 Decision informed: ADR-003 (keep, merge, or redefine abstention types)
@@ -374,6 +374,51 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
   be used as gold labels or as evidence of how many abstention items the corpus holds. The
   sheets are kept unaltered on Kapardhi's machine. No replacement sheet B will be created, so
   the inter-annotator design has no valid run, and Result stays empty.
+
+- 2026-10-09: **EXP-000 closed without a result, and the Stage 1 decisions resolved.**
+  Transcribed from Kapardhi, 2026-10-09, verbatim, all five items word for word as he gave them,
+  the numbering his:
+
+  > 1. EXP-000 is closed without a result. Run 20261009T115207Z-a4804a8 is void, no human
+  >    second annotator is available, and the census shows the real corpus cannot supply 10
+  >    items per abstention type in any case. Set EXP-000's status to "Closed (no result)" in
+  >    its record and in STATE.md. Result stays as it is.
+  > 2. D1 accepted as proposed: 4B or less primary, size curve at about 1B, 4B and 8B.
+  > 3. D2: benchmark first, model second. Change ADR-001's status to Accepted. The benchmark
+  >    is built from constructed conversations; real chats are at most a validation slice.
+  > 4. D4: change ADR-002's status to Accepted. ADR-003 stays Proposed until label feasibility
+  >    is measured on constructed data.
+  > 5. In STATE.md, D3's "second annotator identified (Annotator B)" no longer holds. Note
+  >    that beside it rather than deleting it.
+
+  **What was changed, and nowhere else.** This record's `Status` is now `Closed (no result)`;
+  Result, Interpretation and Decision are untouched and stay `(pending)`, per "Result stays as it
+  is". `STATE.md`: EXP-000's row reads `Closed (no result)`, ADR-001 and ADR-002 read `Accepted`,
+  ADR-003 still reads `Proposed`, and D1, D2 and D4 move to the resolved list beside D3 with the
+  note item 5 asks for. ADR-001 and ADR-002 carry `Status changed on Kapardhi's instruction,
+  2026-10-09 (was Proposed).` in the same form as ADR-004 and ADR-005, and his wording for each is
+  transcribed in the ADR. ADR-003's status was not touched; his reason for leaving it Proposed is
+  recorded in it. No code, no metric, no measurement changed.
+  **Figures behind item 1, for traceability only.** The clause about the census is his reading;
+  these are the numbers it refers to, so a later reader need not re-derive them. The real corpus
+  census (`runs/EXP-000/20261003T163331Z-b860436/census.json`, repeated in
+  `runs/EXP-000/20261005T191447Z-072dbbc/census.json`) reads 623 turns over 47 conversations, 135
+  eligible targets, 18 field mentions, `hedge` 0, `correction` 0, `code_mixed_cue_hits` 0; the
+  pre-registered floor is `MIN_CATEGORY_N = 10` items per category counted as `n_either`
+  (`experiments/EXP-000/thresholds.py`). A cue count is not a label, and the 0 is a fact about
+  enrichment rather than about what annotators would write, as the Risks entry in
+  `knowns-unknowns.md` already states. Whether those numbers settle the question is his to say
+  and item 1 says it.
+  *Flagged by Claude Code, not part of his instruction, three things a later reader will trip on:*
+  (i) D2 is now decided while his 2026-10-06 reading, quoted in this log and in
+  `knowns-unknowns.md`, says D2 "stays open until EXP-000 has labels"; EXP-000 closed with no
+  labels, so that condition was overtaken rather than met. His quote is left as given, with a
+  dated note beside it in `knowns-unknowns.md`.
+  (ii) `STATE.md`'s Experiments table still shows EXP-001 blocked by EXP-000, which can no longer
+  unblock it. Not changed here: what EXP-001 now waits on is a research decision.
+  (iii) `CLAUDE.md` says never to edit `STATE.md`'s "Decisions pending" section. Item 5 directs an
+  edit inside it and items 2-4 resolve three of its bullets, so it was edited on this
+  instruction, following the D3 precedent of 2026-10-02. Nothing else in that section was removed.
 
 ## Known limitations
 Accepted rather than fixed, and no action is asked for. The two bullets below are what Kapardhi

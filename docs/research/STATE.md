@@ -1,6 +1,6 @@
 # StateLM: Current Research State
 
-Last updated: 2026-10-02 · Stage 1 (problem definition) complete, awaiting decisions
+Last updated: 2026-10-09 · D1, D2 and D4 decided; EXP-000 closed without a result
 
 This file is the one-page snapshot every session reads first. Keep it under 60 lines.
 Detail lives in the linked files, not here.
@@ -9,7 +9,7 @@ Detail lives in the linked files, not here.
 
 | Stage | Status |
 |---|---|
-| 1. Problem, gap, contribution | Drafted, awaiting 3 decisions below |
+| 1. Problem, gap, contribution | Drafted; D1, D2 and D4 decided 2026-10-09 |
 | 2. Define X and Y (model contract) | Not started |
 | 3. Data model | Not started |
 | 4. Benchmark design | Not started |
@@ -18,19 +18,25 @@ Detail lives in the linked files, not here.
 
 ## Decisions pending (Kapardhi)
 
-- D1. "Small" bound: proposed ≤4B primary, size curve at ~1B / ~4B / ~8B
-- D2. Contribution ordering: proposed benchmark-first, model-second (ADR-001)
-- D4. Accept / modify / reject ADR-002 (ledger) and ADR-003 (typed abstention)
+None. All four are resolved and were moved here on his instruction; the 2026-10-09 decisions are
+transcribed verbatim in EXP-000's Change log.
 
-Resolved: D3, 2026-10-02 — conversations available; second annotator identified (Annotator B);
-inter-annotator design. (Removed from the list above on Kapardhi's instruction, 2026-10-02.)
+- D1, 2026-10-09 — ≤4B primary, size curve at ~1B / ~4B / ~8B, as proposed.
+- D2, 2026-10-09 — benchmark first, model second (ADR-001 → Accepted); the benchmark is built
+  from constructed conversations, real chats are at most a validation slice.
+- D4, 2026-10-09 — ADR-002 → Accepted; ADR-003 stays Proposed until label feasibility is
+  measured on constructed data.
+- D3, 2026-10-02 — conversations available; second annotator identified (Annotator B);
+  inter-annotator design. **"Second annotator identified (Annotator B)" no longer holds**
+  (Kapardhi, 2026-10-09): no human second annotator is available. Noted beside it rather than
+  deleted, on his instruction.
 
 ## ADRs
 
 | ID | Title | Status |
 |---|---|---|
-| ADR-001 | Interaction-scoped, benchmark-first claim | Proposed |
-| ADR-002 | Temporal memory is a deterministic ledger | Proposed |
+| ADR-001 | Interaction-scoped, benchmark-first claim | Accepted |
+| ADR-002 | Temporal memory is a deterministic ledger | Accepted |
 | ADR-003 | Typed abstention, distinct from NO-OP | Proposed |
 | ADR-004 | Novelty levels by construction, not thresholds | Accepted |
 | ADR-005 | Similarity as a calibrated continuous covariate | Accepted |
@@ -41,9 +47,10 @@ Nothing may be built on a Proposed ADR as if it were Accepted.
 
 | ID | Title | Status | Blocked by |
 |---|---|---|---|
-| EXP-000 | Label feasibility (abstention agreement) | Planned | no human Annotator B (run 20261009T115207Z-a4804a8 void) |
+| EXP-000 | Label feasibility (abstention agreement) | Closed (no result) | closed 2026-10-09 |
 | EXP-001 | Headroom probe (frontier vs small) | Planned | EXP-000 |
 | EXP-002 | Schema novelty audit on SGD / SGD-X | Done | nothing |
+| EXP-003 | Label feasibility, constructed conversations | Draft | his review; 2nd annotator |
 
 ## Tooling
 

@@ -1,13 +1,20 @@
 # ADR-001: Interaction-scoped, benchmark-first research claim
 
-Status: Proposed
+Status: Accepted
 Date: 2026-10-01
 Supersedes: none
+Status changed on Kapardhi's instruction, 2026-10-09 (was Proposed).
 
 ## Decision
 The research claim is the performance and calibration of schema-conditioned state-delta tracking
 under controlled schema novelty, with temporal revision and typed abstention, across model sizes.
 The benchmark is the primary expected contribution; the model is secondary.
+
+**Accepted on Kapardhi's instruction, 2026-10-09, resolving D2.** Transcribed from Kapardhi,
+2026-10-09, verbatim: "D2: benchmark first, model second. Change ADR-001's status to Accepted.
+The benchmark is built from constructed conversations; real chats are at most a validation
+slice." The last sentence is his and is recorded here as given; the Decision paragraph above is
+unchanged.
 
 ## Why
 Each capability alone is covered in prior work (`docs/research/literature.md`). Only their
