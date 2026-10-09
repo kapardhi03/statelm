@@ -58,8 +58,10 @@ change after a real run has been seen; if one must, the change and its reason ar
 | HEDGED | **Rule (a):** HEDGED records the tentative value in the value column ("might stretch to 45" -> label HEDGED, value 45). | `research-question.md` lists hedged statements as Unresolved. This fixes an operational rule so annotation can proceed; it does not resolve the question, and the note there says so. |
 | Threshold comparison | κ ≥ 0.6 with a 1e-9 tolerance. | A one-vs-rest table of (2, 1, 1, 14) has an exact κ of 3/5 but computes as 0.5999999999999996, so a bare comparison would report BELOW on a category that exactly meets the threshold. n = 18 is an ordinary size for a rare abstention type here. Added 2026-10-02, before any real run; a test pins the table and fails if the hazard ever disappears. |
 
-ADR-003 was **Proposed** when these were pre-registered, and D4 is pending. EXP-000 is the
-experiment that tests ADR-003, so every choice above is provisional on a taxonomy that may change.
+ADR-003 was **Proposed** when these were pre-registered, and D4 was pending at that time.
+D4 was decided on 2026-10-09 and ADR-003 is still Proposed, so these choices stay provisional on
+a taxonomy that may change; what changed is that EXP-000 is no longer the experiment that tests
+it. EXP-003 is, on constructed conversations.
 
 ### Change log
 - 2026-10-02: measurement choices above pre-registered by Kapardhi. No sheets labelled yet.
@@ -392,8 +394,9 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
   >    that beside it rather than deleting it.
 
   **What was changed, and nowhere else.** This record's `Status` is now `Closed (no result)`;
-  Result, Interpretation and Decision are untouched and stay `(pending)`, per "Result stays as it
-  is". `STATE.md`: EXP-000's row reads `Closed (no result)`, ADR-001 and ADR-002 read `Accepted`,
+  Result, Interpretation and Decision are untouched, per "Result stays as it is": Result still
+  reads `(pending)` with the void-run sentence the entry of earlier today put there, and
+  Interpretation and Decision still read `(pending)`. `STATE.md`: EXP-000's row reads `Closed (no result)`, ADR-001 and ADR-002 read `Accepted`,
   ADR-003 still reads `Proposed`, and D1, D2 and D4 move to the resolved list beside D3 with the
   note item 5 asks for. ADR-001 and ADR-002 carry `Status changed on Kapardhi's instruction,
   2026-10-09 (was Proposed).` in the same form as ADR-004 and ADR-005, and his wording for each is
@@ -402,8 +405,9 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
   **Figures behind item 1, for traceability only.** The clause about the census is his reading;
   these are the numbers it refers to, so a later reader need not re-derive them. The real corpus
   census (`runs/EXP-000/20261003T163331Z-b860436/census.json`, repeated in
-  `runs/EXP-000/20261005T191447Z-072dbbc/census.json`) reads 623 turns over 47 conversations, 135
-  eligible targets, 18 field mentions, `hedge` 0, `correction` 0, `code_mixed_cue_hits` 0; the
+  `runs/EXP-000/20261005T191447Z-072dbbc/census.json`) reads 623 turns, 135 eligible targets, 18
+  field mentions, `hedge` 0, `correction` 0, `code_mixed_cue_hits` 0, over the 47-file corpus
+  recorded in each run's `config.json` (`inputs.corpus.files`, one conversation per file); the
   pre-registered floor is `MIN_CATEGORY_N = 10` items per category counted as `n_either`
   (`experiments/EXP-000/thresholds.py`). A cue count is not a label, and the 0 is a fact about
   enrichment rather than about what annotators would write, as the Risks entry in
@@ -417,8 +421,33 @@ experiment that tests ADR-003, so every choice above is provisional on a taxonom
   (ii) `STATE.md`'s Experiments table still shows EXP-001 blocked by EXP-000, which can no longer
   unblock it. Not changed here: what EXP-001 now waits on is a research decision.
   (iii) `CLAUDE.md` says never to edit `STATE.md`'s "Decisions pending" section. Item 5 directs an
-  edit inside it and items 2-4 resolve three of its bullets, so it was edited on this
-  instruction, following the D3 precedent of 2026-10-02. Nothing else in that section was removed.
+  edit inside it and item 1 changes EXP-000's row, so the section was edited on this instruction,
+  following the D3 precedent of 2026-10-02. Moving D1, D2 and D4 into it as a resolved list is
+  Claude Code's record-keeping, not something he asked for; nothing in that section was deleted.
+  *Three more stale cross-references, found in the `research-reviewer` pass the same day and
+  listed here rather than changed, because each sits in a document that is Kapardhi's:*
+  (iv) `docs/research/research-question.md` still heads its size definition "(pending D1)" and
+  calls ≤4B "Proposed". D1 is decided and has no ADR, so that heading is now its only stale home.
+  (v) `EXP-000-annotation-guideline.md` says at line 8 that "D4 is still pending, and EXP-000 is
+  the experiment that tests it". Both halves are now false, and his answer of 2026-10-09 is that
+  the guideline carries over to EXP-003 unchanged, so it was not touched.
+  (vi) `EXP-001-headroom-probe.md` is blocked by "EXP-000 (abstention labels must be defined
+  first)", which EXP-000 can no longer supply. EXP-003 is what would supply it.
+
+- 2026-10-09: **`labels_reference.txt` corrected: the instrument contradicted the guideline.**
+  Fixed on Kapardhi's instruction, in his answer to EXP-003's Q4: "EXP-000's guideline carries
+  over unchanged. Fix `labels_reference.txt`: value is filled for VALUE and HEDGED, as the
+  guideline says."
+  `sample_items.write_label_reference` wrote "Fill 'value' only for VALUE", while section 2 of
+  `EXP-000-annotation-guideline.md` says "Fill `value` for VALUE and HEDGED" — HEDGED records the
+  tentative value, his decision of 2026-10-02. An annotator who followed the sheet's own reference
+  rather than the guideline would have left HEDGED's value empty, which is the one thing HEDGED
+  carries. The file now reads "Fill 'value' for VALUE and HEDGED. Leave it empty otherwise."
+  The guideline was not touched. `test_the_value_rule_matches_the_guideline` reads both files and
+  compares the label sets, so the two cannot drift apart again; it fails on the old string.
+  Scope: no sheet was ever labelled, so no label was collected under the wrong rule, and no
+  measurement changes. The instrument is EXP-000's but carries over to EXP-003 with the guideline,
+  which is why the fix lands now rather than with the closed experiment's other code.
 
 ## Known limitations
 Accepted rather than fixed, and no action is asked for. The two bullets below are what Kapardhi

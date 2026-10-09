@@ -291,6 +291,35 @@ class TestLabelReference:
             assert label in body
         assert "not the annotation guideline" in body
 
+    def test_the_value_rule_matches_the_guideline(self, workspace):
+        """The instrument must not contradict the document it accompanies.
+
+        It did: it said "Fill 'value' only for VALUE" while the guideline says
+        "Fill `value` for VALUE and HEDGED". An annotator following the sheet's own
+        reference would have left HEDGED's tentative value out, which is the one thing
+        HEDGED is for. Fixed on Kapardhi's instruction, 2026-10-09; this test reads both
+        files so the two cannot drift apart again.
+        """
+        source, fields, out = workspace
+        run(source, out, fields)
+        body = (out / "labels_reference.txt").read_text(encoding="utf-8")
+
+        guideline = (
+            Path(__file__).resolve().parents[3]
+            / "docs/research/experiments/EXP-000-annotation-guideline.md"
+        )
+        assert guideline.is_file(), guideline
+
+        def labels_taking_a_value(text, quote):
+            match = re.search(rf"Fill {quote}value{quote} for ([^.]+)\.", text)
+            assert match, f"no value rule found in {text[:80]!r}"
+            return {w for w in re.split(r"[,\s]+", match.group(1)) if w.isupper()}
+
+        from_guideline = labels_taking_a_value(guideline.read_text(encoding="utf-8"), "`")
+        from_instrument = labels_taking_a_value(body, "'")
+        assert from_guideline == {"VALUE", "HEDGED"}, from_guideline
+        assert from_instrument == from_guideline
+
     def test_no_label_leaks_into_the_sheet(self, workspace):
         source, fields, out = workspace
         run(source, out, fields)

@@ -82,11 +82,13 @@ or a literature row as evidence.
   are `media_placeholder_kinds.voice` and `eligible_targets`, and 47 is
   `inputs.corpus.files` in `config.json`, one conversation per file. "About 18%" is 29 of 164,
   voice as a share of substantive text plus voice; 29 of 135 alone is 21.5%.
-  *Added 2026-10-09, his quote left as given:* D2 is now decided (benchmark first, model second;
-  ADR-001 Accepted) and EXP-000 is closed without a result, so "stays open until EXP-000 has
-  labels" was overtaken rather than met. Kapardhi, 2026-10-09; transcribed verbatim in EXP-000's
-  Change log. The three explanations above are still open, and listening to the 29 notes is still
-  the only one of them testable directly.
+  *Added by Claude Code, 2026-10-09, not part of any instruction; his quote above left as given:*
+  D2 is now decided (benchmark first, model second; ADR-001 Accepted) and EXP-000 is closed
+  without a result, so the condition "stays open until EXP-000 has labels" was overtaken rather
+  than met. "Overtaken rather than met" is Claude Code's reading of the sequence, not his wording;
+  his 2026-10-09 decisions are transcribed verbatim in EXP-000's Change log. The three
+  explanations above are still open, and listening to the 29 notes is still the only one of them
+  testable directly.
   (2) **Phrasing the cue lists cannot see.** Distinct from the ruled-out (b) below, and the
   distinction matters: (b) was that the lists were in the wrong *language*, which adding
   romanized forms tested and refuted. This is that the phenomenon is expressed in ways no word
@@ -147,10 +149,13 @@ or a literature row as evidence.
   constructed conversations and real chats at most a validation slice (ADR-001 Accepted); D4
   accepts ADR-002 and leaves ADR-003 Proposed "until label feasibility is measured on constructed
   data". EXP-000 is closed without a result, so this risk was never resolved by a measurement on
-  this deployment's text; it was routed around by moving label feasibility to constructed
-  conversations (EXP-003, draft). The risk statement above is left as written because it still
-  describes this corpus, and the paragraph above's closing note on `STATE.md`'s Decisions pending
-  no longer holds: that section was edited on Kapardhi's instruction of 2026-10-09.
+  this deployment's text; label feasibility moves to constructed conversations (EXP-003).
+  *Claude Code's characterisation, not his:* that is a way around the risk rather than a
+  resolution of it, since nothing was measured on this text. The risk statement above is left as
+  written because it still describes this corpus. The paragraph above's closing note still holds —
+  the risk is recorded here and not in `STATE.md`'s Decisions pending, which is Kapardhi's to
+  edit — with one exception on the record: that section was edited once, on his instruction of
+  2026-10-09.
 - Solo annotation: inter-annotator agreement impossible alone
 - Synthetic-data circularity: same frontier model as generator, baseline, and judge
 - No real conversations for the test set

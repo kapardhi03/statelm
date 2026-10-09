@@ -606,7 +606,13 @@ def write_label_reference(root: Path) -> Path:
         "========================\n\n"
         "Use exactly one of these in the 'label' column:\n\n"
         + "".join(f"  {label}\n" for label in LABEL_VOCABULARY)
-        + "\nFill 'value' only for VALUE. Use 'notes' for anything you want to flag.\n\n"
+        # The value rule is the guideline's, not this file's: the guideline (section 2) says
+        # "Fill `value` for VALUE and HEDGED", because HEDGED records the tentative value
+        # (Kapardhi's decision, 2026-10-02). This instrument said "only for VALUE" and so
+        # contradicted the document it accompanies. Fixed on Kapardhi's instruction, 2026-10-09.
+        # test_the_value_rule_matches_the_guideline keeps the two in step.
+        + "\nFill 'value' for VALUE and HEDGED. Leave it empty otherwise. Use 'notes' for\n"
+          "anything you want to flag.\n\n"
           "This file is the vocabulary, not the annotation guideline. The guideline is written\n"
           "and approved by the researcher; label nothing until you have it.\n"
     )
