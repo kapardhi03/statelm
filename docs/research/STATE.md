@@ -41,7 +41,7 @@ Nothing may be built on a Proposed ADR as if it were Accepted.
 
 | ID | Title | Status | Blocked by |
 |---|---|---|---|
-| EXP-000 | Label feasibility (abstention agreement) | Planned | nothing |
+| EXP-000 | Label feasibility (abstention agreement) | Planned | no human Annotator B (run 20261009T115207Z-a4804a8 void) |
 | EXP-001 | Headroom probe (frontier vs small) | Planned | EXP-000 |
 | EXP-002 | Schema novelty audit on SGD / SGD-X | Done | nothing |
 
