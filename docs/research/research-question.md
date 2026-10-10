@@ -43,28 +43,43 @@ If none hold, the honest finding is "difficulty is additive": a benchmark paper,
 ## Operational definitions
 
 ### "Small, self-hostable" (D1 decided 2026-10-09; primary size changed 2026-10-10)
-**Primary: ~9B, `Qwen/Qwen3.5-9B`.** Size curve at ~4B / ~9B. Runs quantized on one consumer GPU
-(~5–6 GB at 4-bit), so the self-hostable half of the definition is unaffected.
+**Primary: ~9B, `Qwen/Qwen3.5-9B`.** Size curve at ~1B / ~4B / ~8B, as decided.
+Reason: FnCTOD and LDST already cover 7–13B.
 
-**Changed on Kapardhi's instruction, 2026-10-10.** Previously: "≤4B parameters, runs quantized on
-one consumer GPU. Size curve at ~1B / ~4B / ~8B", decided as D1 on 2026-10-09. Transcribed from
-Kapardhi, 2026-10-10, verbatim: "9B becomes the new primary".
+**Primary size changed on Kapardhi's instruction, 2026-10-10.** Transcribed from Kapardhi,
+2026-10-10, verbatim: "9B becomes the new primary". Previously: "Proposed: ≤4B parameters, runs
+quantized on one consumer GPU. Size curve at ~1B / ~4B / ~8B. Reason: FnCTOD and LDST already
+cover 7–13B", decided as D1 on 2026-10-09.
 
-Reason the earlier bound gave for ≤4B, left as written because it is still a true statement about
-the literature: FnCTOD and LDST already cover 7–13B. The ~1B point of the old curve is dropped
-because no ~1B model is available on Tinker (Qwen3 0.6B / 1.7B and all Llama models retired
-2026-06-12); running it would need separate infrastructure.
+**His instruction named the primary size and nothing else, so nothing else here has been
+changed.** The size curve, the "runs quantized on one consumer GPU" clause and the Reason sentence
+stand exactly as D1 decided them. A first version of this edit, in commit `5ed50fb`, also
+rewrote the curve to "~4B / ~9B" and gave a reason for dropping the ~1B point; that went beyond
+his instruction and beyond what Claude Code may change, and it is reverted here.
+*Recorded by Claude Code, 2026-10-10, after a `research-reviewer` pass caught it.*
 
-*Flagged by Claude Code, not part of his instruction, and two things:*
-1. A 9B primary sits inside the 7–13B band the reason above names as covered, and `literature.md`
-   lists "small open models can do DST" among the explicit non-contributions. So a contribution
-   resting on model size is not available at the primary size. The ~4B curve point is what leaves
-   the size axis of the claim somewhere to stand. Detail in
-   `plan-2026-10-10-modelling-track.md` §6.
-2. The primary question at the top of this file still reads "can a **≤4B-parameter** model…",
-   which now disagrees with this definition. That sentence is the research question itself and has
-   not been changed, because his instruction named the primary model size and not the question.
-   Raised for him to settle rather than resolved here.
+*Flagged by Claude Code, not part of his instruction. Five consequences, none of them resolved
+here, all of them his:*
+1. **A 9B primary contradicts a `literature.md` row.** Line 11, the FnCTOD row, has as its
+   consequence column: "Small-ish models doing DST is not novel. **Our size range must go below
+   7B**". `literature.md` line 3 is the rule "no claim of novelty may contradict a row below". A
+   ~9B primary contradicts that row, and the row is left unannotated because `literature.md` is
+   his. So a contribution resting on model size is not available at the primary size.
+2. **The primary question at the top of this file** still reads "can a **≤4B-parameter** model…",
+   and now disagrees with the primary size.
+3. **Contribution 3 below** still reads "open ≤4B model and recipe" (line 103).
+4. **`knowns-unknowns.md`** still asks "Where on 1B / 4B / 8B does the joint task collapse?", and
+   **`STATE.md`** still records D1 as "≤4B primary, size curve at ~1B / ~4B / ~8B, as proposed"
+   with "Last updated: 2026-10-09". `STATE.md`'s "Decisions pending" section is his to edit and
+   has not been touched.
+5. **H-C** is "a measurable size threshold below which the joint task collapses". The decided
+   curve has three points and keeps one below the 7B band; running fewer than three, or dropping
+   the ~1B point, would leave no point below that band and no way to locate a threshold. No ~1B
+   model is currently offered by Tinker (per its published `models.json`, fetched 2026-10-10;
+   Qwen3 0.6B / 1.7B and all Llama models retired 2026-06-12), so that point needs separate
+   infrastructure. That is a constraint on how the curve gets run, not a change to it.
+
+Detail and cost figures in `plan-2026-10-10-modelling-track.md` §6.
 
 ### "Unseen schema": novelty ladder
 Report lexical overlap and embedding similarity to the nearest training field for every test item.
