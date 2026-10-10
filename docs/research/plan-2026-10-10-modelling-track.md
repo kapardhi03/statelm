@@ -16,6 +16,28 @@ Date: 2026-10-10 · Author: Claude Code · **Status: proposal. Nothing here is a
 
 ---
 
+## 0. Kapardhi's answers, 2026-10-10
+
+Transcribed verbatim, as he gave them, in answer to the four questions this plan carried when it
+was first pushed. They are now his, and the sections below are amended to match. The remaining
+questions in §9 are unanswered.
+
+> **Privacy (Q2):** "client. consent is taken and can be used also i g wehave >400 examples"
+>
+> **The labelled items (Q3):** "Freeze all 100 as evaluation"
+>
+> **Abstention (Q4):** "Recruit any second annotator"
+>
+> **Model size (Q5):** "9B becomes the new primary"
+
+Four consequences, each recorded where it bites: §3.1 (the privacy rule now needs amending, and
+one question about the scope of that consent stays open), §3.2 (the corpus is larger than 100, so
+the split arithmetic is redone), §3.3 (recruiting unblocks EXP-003 but not today, so the interim
+label space is an open question), and §6 (9B primary moves D1, and collides with the stated reason
+D1 gave for ≤4B).
+
+---
+
 ## 1. The seven asks, restated
 
 | # | His words (condensed) | Where it lands below |
@@ -73,15 +95,40 @@ org-scoped: training data produces checkpoints and runs owned by a *project*, a 
 `project_id` lands in the **Default project** which carries an org-wide read grant, and deleted
 checkpoints may be restorable from backups if the org has them enabled.
 
-So, before step 2:
+**Resolved by Kapardhi, 2026-10-10 (§0):** the text is client text, consent has been obtained,
+and it may be used. Hosted training is therefore not blocked on his instruction.
 
-| If the 100 items are… | Then |
-|---|---|
-| derived from the ARTHRYX corpus (real client chats) | **The plan as described is blocked by our own rule.** Options: (a) he lifts or narrows the rule, in writing, for a named provider and a named data slice; (b) we train only on constructed conversations and keep real text for a local-only validation slice, which is what D2 already says; (c) we self-host (RunPod or his own GPU) and never use a hosted API. |
-| constructed / invented text (no client content) | No conflict. Proceed, and record the provenance of every item as the splits rule requires. |
+Three things follow, and the third is a question rather than a consequence.
 
-If we do use Tinker: create a **named project** and pass `project_id` explicitly rather than
-letting sessions land in Default, and set a TTL on every checkpoint.
+**(a) `.claude/rules/data-privacy.md` no longer describes practice, so it has to be amended.**
+It currently reads "never requested, read, committed or uploaded, scrubbed or not", with no
+consent carve-out. Leaving it unamended means the repository holds a rule that the work breaks,
+which is the failure mode the rule exists to prevent. Proposed amendment, **his to approve, not
+Claude Code's to make** (it is a governance file):
+
+> Client conversation text may be **uploaded to a named training or inference provider** where
+> consent covering that use has been obtained, recorded on Kapardhi's instruction of 2026-10-10.
+> The provider must be named in the experiment record and in every run config that sends text to
+> it. Everything else in this file stands unchanged: the text is still never committed to this
+> repository, `data/raw/` and `data/scrubbed/` stay denied to Claude Code's `Read` and `Edit`, and
+> only aggregates go into `runs/`.
+
+**(b) What does not change, and costs nothing to keep.** The `deny` entries in
+`.claude/settings.json` stay as they are, and every script that reads raw or scrubbed text keeps
+running on his machine with only aggregates returned. Consent to use the data for the product is
+not a reason for Claude Code to read it, and keeping that boundary keeps the provenance record
+clean at no cost to the plan.
+
+**(c) Open, and it is not a technical question — Q9 in §9.** Consent to use conversations for a
+service is commonly not the same as consent to upload them to a third-party model-training API
+that retains them durably and in which deleted checkpoints may be restorable from backups. Whether
+the consent on file covers *that* is worth checking against its actual wording before the first
+upload, because it is not recoverable afterwards. *Flagged by Claude Code, not his instruction:*
+I am proceeding on his answer, and recording the question rather than resolving it myself.
+
+**Tinker hygiene, whichever way (c) lands:** create a **named project** and pass `project_id`
+explicitly rather than letting sessions land in the Default project, which carries an org-wide
+read grant; set a TTL on every checkpoint; and name the provider in each run config.
 
 ### 3.2 100 items is about one test set, and it is currently being spent on three
 
@@ -111,13 +158,43 @@ Read the n=20 column. A 15-point true improvement would be detected **one time i
 split carved out of 100 items cannot answer "did the fine-tune change the behaviour", which is the
 question he said the test set exists to answer.
 
-**Proposed, his to accept:** stop treating the 100 as a train/dev/test set.
+**Settled by Kapardhi, 2026-10-10 (§0): "Freeze all 100 as evaluation."** And in the same answer:
+**"we have >400 examples"**, which is the first time a corpus size above 100 appears anywhere in
+this project's records. That changes the arithmetic from "we cannot measure anything" to "we can
+measure a 10-to-15-point effect", so the split below is a real design rather than a damage limit.
 
-- Freeze all 100 as **evaluation data** (dev + test), split by schema as the splits rule requires.
-- Target **≥150 test items** before any superiority claim is made, and ~100 dev.
-- Build training data separately (step 4), which is also what D2's "benchmark first" ordering wants.
-- A fine-tune on ~70 items is a **smoke test of the pipeline**, which is worth running for that
-  purpose and worth nothing as a comparison. If we run it, the record says so in advance.
+**Proposed split for ~400 labelled items, his to confirm (Q10):**
+
+| Split | n | Role | Why this size |
+|---|---|---|---|
+| **test** (frozen) | 200 | the only number ever reported as a result | 11.0 pp CI width; 0.99 power at +15 pp, 0.79 at +10 pp |
+| dev | 100 | prompt iteration, early stopping, LR selection | never reported; iterating on it is the point |
+| train | 100+ (remainder) | LoRA SFT | small, and step 4 grows it |
+
+Two properties this split must have, from `.claude/rules/data-and-splits.md`: assignment is **by
+schema and domain, not by random conversation**, recorded in `data/splits/schema_assignment.json`;
+and the test split is frozen once written, never regenerated or cleaned.
+
+**Where his 100 go: into the test split.** They are the items he reviewed and categorised himself,
+so they carry the most trustworthy labels in the corpus, and the frozen set is the one place where
+label quality cannot be fixed later.
+
+What 200 test items do and do not buy:
+
+| true gain over the baseline | n=150 | n=200 | n=250 |
+|---|---|---|---|
+| +5 pp | 0.19 | 0.25 | 0.31 |
+| +10 pp | 0.64 | **0.79** | 0.87 |
+| +15 pp | 0.96 | **0.99** | 1.00 |
+
+So a 15-point improvement is detectable, a 10-point improvement is detectable four times in five,
+and **a 5-point improvement is not detectable at any size this corpus can reach.** That sets the
+effect size worth chasing, and it should be written into the experiment record before the run
+rather than discovered after it.
+
+*Flagged:* ">400" is his recollection, not a count from a file. Step 1 counts the corpus as its
+first output, and if the real number is materially below 400 the table above has to be redrawn
+before anything is trained.
 
 ### 3.3 Half the label space rests on a Proposed ADR, and its feasibility test is blocked
 
@@ -126,13 +203,30 @@ feasibility is measured on constructed data". That measurement is EXP-003, which
 D3's Annotator B clause no longer holds (Kapardhi, 2026-10-09) and no human second annotator
 exists. CLAUDE.md rule 4 forbids building on a Proposed ADR as settled fact.
 
-Three ways forward, none of them Claude Code's to pick (**Q4**):
+**Settled by Kapardhi, 2026-10-10 (§0): "Recruit any second annotator."** That reverses the
+2026-10-09 position ("no human second annotator is available") and puts EXP-003 back on its
+pre-registered path: its Hypothesis, Metric and κ ≥ 0.6 threshold are already approved and do not
+move. Nothing else in EXP-003 changes, and its generator build plan still awaits his approval.
 
-| Option | What it buys | What it costs |
-|---|---|---|
-| Recruit any second annotator | EXP-003 runs as pre-registered; ADR-003 gets its answer | Time, and a person |
-| **Intra**-annotator re-test: he re-labels a blind subsample ≥2 weeks later | A measurable stability ceiling, cheap, needs nobody | It is *not* inter-annotator agreement and may never be reported as κ for ADR-003; it bounds label noise, no more |
-| Train on the **collapsed binary** label set only ({NO-OP, VALUE, ABSTAIN}) | Unblocks modelling without touching the Proposed part | The typed-abstention contribution is deferred, not earned |
+**What that does not do is unblock this week.** Recruiting, briefing and labelling ~200 items with
+no AI help takes real time, and until EXP-003 reports a κ, ADR-003 is still Proposed and rule 4
+still applies. So the interim label space is an open question, **Q11 in §9**, with a proposed
+answer:
+
+- Steps 1 to 3 use whatever label space the corpus already carries.
+- Typed abstention is **reported as a breakdown and thresholded on nothing**. No gate, no headline
+  metric, and no claim about typed abstention until EXP-003 has its κ. This is the treatment
+  EXP-000 already gives figures it cannot stand behind.
+- If the corpus's abstention labels turn out too thin to break out at all, they collapse to
+  {NO-OP, VALUE, ABSTAIN} for the modelling track only, and the typed question stays entirely
+  inside EXP-003 where its measurement lives.
+
+*Flagged:* EXP-003's constraint 3 is "two independent human annotators… Annotator B is one outside
+person, named to me and never in this repository, with no AI help". "Any second annotator" is
+looser than that as a phrase but the constraint is his and stands as written, so recruitment has
+to satisfy it: an outside person, not named in the repo, labelling without AI assistance. If he
+means to loosen the constraint itself, that is a separate instruction and EXP-003's record is
+where it would go.
 
 ---
 
@@ -275,6 +369,26 @@ Prices and model list fetched from `tinker-docs.thinkingmachines.ai/tinker/model
 | `Qwen/Qwen3-8B` | 8.2B | Dense | Hybrid | 32K | $0.195 | $0.039 | $0.60 | **$0.44** |
 | `Qwen/Qwen3.5-4B` | 4B | Dense | Hybrid + Vision | 64K | $0.33 | $0.066 | $1.005 | $0.737 |
 
+**Settled by Kapardhi, 2026-10-10 (§0): "9B becomes the new primary."** `Qwen/Qwen3.5-9B` is the
+primary model from here. This moves D1, whose operational definition in `research-question.md`
+reads "≤4B parameters, runs quantized on one consumer GPU", and that file is amended on his
+instruction with the date recorded, as the ADRs do.
+
+*Flagged by Claude Code, and it is the one place where this answer costs something.*
+`research-question.md` gives a reason for the ≤4B bound, in the same two lines that set it:
+
+> Proposed: ≤4B parameters, runs quantized on one consumer GPU. Size curve at ~1B / ~4B / ~8B.
+> **Reason: FnCTOD and LDST already cover 7–13B.**
+
+A 9B primary therefore sits inside the band the literature already covers, and `literature.md`
+lists "small open models can do DST" among the **explicit non-contributions**. The "self-hostable"
+half of the definition survives — 9B at 4-bit is roughly 5–6 GB and still one consumer GPU — but
+the *novelty* half does not. Concretely: a result at 9B can carry the POC claims in §5 and the top
+point of H-C's size curve; it cannot carry a contribution that rests on model size, because that
+ground is taken. Keeping a ≤4B point in the curve (`Qwen/Qwen3.5-4B`, a few dollars in §7) is what
+leaves the research claim somewhere to stand, and is why the recommendation below runs both anyway.
+Recorded rather than argued: the decision is his and it is made.
+
 Notes that change the plan:
 
 - **No ~1B model is available.** Qwen3 0.6B / 1.7B / 4B-Instruct and all Llama models retired
@@ -283,7 +397,8 @@ Notes that change the plan:
 - `Qwen/Qwen3-8B` trains at **3.3× lower cost** than `Qwen/Qwen3.5-9B` and is the nearest thing
   to D1's "~8B" curve point. `Qwen/Qwen3.5-9B` is newer, has 64K context and a Base variant.
   *Recommendation:* run **both**, since the cost difference is a few dollars (§7) and the pair is
-  a size/recency comparison we want anyway. He asked for the 9B; this keeps the 9B as primary.
+  a size/recency comparison we want anyway. `Qwen/Qwen3.5-9B` stays primary per his decision;
+  `Qwen/Qwen3.5-4B` is the curve point that keeps the size axis of the research claim alive.
 - Both are **Hybrid** (reason by default). For state extraction, disable chain-of-thought via the
   renderer for lower latency and token cost, and record that choice in the config — a thinking and
   a non-thinking run are not the same system.
@@ -388,28 +503,32 @@ research question, ADRs, experiment records and Decisions. Genesis never writes 
 
 ## 9. Questions for Kapardhi
 
-Answers to Q1–Q4 are needed before step 1 code. Q5–Q8 can follow.
+**Answered 2026-10-10:** Q2 (privacy), Q3 (the labelled items), Q4 (abstention), Q5 (model size).
+Transcribed in §0 and worked into §3.1, §3.2, §3.3 and §6.
 
-- **Q1. What exactly are the 100 items?** Specifically: (a) what is the label space — chatbot
-  action + reply, or `(field, op, value)` state deltas? (b) who labelled them, and was any model
-  output involved at any stage? (c) is the text real client conversation or constructed? (d) does
-  a written label guideline exist, or was it judgement in the moment?
-- **Q2. Privacy (§3.1).** If the text is client-derived: do we self-host, switch to constructed
-  data, or do you lift the rule in writing for a named provider and a named slice?
-- **Q3. The 100 items (§3.2).** Freeze all 100 as evaluation data and build training data
-  separately, or split them and accept that step 3 is a pipeline smoke test with no comparison
-  value?
-- **Q4. Abstention (§3.3).** Recruit any second annotator, run an intra-annotator re-test as a
-  noise ceiling, or train on the collapsed binary label set and defer the typed-abstention claim?
-- **Q5. D1 and the 9B.** Is `Qwen/Qwen3.5-9B` the new primary (which moves D1's "≤4B primary"), or
-  the ~8B point of D1's existing size curve with ≤4B still primary? Also: the ~1B point is not
-  available on Tinker — drop it, or run it elsewhere?
+**Q1 is the one that still blocks step 1 code**, because it decides what the audit measures.
+
+- **Q1. What exactly are the labelled items?** (a) What is the label space — chatbot action +
+  reply, or `(field, op, value)` state deltas? (b) Who labelled them, and did any model output
+  touch a label at any stage, including as a suggestion a human then accepted? (c) Does a written
+  label guideline exist, or was it judgement in the moment? (d) Where does the file live, and what
+  format is it in? *This needs prose, not a choice.* Without (a) I cannot write EXP-004's
+  hypothesis, and without (b) I cannot fill the `labeler` field the splits rule requires.
+- **Q9. Consent scope (§3.1(c)).** Does the consent on file cover upload to a third-party
+  model-training API with durable retention, or only use of the conversations for the service? And
+  do you approve the amendment to `.claude/rules/data-privacy.md` quoted in §3.1(a), which is a
+  governance file and so yours to change, not mine?
+- **Q10. Corpus count and split (§3.2).** Confirm the 200 / 100 / remainder split, and the exact
+  corpus size: ">400" is a recollection, and step 1 counts it as its first output.
+- **Q11. Interim label space (§3.3).** Confirm the proposal: typed abstention reported as a
+  breakdown, thresholded on nothing, no typed-abstention claim until EXP-003 reports a κ.
 - **Q6. Genesis boundary (§8).** Confirm or replace the proposed split of canonical records. Shall
   I run `genesis adopt .` in report-only mode so you can see what it would write?
 - **Q7. Which frontier models**, by exact revision, are B4 and B5? And confirm: whichever model
   generates data in step 4 is excluded from being a baseline on those items.
 - **Q8. Equivalence margin.** For the "matches a frontier model" claim in §5, what margin counts
-  as matched? It has to be set before the run, not after.
+  as matched? §3.2 now bounds it from below: a 5-point difference is undetectable at any size this
+  corpus reaches, so the margin cannot be set tighter than that and pretend to mean anything.
 
 ---
 
@@ -428,6 +547,21 @@ Steps 1 and 2 need no GPU and no Tinker credits. Step 1 needs no model at all.
 - 2026-10-10: drafted by Claude Code from Kapardhi's two session messages. Nothing approved; no
   experiment record created; no row added to `STATE.md`. Tinker prices and model list fetched the
   same day from the published `models.json`; power figures computed the same day.
+- 2026-10-10, same day: **his answers to Q2, Q3, Q4 and Q5 transcribed verbatim in §0** and worked
+  into the sections they bear on. Four things changed as a result, and three of them reverse or
+  move a position taken on 2026-10-09:
+  (1) §3.1 — hosted training is unblocked on his instruction; `.claude/rules/data-privacy.md` now
+  needs an amendment, drafted there for his approval, and the scope of the consent is raised as Q9.
+  (2) §3.2 — the corpus is ">400 examples", not 100, so the split arithmetic is redone around a
+  200-item frozen test split, with his reviewed 100 going into it; a 5-point effect is recorded as
+  undetectable at any reachable size.
+  (3) §3.3 — EXP-003 is back on its pre-registered path; the interim label space for steps 1 to 3
+  is raised as Q11, since recruitment does not unblock this week.
+  (4) §6 — `Qwen/Qwen3.5-9B` is primary; `research-question.md`'s D1 definition is amended on his
+  instruction, with the collision against its own stated reason ("FnCTOD and LDST already cover
+  7–13B") flagged in §6 rather than argued.
+  Claude Code added Q9, Q10 and Q11 as flags, not as part of his instruction. Still nothing built,
+  no experiment record created, and `STATE.md` untouched.
 
 ---
 

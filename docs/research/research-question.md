@@ -42,9 +42,29 @@ If none hold, the honest finding is "difficulty is additive": a benchmark paper,
 
 ## Operational definitions
 
-### "Small, self-hostable" (pending D1)
-Proposed: ≤4B parameters, runs quantized on one consumer GPU. Size curve at ~1B / ~4B / ~8B.
-Reason: FnCTOD and LDST already cover 7–13B.
+### "Small, self-hostable" (D1 decided 2026-10-09; primary size changed 2026-10-10)
+**Primary: ~9B, `Qwen/Qwen3.5-9B`.** Size curve at ~4B / ~9B. Runs quantized on one consumer GPU
+(~5–6 GB at 4-bit), so the self-hostable half of the definition is unaffected.
+
+**Changed on Kapardhi's instruction, 2026-10-10.** Previously: "≤4B parameters, runs quantized on
+one consumer GPU. Size curve at ~1B / ~4B / ~8B", decided as D1 on 2026-10-09. Transcribed from
+Kapardhi, 2026-10-10, verbatim: "9B becomes the new primary".
+
+Reason the earlier bound gave for ≤4B, left as written because it is still a true statement about
+the literature: FnCTOD and LDST already cover 7–13B. The ~1B point of the old curve is dropped
+because no ~1B model is available on Tinker (Qwen3 0.6B / 1.7B and all Llama models retired
+2026-06-12); running it would need separate infrastructure.
+
+*Flagged by Claude Code, not part of his instruction, and two things:*
+1. A 9B primary sits inside the 7–13B band the reason above names as covered, and `literature.md`
+   lists "small open models can do DST" among the explicit non-contributions. So a contribution
+   resting on model size is not available at the primary size. The ~4B curve point is what leaves
+   the size axis of the claim somewhere to stand. Detail in
+   `plan-2026-10-10-modelling-track.md` §6.
+2. The primary question at the top of this file still reads "can a **≤4B-parameter** model…",
+   which now disagrees with this definition. That sentence is the research question itself and has
+   not been changed, because his instruction named the primary model size and not the question.
+   Raised for him to settle rather than resolved here.
 
 ### "Unseen schema": novelty ladder
 Report lexical overlap and embedding similarity to the nearest training field for every test item.
