@@ -1,6 +1,12 @@
-# Plan: from a labelled sample to a measured fine-tune (modelling track)
+# Plan: from a labelled sample to a measured fine-tune (product track)
 
-Date: 2026-10-10 · Author: Claude Code · **Status: proposal. Nothing here is approved.**
+Date: 2026-10-10, scope settled 2026-11-08 · Author: Claude Code · **Status: proposal. Nothing
+here is approved.**
+
+> **Scope, settled by Kapardhi on 2026-11-08 (§0, Q12): this is the product track.** Its eval set
+> is a **product-evaluation set, not the benchmark**. ADR-001 still governs the benchmark, which is
+> built from constructed conversations with real chats as at most a validation slice. No number
+> produced by anything in this file is a benchmark result or evidence for H-A, H-B or H-C.
 
 > **What this document is.** Kapardhi described, in one session, a sequence he wants: baseline the
 > base model, choose LoRA settings, compare against frontier models, analyse whether the labelled
@@ -8,9 +14,9 @@ Date: 2026-10-10 · Author: Claude Code · **Status: proposal. Nothing here is a
 > into an ordered plan with gates, and names every decision in it that is his.
 >
 > **What it is not.** It is not a Decision, it changes no ADR status, and it adds no row to
-> `STATE.md`. No experiment record has been created and no code has been written. Three of the
-> steps below cannot start until he answers the questions in **§3**, because they would otherwise
-> be built on a guess about what the data is.
+> `STATE.md`. No experiment record has been created and no code has been written. The steps below
+> cannot start until he answers **Q1** in §9, because they would otherwise be built on a guess
+> about what the data is.
 >
 > Everything marked *Flagged* is Claude Code's reading, not his instruction.
 
@@ -35,6 +41,31 @@ one question about the scope of that consent stays open), §3.2 (the corpus is l
 the split arithmetic is redone), §3.3 (recruiting unblocks EXP-003 but not today, so the interim
 label space is an open question), and §6 (9B primary moves D1, and collides with the stated reason
 D1 gave for ≤4B).
+
+### Kapardhi's answer of 2026-11-08 (Q12)
+
+Transcribed verbatim:
+
+> "it's a product-evaluation set, not the benchmark"
+
+**This is the scope decision for the whole document, so it is restated once, plainly:**
+
+This track builds and measures a **product**. Its eval set is a product-evaluation set. ADR-001 is
+untouched and still governs the benchmark, which is built from constructed conversations with real
+chats as at most a validation slice. Three things follow, and the first two are what the answer
+buys:
+
+1. **The ADR-001 conflict is gone**, not deferred. §3.2 no longer contradicts an Accepted ADR.
+2. **The single-schema L0 limit stops being a defect and becomes a scope statement.** A product
+   eval set on one schema is the right instrument for "did the fine-tune change behaviour on our
+   schema". It was only a defect while the set was going to be called a benchmark.
+3. **No number from this track is a benchmark result, or evidence for H-A, H-B or H-C.** Not in a
+   paper, not in `STATE.md`'s experiment table, not in a sentence that begins "StateLM shows".
+   What it can support is §5's first two rows, the demo sentences, and nothing in §5's third row.
+
+Two new questions his answer creates, both about keeping the two tracks apart: **Q16** (where the
+product track's records and data live, so they are never mistaken for the benchmark's) and **Q17**
+(how its items are marked now so they can be excluded from the benchmark's test split later).
 
 ---
 
@@ -77,6 +108,13 @@ Two decisions taken on 2026-10-09, one day before this plan, bear directly on it
 - **D1: ≤4B primary**, size curve at ~1B / ~4B / ~8B. He now asks for a 9B primary.
 
 Neither is a reason not to do what he wants. Both are reasons to say out loud which one is moving.
+
+**Updated 2026-11-08, after Q12.** D2's ordering is a statement about *contributions*: benchmark
+first, model second. A product track makes no contribution claim, so running it alongside does not
+contest D2 — provided the benchmark is still what gets built for the research claim, and provided
+no product number is later cited as benchmark evidence (see the Scope note at the top). What D1's
+move does change is recorded in §6 and in `research-question.md`, and that one is a genuine change
+to a decided artifact rather than a parallel track.
 
 ---
 
@@ -215,13 +253,21 @@ pilot items too, not only across split boundaries. Missed in the first version o
 *added 2026-10-10 after a `research-reviewer` pass.*
 
 **(iii) "Splits are assigned by schema and domain, not by random conversation, so that 'unseen
-schema' actually means unseen" — and on this corpus that is impossible.** It is one deployment, one
-chatbot, one schema, one domain. There is nothing to split by. What will actually happen is a
-random conversation split. The consequence is larger than bookkeeping: **a single-schema test split
-can only produce L0 results, so no number from this entire modelling track can speak to the
-novelty axis of the primary question.** It can measure whether the fine-tune changed behaviour on
-this schema. It cannot measure generalisation to an unseen one. §5's third row is the only place
-that was previously hinted at; it belongs here, where the test split is called the headline number.
+schema' actually means unseen" — impossible on this corpus, and after Q12 that is a scope statement
+rather than a defect.** It is one deployment, one chatbot, one schema, one domain, so there is
+nothing to split by and the split is by conversation. That rule exists to make "unseen schema" mean
+unseen, which is a **benchmark** concern, and this is not the benchmark (Q12, 2026-11-08). So the
+rule does not bite here, and what remains true is the limit it was protecting:
+
+**A single-schema eval set can only produce L0 results.** It measures whether the fine-tune changed
+behaviour on *our* schema. It cannot measure generalisation to an unseen one, and no number from
+this track may be offered as evidence on the novelty axis of the primary question. That is the
+correct scope for a product instrument, and it is why the benchmark still has to be built
+separately, as D2 ordered.
+
+Two things the conversation-level split must still do, because they are not benchmark concerns:
+near-duplicate control across split boundaries, and a stable assignment recorded in a file so the
+test split is reproducible and frozen.
 
 **(iv) Provenance before freezing.** `data-and-splits.md` requires `source`, `generator`,
 `labeler`, `created_at` and `split` on every record. **The frozen split may not be written until
@@ -234,14 +280,15 @@ have unknown provenance.
 **Where his 100 go: proposed for the test split**, because the frozen set is the one place label
 quality cannot be fixed later, subject to (ii) and (iv).
 
-**And one contradiction with an Accepted ADR, which is his to resolve (Q12).** ADR-001, Accepted
-2026-10-09, carries his verbatim: *"The benchmark is built from constructed conversations; real
-chats are at most a validation slice."* This section proposes a real-chat corpus as the frozen test
-split and calls it the only number reported as a result. Those cannot both stand. Two ways out, and
-the second looks right: amend ADR-001, **or** state that this modelling track's eval set is a
-**product-evaluation set and not the benchmark**, in which case no number from it is a benchmark
-result and ADR-001 is untouched. §2 flagged the model-first ordering against D2 and missed this
-sentence; *added 2026-10-10 after a `research-reviewer` pass.*
+**The contradiction with ADR-001 is resolved, 2026-11-08 (Q12).** It was: ADR-001, Accepted
+2026-10-09, carries his verbatim *"The benchmark is built from constructed conversations; real
+chats are at most a validation slice"*, while this section proposes a real-chat corpus as the
+frozen test split. **Settled by Kapardhi, 2026-11-08: "it's a product-evaluation set, not the
+benchmark."** So ADR-001 is untouched, no amendment is needed, and the set below is a product
+instrument. The consequence that stays: **no number from this track is a benchmark result**, and
+"the only number ever reported as a result" in this section means the only *product* number
+reported, from the one pre-registered comparison. *Raised 2026-10-10 after a `research-reviewer`
+pass; answered 2026-11-08.*
 
 What 200 test items do and do not buy (discordant-pair rate 0.25 throughout this table):
 
@@ -497,7 +544,7 @@ He wants a sentence he can say in a demo. Three candidates, with what each one n
 |---|---|---|
 | "Matches a frontier model on our schema, at a fraction of the cost, on our own hardware" | n≥150 test, a paired **equivalence** margin set in advance, and measured $/latency per item | Reachable this month |
 | "Beats a frontier model on our schema and output format" | n≥150, paired McNemar, p<0.05, a named primary metric, labels not supplied by that model | Reachable. *Flagged:* an earlier version added "format and vocabulary adherence is where a small fine-tune genuinely wins", asserted with no citation and no experiment here. Withdrawn: it is a hypothesis for step 2 to test, and `literature.md` has no row supporting it |
-| "Beats a frontier model on **unseen** schemas" | The novelty ladder (ADR-004), L2+ test items, EXP-002's similarity covariate | **Not supported by anything we have.** This is the research claim and it needs the benchmark |
+| "Beats a frontier model on **unseen** schemas" | The novelty ladder (ADR-004), L2+ test items, EXP-002's similarity covariate | **Out of scope for this track by design, as of Q12 (2026-11-08).** This is the research claim, it needs the benchmark, and a single-schema product eval set cannot reach it however good the numbers are |
 
 **Each row needs a named metric before it is claimed**, and none is named yet, because Y is
 undefined until Q1 is answered. The metric goes in the experiment record, not into the sentence
@@ -699,7 +746,8 @@ research question, ADRs, experiment records and Decisions. Genesis never writes 
 ## 9. Questions for Kapardhi
 
 **Answered 2026-10-10:** Q2 (privacy), Q3 (the labelled items), Q4 (abstention), Q5 (model size).
-Transcribed in §0 and worked into §3.1, §3.2, §3.3 and §6.
+**Answered 2026-11-08:** Q12 (this is the product track, not the benchmark). All transcribed in §0
+and worked into the Scope note, §2, §3.1, §3.2, §3.3, §5 and §6.
 
 **Q1 is the one that still blocks step 1 code**, because it decides what the audit measures.
 
@@ -724,11 +772,41 @@ Transcribed in §0 and worked into §3.1, §3.2, §3.3 and §6.
 - **Q8. Equivalence margin.** For the "matches a frontier model" claim in §5, what margin counts
   as matched? §3.2 now bounds it from below: a 5-point difference is undetectable at any size this
   corpus reaches, so the margin cannot be set tighter than that and pretend to mean anything.
-- **Q12. ADR-001 vs a real-chat test split (§3.2).** ADR-001 is Accepted and carries your sentence
-  "the benchmark is built from constructed conversations; real chats are at most a validation
-  slice". Either amend ADR-001, or declare this track's eval set a **product-evaluation set that is
-  not the benchmark** — in which case no number from it is a benchmark result. The second needs no
-  ADR change and looks right, but it is yours.
+- ~~**Q12. ADR-001 vs a real-chat test split (§3.2).**~~ **Answered 2026-11-08:** product-
+  evaluation set, not the benchmark. ADR-001 untouched. See the Scope note and §0.
+- **Q16. Where the product track's records and data live** — new, created by Q12's answer, and the
+  one thing to settle before any file is written. Two tracks that share a namespace will be
+  confused for each other eventually. Proposed, and it is a structural change so it is yours:
+  - **Records:** a separate series in a separate place, `docs/product/evals/PE-001-*.md`, not
+    `EXP-NNN` in `docs/research/experiments/`. Reason: CLAUDE.md rule 1 requires every experiment
+    record to name the ADR or decision it informs, and a product eval informs none. Giving these
+    `EXP-NNN` ids would either break that rule or put "Decision informed: none" into the research
+    series. Same discipline in the template (hypothesis, metric and threshold pre-registered,
+    leakage check, Result and Interpretation by Claude Code, Decision by you), different series.
+  - **`STATE.md`:** unchanged. No product rows in the Experiments table. That table is the research
+    record, and it is the first thing every session reads.
+  - **Runs:** `runs/PE-NNN/<run-id>/`, same config.json discipline.
+  - **Data:** its own directory, not `data/splits/`, which is the benchmark's frozen structure.
+  - So the earlier names in §10 (EXP-004, EXP-005, EXP-006) become PE-001, PE-002, PE-003 if you
+    take this. They are referred to by their old names elsewhere in this file until you decide.
+- **Q17. Two safety items that Q12's answer creates.** Both are small and both have to land before
+  the first product-eval file is written:
+  1. **`.gitignore` does not cover a new `data/` subdirectory.** Measured with `git check-ignore`
+     on 2026-11-08: `data/splits/test/conv_001.jsonl` is ignored, but
+     `data/product-eval/test/conv_001.jsonl`, `data/product_eval/...` and `data/eval/...` are
+     **not** — they are committable. Client text could be committed by accident the first time
+     someone writes the file. Whichever directory Q16 names needs a `.gitignore` entry and a case
+     added to `MUST_BE_IGNORED` in `experiments/EXP-000/tests/test_gitignore.py`, which exists to
+     assert this mechanism with git itself rather than trust it. I have not changed `.gitignore`:
+     the existing rules re-include `data/splits/schema_assignment.json` through a pattern that a
+     careless broadening would break, and the test does not cover that re-inclusion.
+  2. **These items must be excludable from the benchmark later.** ADR-001 keeps real chats out of
+     the benchmark's construction, but it allows them as a **validation slice** — and this track
+     will have iterated prompts against them, which contaminates that slice. So every product-eval
+     item needs a stable id and a `used_in` field recording the product runs that touched it, and
+     `.claude/rules/data-and-splits.md` needs one line extending its existing exclusion ("Pilot
+     items used in EXP-000 and EXP-001 must never enter the final test split") to cover
+     product-eval items against the benchmark's validation slice. That file is yours.
 - **Q13. CLAUDE.md vs `data-and-splits.md` on pre-labelling (§4).** CLAUDE.md rule 3 forbids
   pre-labelling outright; `data-and-splits.md` permits model output as a gold label given human
   verification recorded in `labeler`. They disagree. This plan follows the stricter rule. Which
@@ -793,6 +871,21 @@ is first.
   pre-labelling), Q14 (EXP-001's disposition), Q15 (`literature.md`'s FnCTOD row). Appendix A now
   reproduces every published cell and the §3.2 tables were aligned to it; §7's total was
   recomputed. Still nothing built and `STATE.md` still untouched.
+- 2026-11-08: **Q12 answered, transcribed verbatim in §0: "it's a product-evaluation set, not the
+  benchmark."** This is the document's scope decision, so it is stated in a Scope note at the top.
+  What it resolves: the contradiction with ADR-001 (gone, no amendment needed), the single-schema
+  L0 limit (now a scope statement rather than a defect, §3.2(iii)), and D2's ordering (a product
+  track makes no contribution claim, §2). What it fixes in place: no number from this track is a
+  benchmark result or evidence for H-A, H-B or H-C, and §5's third row is out of scope by design.
+  Two new questions follow from it, both about keeping the tracks apart, and both wanted before any
+  file is written: **Q16**, where the product track's records, runs and data live (proposed: a
+  separate `PE-NNN` series under `docs/product/evals/`, `STATE.md` untouched); and **Q17**, the two
+  safety items — `.gitignore` does not cover a new `data/` subdirectory, measured on the day, and
+  product-eval items need a `used_in` field plus one line in `data-and-splits.md` so they can be
+  kept out of the benchmark's validation slice later. Also re-verified the same day: Tinker still
+  lists `Qwen/Qwen3.5-9B`, `Qwen3.5-4B` and `Qwen3-8B` at the prices §6 and §7 use, unchanged since
+  2026-10-10, and still offers no model at or below ~2B, so the §7 budget stands and the ~1B curve
+  point still needs other infrastructure. Nothing built, no record created, `STATE.md` untouched.
 
 ## 11. `research-reviewer` pass, 2026-10-10
 
@@ -811,7 +904,7 @@ before being acted on; all of them held. What it found, and what changed:
 | The CI and power figures assume independent items and a random sample; items are `(field, turn)` rows from a few dozen conversations, and his 100 are self-selected | **Fixed.** Both limits stated in §3.2 and Appendix A; the deciding interval is a cluster bootstrap, as EXP-003 already requires |
 | "The only number ever reported" sat beside 20 test passes and 7 comparisons with no multiplicity control | **Fixed.** One pre-registered primary comparison, +10 pp minimum effect, Holm for the rest |
 | The HTML scorecard showed per-item pass/fail on frozen test items, which `data-and-splits.md` closes ("only aggregate metrics") | **Fixed.** Scorecard moves to dev; test gets an aggregates-only report |
-| §3.2 makes real chats the frozen test split; ADR-001 (Accepted) says real chats are at most a validation slice | **Raised as Q12.** Not Claude Code's to resolve: it needs either an ADR amendment or a statement that this eval set is not the benchmark |
+| §3.2 makes real chats the frozen test split; ADR-001 (Accepted) says real chats are at most a validation slice | **Raised as Q12; answered 2026-11-08** — product-evaluation set, not the benchmark, so ADR-001 is untouched. The reviewer's finding was correct and the resolution was his |
 | `literature.md`'s FnCTOD row says "our size range must go below 7B", which the 9B primary contradicts | **Raised as Q15.** `literature.md` is his; the row is left unannotated |
 | Gate 1's trivial-baseline clause was circular and used the wrong instrument; Gate 2 thresholds on an unmeasurable ceiling | **Fixed.** Trivial baselines become rung B-triv; Gate 2 points at EXP-000's recorded intra-annotator fallback |
 | §3.2 asserted his 100 "carry the most trustworthy labels" while Q1(b) asks whether a model touched them | **Fixed.** Withdrawn; a `labeler` value is now required before the split is written |
