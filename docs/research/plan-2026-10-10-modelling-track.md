@@ -67,6 +67,21 @@ Two new questions his answer creates, both about keeping the two tracks apart: *
 product track's records and data live, so they are never mistaken for the benchmark's) and **Q17**
 (how its items are marked now so they can be excluded from the benchmark's test split later).
 
+### Kapardhi's answer of 2026-11-08 (Q1, part a)
+
+Transcribed verbatim:
+
+> "the labels are action + reply for each user message"
+
+So the label space is confirmed: **one `action` and one `reply` per user message.** It is not the
+`Y` of `research-question.md`, which is consistent with Q12 — this is the product's task, not the
+research task. Parts (b), (c) and (d) of Q1 are still open and still block the first step.
+
+**This answer changes the measurement design, and §3.4 is new because of it.** `action` is a
+classification and `reply` is free text. Every binary per-item comparison in this plan — the power
+tables, the paired test, the +10 pp effect, the scorecard's pass/fail — works for `action` and does
+not work for `reply`. §3.4 sets out what follows and what has to be decided.
+
 ---
 
 ## 1. The seven asks, restated
@@ -93,14 +108,19 @@ Checked on 2026-10-10 at commit `f73ff9b`.
 | "We reviewed and categorized and labeled that data" | No labelled set is in the repo, and `data/` does not exist here at all. EXP-000's only agreement run, `20261009T115207Z-a4804a8`, is marked **VOID** (AI-generated sheets) and EXP-000 is **Closed (no result)**. |
 | "100 data points, divided into train/test/val" | No `data/splits/`, no `schema_assignment.json`. Under `.claude/rules/data-privacy.md` this is expected if the set is client text: it stays on his machine. But then **nothing in this repo records that it exists, how it was labelled, or by whom.** |
 | "The SLM chatbot which we have built" | Not in this repo, and not in `docs/research/`. `research-question.md` forbids CRM integrations in v0.1; the chatbot is a separate product artifact. |
-| "What action should have been taken by the chatbot, and what reply it gives" | **This is not the Y defined in `research-question.md`**, which is `{(field, op, value, evidence, confidence)}` with `op ∈ {ADD, UPDATE, RETRACT, ABSTAIN_k}`. Stage 2 ("Define X and Y") is **Not started**. |
+| "What action should have been taken by the chatbot, and what reply it gives" | **Confirmed 2026-11-08: one `action` and one `reply` per user message.** This is not the `Y` of `research-question.md`, which is `{(field, op, value, evidence, confidence)}` with `op ∈ {ADD, UPDATE, RETRACT, ABSTAIN_k}`. Stage 2 ("Define X and Y") is still **Not started** for the research track, and this answer does not advance it. |
 
-*Flagged, and this is the single most consequential item in the table:* an **action + reply** label
-space and a **state-delta op** label space are different tasks with different metrics. If the 100
-items carry the first, then training on them tests a hypothesis this repository has never written
-down, and `architecture.md`, `research-question.md` and ADR-002 do not describe the system being
-built. That is a legitimate thing for him to want — but it is a change of research object, not a
-next step, and under CLAUDE.md it is his to make explicitly. **Q1 in §9.**
+*Flagged, and confirmed on 2026-11-08 rather than suspected:* an **action + reply** label space and
+a **state-delta op** label space are different tasks with different metrics. The labelled items
+carry the first. Two consequences, both of which Q12 makes acceptable rather than alarming:
+
+- `architecture.md`, `research-question.md` and **ADR-002 do not describe the system this track
+  builds**. There is no ledger in an action + reply task, so nothing here exercises ADR-002, and
+  the product model is not "StateLM" in the sense the research question defines. After Q12 that is
+  a scope fact, not a contradiction.
+- **The measurement design has to change**, because `reply` is free text. That is §3.4, which is
+  new as of this answer and is the one thing in this plan that a wrong assumption would silently
+  invalidate.
 
 Two decisions taken on 2026-10-09, one day before this plan, bear directly on it:
 
@@ -118,7 +138,7 @@ to a decided artifact rather than a parallel track.
 
 ---
 
-## 3. Three things that must be settled before any training token is spent
+## 3. Four things that must be settled before any training token is spent
 
 ### 3.1 Sending this data to Tinker, Claude or OpenAI may be forbidden by our own rule
 
@@ -302,8 +322,13 @@ So a 15-point improvement is detectable, a 10-point improvement is detectable fo
 and **a 5-point improvement is not detectable at any size this corpus can reach.**
 
 **Pre-registered effect size, proposed:** the primary comparison is the fine-tune against rung B3,
-and **+10 pp is the smallest difference this plan will call a result**. Below that, the honest
-report is "no detectable difference", not a number. Written here before any run, as rule 2 requires.
+**scored on `action`**, and **+10 pp is the smallest difference this plan will call a result**.
+Below that, the honest report is "no detectable difference", not a number. Written here before any
+run, as rule 2 requires.
+
+*Scoped 2026-11-08:* every figure in this section assumes one right-or-wrong outcome per item,
+which is true of `action` and not of `reply`. See §3.4. Nothing here applies to `reply` until it
+has a scoring function.
 
 **Three things these tables assume, and two of them are not true of this data.** *Added 2026-10-10
 after a `research-reviewer` pass; the arithmetic was checked and is right, the inference frame was
@@ -330,6 +355,87 @@ not stated.*
 *Flagged:* ">400" is his recollection, not a count from a file. Step 1 counts the corpus as its
 first output, and if the real number is materially below 400 the table above has to be redrawn
 before anything is trained.
+
+### 3.4 `action` and `reply` are two tasks, and only one of them is measurable the way this plan assumes
+
+*Added 2026-11-08, on his answer to Q1(a): "the labels are action + reply for each user message."*
+
+Every per-item comparison in this document — §3.2's power tables, the paired McNemar test, the
++10 pp minimum effect, the scorecard's pass/fail, Gate 1's class counts — assumes each item is
+either right or wrong. That holds for `action`. It does not hold for `reply`, which is free text,
+and free text has no exact-match metric. Left unnoticed, this would have produced numbers that
+look like the tables above and mean something different.
+
+So the two halves are separated:
+
+| | `action` | `reply` |
+|---|---|---|
+| Kind | classification over a fixed set | free-text generation |
+| Scoring | exact match on the class | **no metric decided** (see below) |
+| Paired test | McNemar, as §3.2 | depends on the metric |
+| Carries the pre-registered claim | **yes** | **not until a metric exists** |
+
+**Proposed, and it is the honest version: `action` is the primary metric and carries every claim in
+§5. `reply` is secondary, and gets a metric only after step 1 reports which of the families below
+applies.** Pre-registering an effect size for a quantity with no scoring function is not
+pre-registration.
+
+#### What step 1 must measure first, because it may dissolve the problem
+
+**Are the replies templated?** This is a bot-led WhatsApp flow, so the gold replies may come from a
+finite set of templates with slots. If step 1 finds the distinct-reply count is small relative to
+the item count, or that replies cluster tightly after slot normalisation, then `reply` is
+effectively a second classification, exact match works, and everything in §3.2 applies to it
+unchanged. **Measure this before choosing a metric.** It is one count and it decides the rest.
+
+#### If the replies are genuinely free text, four families, with their real costs
+
+1. **Normalised exact match.** Works only in the templated case above. Cheapest by far.
+2. **Human pairwise preference on a subsample.** Pre-registered, blind to which system wrote which
+   reply. The cost is the thing to look at before choosing it — non-tied comparisons needed to
+   detect a real preference against 50/50, two-sided α = 0.05:
+
+   | true preference split | 80% power | 90% power |
+   |---|---|---|
+   | 55 : 45 | 783 | 1,047 |
+   | **60 : 40** | **194** | 259 |
+   | 65 : 35 | 85 | 113 |
+   | 70 : 30 | 47 | 62 |
+
+   At a plausible 60:40 and ~40% ties, that is about **322 pairs to rate by hand** for one
+   comparison. With no second annotator it is also intra-rater, so it carries EXP-000's recorded
+   caveat and must be reported as intra-rater, never as agreement.
+3. **LLM judge.** Cheap and it scales. Three conditions, and the first is not negotiable: the judge
+   must **not** be a model that is also a baseline here, which `knowns-unknowns.md` already names
+   as the synthetic-data circularity risk and EXP-003's Q1 already rules on for generators; it must
+   be validated against human judgement on a subsample, or it is an unvalidated instrument; and
+   `research-question.md`'s Evaluation cluster states a preference for "exact-match metrics for ops
+   and lineage without LLM judges". *Flagged:* that preference is about the benchmark, and after
+   Q12 this is a product metric, so a judge is more defensible here than it would be there. It is
+   still his call, not Claude Code's.
+4. **Overlap metrics** (ROUGE, BLEU, BERTScore). Cheap, and weak proxies for whether a reply is the
+   right thing to say. Report descriptively at most. Never the deciding metric.
+
+#### What this does to the POC sentence
+
+Worth saying before the work rather than after: **a 9B fine-tune beating a frontier model on
+`action` classification is plausible; beating one on free-text reply quality is not likely.**
+Writing a good reply is close to what frontier models are best at, and nothing about 400 examples
+changes that. So §5's demo sentences should be built on action accuracy, format adherence, cost and
+latency. If a reply claim is wanted it is most likely to be an **equivalence** claim ("replies rated
+no worse"), which needs the margin in Q8 set in advance and the rating budget above.
+
+#### Two smaller consequences
+
+- **Token budget barely moves.** A longer completion because `reply` is in it: at 250 tokens the
+  9-run sweep goes from $42.66 to $45.82, at 400 tokens to $50.56. Within the noise of §7's total,
+  so no re-budgeting. Step 1 measures the real lengths.
+- **Typed abstention may be moot here.** §3.3's Q11 asked what to do about typed abstention while
+  ADR-003 is Proposed. If the action set contains no abstain-like class, the answer is that this
+  label space has no typed abstention at all, nothing needs thresholding, and the question lives
+  entirely inside EXP-003. That depends on the action set, which is **Q18**.
+
+---
 
 ### 3.3 Half the label space rests on a Proposed ADR, and its feasibility test is blocked
 
@@ -414,10 +520,12 @@ back. Proposed as **EXP-004**, record to be written by interview before any code
 
 | Check | Why it decides something |
 |---|---|
-| Class counts per label | A class with <10 items cannot be measured at all, whatever the model does |
+| **`action` class counts** | A class with <10 items cannot be measured at all, whatever the model does. Also settles **Q18** (what the action set is) and whether any class is abstain-like, which decides Q11 |
+| **Are `reply` values templated?** Distinct-reply count against item count, and again after slot normalisation | **The first thing to measure, per §3.4.** If replies come from a finite template set, `reply` is a second classification, exact match works, and §3.2 applies to it unchanged. If not, a metric has to be chosen and paid for |
+| `reply` length distribution | Sets the completion budget, and tells us whether §7's 150-token assumption holds |
 | **Majority-class baseline** | If "the most common action" scores 62%, a model at 68% is noise |
 | **Keyword / bag-of-words baseline** (logistic regression, TF-IDF) | If a linear model on word counts matches the SLM, the pattern is lexical and needs no SLM. This is the cheapest possible refutation of the whole project and it should be run first |
-| **Memory dependence**: how many items' gold label changes if you delete all prior turns | This is the research question. EXP-000's census found **0 correction and 0 hedge cue matches across all 286 real customer turns**. *Flagged:* if these 100 items came from that corpus, the prediction is that very few of them require memory — and then the dataset cannot teach the temporal behaviour, however good the training run is |
+| **Memory dependence**: for how many items does the gold **`action`** change if you delete all prior turns | The premise of the whole project. EXP-000's census found **0 correction and 0 hedge cue matches across all 286 real customer turns**. *Flagged:* if these items came from that corpus, the prediction is that few of them need prior turns — and then the data cannot teach behaviour over time, however good the training run is. Measured on `action` because that is the half with a crisp right answer |
 | Near-duplicate detection across splits | 100 items from one deployment, with a bot on one side, will contain repeats. A duplicate across train and test inflates every number after it |
 | Input length distribution, turns per item | Decides context budget and whether 32K (Qwen3-8B) or 64K (Qwen3.5-9B) is needed |
 | Label noise ceiling | §3.3's re-test. A model above the human self-agreement rate is measuring the wrong thing |
@@ -471,11 +579,13 @@ run already computed") does not fix that. *Corrected 2026-10-10 after a `researc
 
 So, two artifacts:
 
-- **Dev scorecard**, the one you asked for: one row per dev item, one column per rung, pass/fail per
-  item, the model's raw output on click. This is the debugging surface, and dev is where iteration
-  is supposed to happen.
-- **Test report**: aggregates only. Per-rung accuracy with cluster-bootstrap intervals, the paired
-  primary comparison, and class-level breakdowns. No per-item rows, no raw outputs.
+- **Dev scorecard**, the one you asked for: one row per dev item and, per rung, **two cells** —
+  `action` pass/fail, and the generated `reply` shown as text beside the gold reply, since there is
+  nothing to pass or fail it against until §3.4's metric exists. The model's raw output on click.
+  This is the debugging surface, and dev is where iteration is supposed to happen.
+- **Test report**: aggregates only. Per-rung `action` accuracy with cluster-bootstrap intervals,
+  the paired primary comparison, and per-class breakdowns. `reply` appears only as whatever
+  descriptive statistics §3.4 settles on. No per-item rows, no raw outputs.
 
 Both are generated from a results file. Neither calls a model.
 
@@ -542,7 +652,13 @@ He wants a sentence he can say in a demo. Three candidates, with what each one n
 
 | Claim | Needs | Status today |
 |---|---|---|
-| "Matches a frontier model on our schema, at a fraction of the cost, on our own hardware" | n≥150 test, a paired **equivalence** margin set in advance, and measured $/latency per item | Reachable this month |
+| "Matches a frontier model on our schema, at a fraction of the cost, on our own hardware" | n≥150 test, a paired **equivalence** margin set in advance (Q8), and measured $/latency per item | Reachable this month, on `action` |
+
+*Split by half of the label space, 2026-11-08 (§3.4).* Each row below should be read as a claim
+about **`action`** unless it says otherwise. On `reply`: no claim at all until it has a metric, and
+the likeliest honest shape is equivalence ("replies rated no worse"), not superiority — writing
+replies is close to what frontier models are best at.
+
 | "Beats a frontier model on our schema and output format" | n≥150, paired McNemar, p<0.05, a named primary metric, labels not supplied by that model | Reachable. *Flagged:* an earlier version added "format and vocabulary adherence is where a small fine-tune genuinely wins", asserted with no citation and no experiment here. Withdrawn: it is a hypothesis for step 2 to test, and `literature.md` has no row supporting it |
 | "Beats a frontier model on **unseen** schemas" | The novelty ladder (ADR-004), L2+ test items, EXP-002's similarity covariate | **Out of scope for this track by design, as of Q12 (2026-11-08).** This is the research claim, it needs the benchmark, and a single-schema product eval set cannot reach it however good the numbers are |
 
@@ -746,17 +862,33 @@ research question, ADRs, experiment records and Decisions. Genesis never writes 
 ## 9. Questions for Kapardhi
 
 **Answered 2026-10-10:** Q2 (privacy), Q3 (the labelled items), Q4 (abstention), Q5 (model size).
-**Answered 2026-11-08:** Q12 (this is the product track, not the benchmark). All transcribed in §0
-and worked into the Scope note, §2, §3.1, §3.2, §3.3, §5 and §6.
+**Answered 2026-11-08:** Q12 (product track, not the benchmark) and **Q1(a)** (the label space is
+`action` + `reply` per user message). All transcribed in §0 and worked into the Scope note, §2,
+§3.1, §3.2, §3.3, §3.4, §5 and §6.
 
 **Q1 is the one that still blocks step 1 code**, because it decides what the audit measures.
 
-- **Q1. What exactly are the labelled items?** (a) What is the label space — chatbot action +
-  reply, or `(field, op, value)` state deltas? (b) Who labelled them, and did any model output
-  touch a label at any stage, including as a suggestion a human then accepted? (c) Does a written
-  label guideline exist, or was it judgement in the moment? (d) Where does the file live, and what
-  format is it in? *This needs prose, not a choice.* Without (a) I cannot write EXP-004's
-  hypothesis, and without (b) I cannot fill the `labeler` field the splits rule requires.
+- **Q1. What exactly are the labelled items?** **(a) Answered 2026-11-08:** `action` + `reply` per
+  user message. Three parts still open, and (b) and (d) still block step 1:
+  - **(b) Who labelled them, and did any model output touch a label at any stage** — including as a
+    suggestion a human then accepted? This decides two things, not one: the `labeler` value that
+    `data-and-splits.md` requires on every record, and whether the labels are usable at all. If a
+    frontier model proposed them, §4's distillation-ceiling point applies and "beats Claude"
+    becomes close to unreachable by construction; if the product SLM proposed them, the labels
+    partly encode what the current system already does, which is worse.
+  - **(c) Does a written label guideline exist**, or was it judgement in the moment? Without one,
+    §3.3's intra-rater re-test is the only way to bound label noise, and Gate 2 has no ceiling.
+  - **(d) Where does the file live and in what format?** I need this to write the audit script;
+    it runs on your machine and returns counts only.
+- **Q18. What is the `action` set?** The exact classes, as labelled. Step 1 counts them anyway, but
+  knowing them now decides whether any class is abstain-like, which settles **Q11**, and whether
+  the set is closed or was invented per item.
+- **Q19. The `reply` metric (§3.4).** Deferred on purpose until step 1 reports whether replies are
+  templated. If they are, exact match and nothing to decide. If they are not, the choice is yours
+  between a human preference study (~322 pairs to rate for one comparison at 60:40 with ties), an
+  LLM judge that is not also a baseline and is validated against human judgement on a subsample, or
+  no reply claim at all. The default this plan proceeds under, absent an answer: **no claim on
+  `reply`**, and `action` carries everything.
 - **Q9. Consent scope (§3.1(c)).** Does the consent on file cover upload to a third-party
   model-training API with durable retention, or only use of the conversations for the service? And
   do you approve the amendment to `.claude/rules/data-privacy.md` quoted in §3.1(a), which is a
@@ -886,6 +1018,23 @@ is first.
   lists `Qwen/Qwen3.5-9B`, `Qwen3.5-4B` and `Qwen3-8B` at the prices §6 and §7 use, unchanged since
   2026-10-10, and still offers no model at or below ~2B, so the §7 budget stands and the ~1B curve
   point still needs other infrastructure. Nothing built, no record created, `STATE.md` untouched.
+- 2026-11-08: **Q1(a) answered, transcribed verbatim in §0: "the labels are action + reply for each
+  user message."** This confirms the label space is not the research `Y`, which Q12 already makes
+  acceptable, and it adds **§3.4**, new and the most consequential thing in this revision: every
+  per-item comparison in this plan assumes one right-or-wrong outcome per item, which is true of
+  `action` and false of `reply`. Left unnoticed that would have produced numbers shaped like the
+  §3.2 tables and meaning something else. What §3.4 settles: `action` is the primary metric and
+  carries every claim; `reply` gets no pre-registered effect size until it has a scoring function;
+  step 1 measures whether replies are templated first, because that would dissolve the problem;
+  and if they are not, the four metric families are set out with their real costs, including ~322
+  hand-rated pairs for one human-preference comparison at 60:40 with ties. Also recorded: ADR-002
+  is not exercised by this track at all, since an action + reply task has no ledger; a 9B fine-tune
+  beating a frontier model on reply text is not likely and the demo sentence should rest on action
+  accuracy, format, cost and latency; and the longer completions move the sweep from $42.66 to
+  $45.82 at 250 tokens, within §7's noise. Two new questions: **Q18** (the action set, which also
+  settles Q11) and **Q19** (the reply metric, deferred until step 1 reports). Q1(b), (c) and (d)
+  are still open and (b) and (d) still block step 1. Nothing built, no record created, `STATE.md`
+  untouched.
 
 ## 11. `research-reviewer` pass, 2026-10-10
 
