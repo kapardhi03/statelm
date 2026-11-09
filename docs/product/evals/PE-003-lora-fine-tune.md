@@ -1,6 +1,6 @@
 # PE-003: LoRA fine-tune — does it beat eight examples in a prompt?
 
-Status: **Draft**
+Status: **Planned** (code written; nothing has been run)
 Owner: Kapardhi
 Created: 2026-11-09
 Product decision informed: whether to ship a fine-tuned model, or stay with the best prompted rung.
@@ -15,8 +15,11 @@ least a week out, and that is the critical path rather than anything in this rec
 > product-track scope (Q12), the separate series (Q16), ~9B as the primary model (Q5), and PE-002's
 > approved Metric, which already fixed **B3 as the rung a fine-tune must beat** before any
 > fine-tune existed.
-> **Not approved:** the Hypothesis, Metric and thresholds below. **Claude Code's proposals**,
-> written before any code as rules 1 and 2 require. The Decision section is left for him (rule 5).
+> **Approved by Kapardhi, 2026-11-09:** "approved, write the code". The Hypothesis, Metric and
+> thresholds below are now pre-registered and do not move after a result is seen (rule 2). The code
+> was written after that approval, at `product/PE-003/`, and **is still not approved to run**: three
+> gates refuse in code — PE-002's Gate 2 on both conditions, the Q9 consent record, and the prompt
+> freeze on the test split. The Decision section is left for him (rule 5).
 > Everything marked *Flagged* is Claude Code's reading rather than his instruction.
 
 ---
@@ -115,7 +118,10 @@ run whose weighted-token count does not match stops rather than trains.
   Tinker SDK reference, read at the time, not from memory.
 - **This uploads client conversation text**, so the same consent gate PE-002 enforces applies here
   (the plan's **Q9**), with `tinker` named in the record.
-- Code entry point: `product/PE-003/` — **not created yet**; the Metric below is unapproved.
+- Code entry point: `product/PE-003/`. Written 2026-11-09 after approval: `recipe.py`,
+  `dataset.py` (the loss mask and its checks), `trainer.py` (the Tinker adapter and an offline
+  stub), `sweep.py`, `run_finetune.py`, and 50 tests — every one against the stub, so no key, no
+  network and no credits. Run book in that directory's `README.md`.
 - `runs/PE-003/<run-id>/config.json` records: git commit and dirty flag, the split hashes, the prompt
   hash, the base model and Tinker model id, rank, LR, batch size, epochs run, the early-stopping
   decision, the seed, the weighted-token totals, the consent hash, the price table version, and the
@@ -216,6 +222,40 @@ examples may simply not be enough to move anything, which is what the Hypothesis
 (pending, human; never written by Claude Code)
 
 ### Change log
+- 2026-11-09: **approved ("approved, write the code") and built.** Status Draft → Planned. 50 tests,
+  all offline. The Tinker call shapes were taken from its SDK cheatsheet read the same day, as this
+  record committed to, not from memory: `create_lora_training_client(base_model=, rank=)`,
+  `forward_backward_async(data=, loss_fn="cross_entropy")`, `optim_step_async(AdamParams(...))`,
+  `save_weights_and_get_sampling_client(name=)`, and the `Datum` shape with its one-position shift.
+  Three gates refuse in code: PE-002's Gate 2 (every condition row, not the summary line), the Q9
+  consent record (naming `tinker` **and** B3's provider), and the prompt freeze on test.
+
+  **Four findings from building it, none of which changes a threshold:**
+  1. **A float round-trip would have scored zero seeds.** The sweep selected its learning rate by
+     formatting it to a label and parsing it back, so `base_lr × (1/3)` became `3.33e-05` and
+     matched none of its own runs: the sweep would have chosen a learning rate and then scored
+     **no** seeds on test, returning an empty result rather than failing. Caught by a test;
+     learning rates now stay floats and are matched with `isclose`, with a regression test on the
+     non-terminating factor.
+  2. **A fourth mask check, beyond the one pre-registered here.** The record asked that the number
+     of weight-1 positions equal the completion length. A mask with the right *count* in the wrong
+     *places* passes that and trains on the conversation anyway, so placement is asserted too.
+     Measured on the smoke corpus: 64 weighted positions of 6,034, a 1.06% weighted share, which is
+     the shape a classification target should have. A share near 1.0 would mean the mask is idle.
+  3. **B3 is run inside PE-003, not imported from PE-002's output.** PE-002's test pass writes
+     aggregates only, so there is no per-item correctness on disk to pair against — and that rule is
+     right. PE-003 therefore imports PE-002's modules and runs B3 itself, which also makes the
+     baseline PE-002's own code rather than a copy that could drift. Its one cost: PE-003's
+     constants live in `recipe.py`, because two bare `thresholds` modules cannot both be imported.
+     **The promote-to-a-shared-module question EXP-003 raised is now plainly live for this pair, and
+     it is still his.**
+  4. **The shared output guard needed PE-003's vocabulary**, and one value went into the wrong
+     category first: `base_model` is `Qwen/Qwen3.5-9B`, which the strict hash charset rejects and
+     the config-identifier charset accepts. The guard caught it rather than a reader noticing later.
+     PE-001's 95 and PE-002's 116 tests stay green after the change.
+
+  Still his: whether the Hypothesis survives PE-001's real train-split count, **Q9**, **Q7**, and
+  the shared-module question above.
 - 2026-11-09: created at Kapardhi's request ("now write PE-003"). Hypothesis, Metric and thresholds
   are Claude Code's proposals awaiting approval; **no code written**. Four things in it are Claude
   Code's and are flagged as such: the **64-against-8 framing**, which is the central risk and is

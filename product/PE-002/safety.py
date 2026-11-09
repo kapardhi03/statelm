@@ -60,6 +60,12 @@ ALLOWED_VALUE_STRINGS: frozenset[str] = frozenset(
         "B4",
         "B5",
         "B-triv",
+        # --- PE-003's additions (it imports this guard, so the vocabulary is shared) ---
+        "PE-003",
+        "finetune",
+        "action_only",
+        "action_and_reply",
+        "UNSTABLE",
         "scikit_learn_not_installed",
         "degenerate_single_class_train",
         # config.json's record of how turns were ordered.
@@ -93,6 +99,7 @@ IDENTIFIER_KEYS: frozenset[str] = frozenset(
         "providers_sha256",
         "consent_sha256",
         "consent_instructed_on",
+        "gate2_source_sha256",
         # Short non-reversible group ids, from normalize.stable_hash.
         "duplicate_group_ids",
     }
@@ -125,6 +132,9 @@ CONFIG_IDENTIFIER_KEYS: frozenset[str] = frozenset(
         "rungs_run",
         "fewshot_item_id_hashes",
         "columns_mapped",
+        "base_model",
+        "best_checkpoint",
+        "checkpoint",
     }
 )
 _CONFIG_ID_CHARS = set(
