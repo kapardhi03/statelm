@@ -2,6 +2,11 @@
 data/raw/
 # Scrubbed conversation text is still client text: it never gets committed.
 data/scrubbed/
+# The product track's eval data (PE-NNN): a CSV export of the labelling sheet and anything derived
+# from it. Client text, so it never gets committed. Added 2026-11-08 on Kapardhi's answer to Q16;
+# test_gitignore.py pins it. Additive on purpose: broadening the patterns above would break the
+# re-inclusion of data/splits/schema_assignment.json, which no test covers.
+data/product-eval/
 data/splits/**
 !data/splits/**/
 !data/splits/schema_assignment.json

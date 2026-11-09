@@ -24,6 +24,11 @@ MUST_BE_IGNORED = [
     # The sampler's manifest holds every item's stratum and source. It stays local: those are
     # the counts an annotator must not meet before labelling.
     "data/scrubbed/EXP-000-annotation/manifest.json",
+    # The product track's eval data (PE-NNN) is a CSV export of the labelling sheet and whatever
+    # is derived from it. Client text either way, so none of it can be committed.
+    "data/product-eval/export.csv",
+    "data/product-eval/test/items.jsonl",
+    "data/product-eval/dev/items.jsonl",
     # A run directory holds counts; anything else under it is not a summary and stays local.
     "runs/EXP-000/20261003T000000Z-abc1234/stdout.log",
     "runs/EXP-000/20261003T000000Z-abc1234/synthetic_census.json",

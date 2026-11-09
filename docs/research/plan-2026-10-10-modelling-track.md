@@ -107,6 +107,48 @@ Transcribed verbatim:
    quality: with one annotator and no guideline, the labels are judgement in the moment and may
    have drifted across the labelling session, and the re-test is what would measure that.
 
+### Kapardhi's answers of 2026-11-08 (Q16, and Q1 part d)
+
+Transcribed verbatim:
+
+> "yes to Q16, data is in a google sheet"
+
+**Q16 settled.** The product track gets its own series and its own places, as proposed: records
+under `docs/product/evals/PE-NNN-*.md`, runs under `runs/PE-NNN/<run-id>/`, data in its own
+directory, and **`STATE.md` stays research-only**. `PE-001` is the dataset audit, formerly called
+EXP-004 in §10; `PE-002` is the baseline ladder, `PE-003` the LoRA fine-tune. Created on this
+answer: `docs/product/evals/_TEMPLATE.md` and `docs/product/evals/PE-001-dataset-audit.md`, the
+latter a draft whose Hypothesis, Metric and threshold are **proposals awaiting his approval**, with
+the Decision section left for him as CLAUDE.md rule 5 requires.
+
+**Q1(d) answered: the data is in a Google Sheet.** Two things follow, and the second is a question
+for him.
+
+1. **Step 1 runs locally on an export, and only `metrics.json` comes back.** This is the pattern
+   `.claude/rules/data-privacy.md` already prescribes for EXP-000's tooling — "EXP-000's scrubber,
+   item sampler, annotation-sheet generator and agreement script all run on his machine. Only
+   aggregates — counts, Cohen's κ, confusion matrices — go into `runs/`." The audit needs the user
+   message text for its keyword baseline and its near-duplicate check, so there is no version of it
+   that returns anything useful without touching client text. It therefore runs where the text is.
+   He exports the sheet to CSV, runs the script, and commits the aggregates.
+2. **Claude Code is not reading the sheet, and that is a deliberate default (Q20).** The Google
+   Drive connector in this session could read it. The consent he gave under Q2 covers *uploading to
+   a named provider for training*; it says nothing about Claude Code reading client conversation
+   text, and `data-privacy.md` still says client text is "never requested, read, committed or
+   uploaded". So Claude Code is not asking for it and does not need it: the local-export design
+   above gives the same result. If he would rather I read the sheet directly, that is his to say and
+   it needs recording as a second, separate lifting of that rule — raised as **Q20**, with a
+   recommendation to leave it as it is.
+
+*Flagged by Claude Code, a fact rather than a criticism:* the data living in a Google Sheet means
+client conversation text is already on a third party's servers, so `data-privacy.md`'s "never
+leaves Kapardhi's machine" has not described reality for as long as the sheet has existed. That
+does not change any decision here — the amendment drafted in §3.1(a) is still the right fix and is
+still his to approve — but the amendment should cover storage as well as upload, or the file will
+be wrong again the day after it is fixed.
+
+---
+
 *Flagged by Claude Code, not a defect and worth stating once:* he labelled the data, he owns the
 product's intended behaviour, and he would also be the rater if §3.4's human-preference route is
 taken. So this eval set measures **agreement with Kapardhi's judgement**, not with a ground truth
@@ -912,11 +954,18 @@ research question, ADRs, experiment records and Decisions. Genesis never writes 
     route to the label-noise ceiling that Gate 2 thresholds on. With no guideline, the labels may
     also have drifted across the labelling session, which is exactly what that re-test measures.
     Does not block step 1; does block Gate 2.
-  - **(d) Where does the file live and in what format?** **The last thing blocking step 1.** I need
-    it to write the audit script, which runs on your machine and returns counts only.
+  - ~~**(d) Where does the file live and in what format?**~~ **Answered 2026-11-08: a Google
+    Sheet.** Step 1 therefore runs locally on a CSV export and returns only aggregates, per §0.
+    Still useful when you next open it: the column names, and whether every row is labelled.
 - **Q18. What is the `action` set?** The exact classes, as labelled. Step 1 counts them anyway, but
   knowing them now decides whether any class is abstain-like, which settles **Q11**, and whether
   the set is closed or was invented per item.
+- **Q20. Should Claude Code read the Google Sheet directly?** Raised by Claude Code, 2026-11-08.
+  The connector in this session could. Q2's consent covers upload to a training provider, not
+  Claude Code reading client text, and `data-privacy.md` forbids the latter in terms.
+  **Recommendation: no.** The local-export design returns the same aggregates, and saying yes would
+  be a second, separate lifting of that rule. If you do want it, say so explicitly and I will
+  record it as its own instruction with the date.
 - **Q19. The `reply` metric (§3.4).** Deferred on purpose until step 1 reports whether replies are
   templated. If they are, exact match and nothing to decide. If they are not, the choice is yours
   between a human preference study (~322 pairs to rate for one comparison at 60:40 with ties), an
@@ -987,7 +1036,22 @@ research question, ADRs, experiment records and Decisions. Genesis never writes 
 
 ---
 
-## 10. What I will build first, once Q1, Q9, Q10 and Q11 are answered
+## 10. What I will build first, once the Metric in PE-001 is approved
+
+**Renumbered to the `PE-NNN` series on his answer to Q16, 2026-11-08.** EXP-004 is **PE-001**,
+EXP-005 is **PE-002**, EXP-006 is **PE-003**. `PE-001`'s record exists at
+`docs/product/evals/PE-001-dataset-audit.md`, with its Hypothesis, Metric and thresholds written
+before any code as rule 1 requires and awaiting his approval. `STATE.md` gets no row (Q16).
+
+**What now gates what, after the answers of 2026-11-08:**
+
+| Step | Gated on | Needs an upload? |
+|---|---|---|
+| PE-001, dataset audit | **approval of PE-001's Metric** — nothing else | No. Runs on his machine, returns `metrics.json` |
+| PE-002, baseline ladder | PE-001's Gate 1, Q9 (consent scope), Q1(c) for Gate 2's ceiling, Q7 (which frontier revisions) | Yes, at rungs B4/B5 and for the Qwen rungs |
+| PE-003, LoRA fine-tune | PE-002's Gate 2, Q19 if a reply claim is wanted, Q8 if an equivalence claim is | Yes, Tinker |
+
+### The old gating note, kept for the record
 
 **The gate is those four, not Q1–Q4.** *Corrected 2026-10-10 after a `research-reviewer` pass:* an
 earlier version gated on Q1–Q4 and then listed steps that upload client text, which would have run
@@ -1083,6 +1147,20 @@ is first.
   rather than with an independent ground truth — the correct target for a product eval set after
   Q12, and one more reason the two tracks stay apart. **Q1(d) is now the only thing blocking step
   1.** Nothing built, no record created, `STATE.md` untouched.
+- 2026-11-08: **Q16 and Q1(d) answered, transcribed verbatim in §0: "yes to Q16, data is in a
+  google sheet."** Q16 approves the separate product series, so `docs/product/evals/_TEMPLATE.md`
+  and `docs/product/evals/PE-001-dataset-audit.md` are created, the latter a draft whose Hypothesis,
+  Metric and threshold are proposals for his approval and whose Decision section is left for him.
+  EXP-004/005/006 in §10 become PE-001/002/003. `STATE.md` stays research-only, so no row is added
+  there. Q1(d) settles how step 1 runs: the audit needs user message text for its keyword baseline
+  and duplicate check, so it runs on his machine against a CSV export and only `metrics.json`
+  comes back, which is the pattern `data-privacy.md` already sets for EXP-000's tooling. Claude Code
+  is **not** reading the sheet: the connector could, but Q2's consent covers upload to a training
+  provider rather than Claude Code reading client text, so that is raised separately as **Q20** with
+  a recommendation against. Also flagged: the sheet means client text already sits on a third
+  party's servers, so §3.1(a)'s drafted amendment should cover storage as well as upload. Q1(c) and
+  Q18 are the remaining asks, and neither blocks the audit. `data/product-eval/` is now gitignored
+  with a test case, closing the Q17 safety gap for the directory the export lands in.
 
 ## 11. `research-reviewer` pass, 2026-10-10
 
