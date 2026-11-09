@@ -1,6 +1,6 @@
 # PE-002: Baseline ladder — what does a fine-tune have to beat?
 
-Status: **Draft**
+Status: **Planned** (stage 1 built; stage 2 not built)
 Owner: Kapardhi
 Created: 2026-11-09
 Product decision informed: whether to fine-tune at all, and which rung PE-003 must beat. This is
@@ -14,8 +14,10 @@ frontier revisions), and PE-001's Gate 1.
 > (Q1a); he labelled the items himself with no model involved (Q1b); there is no written label
 > guideline (Q1c); the data is in a Google Sheet (Q1d); this is a product-evaluation set and not
 > the benchmark (Q12); the product track has its own series (Q16).
-> **Not approved:** the Hypothesis, Metric and thresholds below. **Claude Code's proposals**,
-> written before any code as rules 1 and 2 require. The Decision section is left for him (rule 5).
+> **Approved by Kapardhi, 2026-11-09:** "approved, write stage 1". The Hypothesis, Metric and
+> thresholds below are now pre-registered and do not move after a result is seen (rule 2). Stage 1's
+> code was written after that approval; **stage 2 has no code and is not approved to run**, because
+> it uploads client text and is gated on Q9. The Decision section is left for him (rule 5).
 > Everything marked *Flagged* is Claude Code's reading rather than his instruction.
 
 ---
@@ -108,7 +110,17 @@ Also run, because it costs almost nothing and answers a question the plan raises
 - **Per-item outputs for the dev split only.** `data-and-splits.md`: for test, "you may see only
   aggregate metrics". So the dev run writes a per-item JSONL and the HTML scorecard; the test run
   writes aggregates, the paired discordance counts (b and c), and nothing per item.
-- Code entry point: `product/PE-002/` — **not created yet**; the Metric below is unapproved.
+- Code entry point: `product/PE-002/`. **Stage 1 written 2026-11-09**: `thresholds.py`,
+  `scoring.py` (accuracy, Wilson, exact McNemar, cluster bootstrap, Holm, spread), `baselines.py`,
+  `data.py`, `make_split.py`, `run_stage1.py`, and 65 tests. Stage 2 is not written. Run book in
+  that directory's `README.md`.
+- **The split writer came with stage 1**, because nothing could be scored without a split and
+  nothing had written one. It implements the plan's §3.2 assignment (200 / 100 / remainder, by
+  conversation), is a **dry run by default** since `data-and-splits.md` freezes the test split once
+  created, excludes EXP-000's conversations from test at conversation level, and writes the
+  assignment to a gitignored local path with only its SHA-256 in the run config. The reason it is
+  not committed, unlike the research track's tracked `schema_assignment.json`: it is keyed by
+  conversation ids from a WhatsApp export, where a conversation id may be a phone number.
 - `runs/PE-002/<run-id>/config.json` records: git commit and dirty flag, the split hashes, the
   prompt template hash, the rung, the model id and revision, the provider, the decoding settings,
   k and the few-shot example ids, the seed, the price table version, and the token counts billed.
@@ -197,6 +209,27 @@ which family applies (Q19).
 (pending, human; never written by Claude Code)
 
 ### Change log
+- 2026-11-09: **Metric approved ("approved, write stage 1"); stage 1 built.** Status Draft →
+  Planned. 65 tests, no model, no network, no credits. Three findings from building it, none of
+  which changes a threshold:
+  1. **The split writer would have frozen a useless split.** On a corpus smaller than the
+     pre-registered targets, filling test-first drained every conversation into test and left train
+     and dev empty — and `data-and-splits.md` freezes the result. It now refuses, with two
+     conditions: fewer than 300 items, and enough items but too few and too large conversations to
+     fill three splits without dividing one. Caught by a test on a 72-item fabricated corpus. The
+     first refusal surfaces the plan's **Q10** at the right moment: ">400 examples" is a
+     recollection, so if the export is materially smaller the pre-registered split is unreachable
+     and that is his decision, not a script's.
+  2. **Two of Claude Code's own bootstrap tests were vacuous.** They gave every conversation the
+     same accuracy, which has zero between-cluster variance and therefore a zero-width interval —
+     correct behaviour, but it made the assertions meaningless rather than failing honestly. Fixed,
+     and the zero-variance case now has a test of its own that records what it means: a zero-width
+     cluster interval is a signal to look at the clusters, not a precision claim.
+  3. **A p-value was being rounded to `0.0`.** A strongly significant exact test gives a value of
+     order 1e-11, and six decimal places print it as an exactness no test can have. No longer
+     rounded.
+  Also recorded: the output guard caught an unregistered hash key on first run, which is the guard
+  doing its job rather than a defect.
 - 2026-11-09: created at Kapardhi's request ("ok now write PE-002"). The Hypothesis, Metric and
   thresholds are Claude Code's proposals awaiting his approval; no code has been written. Two
   things in it are not from the plan and are flagged as Claude Code's: the **stage split**, which
