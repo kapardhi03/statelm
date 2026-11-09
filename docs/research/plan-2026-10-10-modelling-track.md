@@ -1083,7 +1083,7 @@ before any code as rule 1 requires and awaiting his approval. `STATE.md` gets no
 | PE-001, dataset audit | **approval of PE-001's Metric** — nothing else | No. Runs on his machine, returns `metrics.json` |
 | PE-002 **stage 1**, B-triv only | PE-001's split, and nothing else | **No.** No model, no network, no credits |
 | PE-002 **stage 2**, B0–B5 | PE-001's Gate 1, **Q9** (consent scope), Q7 (which frontier revisions), and PE-001's re-test for Gate 2's ceiling | Yes. The first upload in this plan |
-| PE-003, LoRA fine-tune | PE-002's Gate 2, Q19 if a reply claim is wanted, Q8 if an equivalence claim is | Yes, Tinker |
+| PE-003, LoRA fine-tune | **PE-002's Gate 2, both conditions**, Q9, Q19 if a reply claim is wanted, Q8 if an equivalence claim is | Yes, Tinker |
 
 ### The old gating note, kept for the record
 
@@ -1203,6 +1203,21 @@ is first.
   fabricated data: measurement D conflates context dependence with label noise, so what it
   establishes is narrower than first written. The threshold stays at 30 and only the interpretation
   is narrowed, recorded in PE-001's Change log as rule 2 requires.
+- 2026-11-09: **PE-003's record drafted** at `docs/product/evals/PE-003-lora-fine-tune.md`, Status
+  Draft, Metric awaiting approval, no code written. It leads with the number that frames it: the
+  split is 200 test / 100 dev / **remainder** train, and on a corpus the size his ">400 examples"
+  suggests the remainder is small — a dry run of the split writer on a 367-item fabricated corpus
+  gave train 64 / dev 102 / test 201. **So the fine-tune gets about 64 training examples and B3,
+  the rung it must beat, has 8 of them in its prompt: the contest is 64 against 8, not 400 against
+  8.** At that size PE-003 tests whether SFT changes behaviour at all on this data, and a null
+  result is a finding about data volume rather than about LoRA, routing to step 4 rather than to a
+  bigger model. Claude Code's four additions, flagged there: that framing; a seed-0-plus-agreement
+  rule rather than "all three seeds must pass", which would cost about half the power for no
+  protection the agreement check does not give; an action-only primary with an action+reply
+  secondary, so the gap between what is measured cleanly and what would be shipped stays visible;
+  and a loss-masking assertion, because a mis-masked run trains the model to predict the
+  conversation, looks healthy in the loss curve, and no metric in the record would catch it. Whole
+  cost ≈ $17 on the 9B, so compute is not the constraint at any plausible train size.
 - 2026-11-09: **PE-002's record drafted** at `docs/product/evals/PE-002-baseline-ladder.md`, Status
   Draft, Metric awaiting approval, no code written. Two things in it are Claude Code's and not from
   this plan, both flagged there. **The stage split:** B-triv runs locally with no upload, no
