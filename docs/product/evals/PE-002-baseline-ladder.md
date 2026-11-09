@@ -1,6 +1,6 @@
 # PE-002: Baseline ladder — what does a fine-tune have to beat?
 
-Status: **Planned** (stage 1 built; stage 2 not built)
+Status: **Planned** (stage 1 and stage 2 built; neither has been run)
 Owner: Kapardhi
 Created: 2026-11-09
 Product decision informed: whether to fine-tune at all, and which rung PE-003 must beat. This is
@@ -16,8 +16,10 @@ frontier revisions), and PE-001's Gate 1.
 > the benchmark (Q12); the product track has its own series (Q16).
 > **Approved by Kapardhi, 2026-11-09:** "approved, write stage 1". The Hypothesis, Metric and
 > thresholds below are now pre-registered and do not move after a result is seen (rule 2). Stage 1's
-> code was written after that approval; **stage 2 has no code and is not approved to run**, because
-> it uploads client text and is gated on Q9. The Decision section is left for him (rule 5).
+> code was written after that approval. **Stage 2's code exists as of 2026-11-09 and is still not
+> approved to RUN**: it uploads client text, and the consent gate in `consent.py` refuses to send
+> anything without a record of his Q9 decision naming every provider a run would reach. Writing the
+> code is not uploading; running it is. The Decision section is left for him (rule 5).
 > Everything marked *Flagged* is Claude Code's reading rather than his instruction.
 
 ---
@@ -88,11 +90,16 @@ Also run, because it costs almost nothing and answers a question the plan raises
 ### Settings, fixed before running
 
 - **Decoding:** greedy, temperature 0, for every model rung. This is a classification task.
+  **Cannot be honoured on a Claude rung — recorded 2026-11-09, see the Change log:** sampling
+  parameters return a 400 on current Claude models, so temperature cannot be set on B4 at all.
+  `output_config: {effort: "low"}` stands in as the nearest control.
 - **Runs per rung: 3.** Providers are not deterministic even at temperature 0, so CLAUDE.md's "mean
   and spread over ≥3 seeds whenever a model is sampled" applies. Report mean and spread; a rung
   whose spread exceeds its distance to a neighbour has not separated from it.
 - **Thinking disabled** on the Hybrid models via the renderer, and recorded in the config: a
   thinking and a non-thinking run are not the same system.
+  **Cannot be honoured on a Claude rung — recorded 2026-11-09, see the Change log:**
+  `{type: "disabled"}` returns a 400 on `claude-opus-5-5` at every effort level.
 - **k for B3:** proposed **k = 8**, examples drawn from train with a fixed seed, order fixed and
   recorded. Few-shot results move with example choice and order, so both are part of the config.
 - **One prompt**, shared by B1, B2, B3, B4 and B5 except for what each rung is defined to change.
@@ -209,6 +216,50 @@ which family applies (Q19).
 (pending, human; never written by Claude Code)
 
 ### Change log
+- 2026-11-09: **stage 2 built** at his instruction ("write stage 2"), 116 tests, every one against
+  an offline stub backend so the pipeline is testable without a key, a credit or an upload.
+  **It is still not approved to run.** Two preconditions are enforced in code rather than by
+  discipline: `consent.py` refuses to send anything without a record of his Q9 decision naming
+  every provider a run would reach, with that file's SHA-256 in the run config; and a
+  `--split test` run refuses unless `--prompt-sha` matches the template on disk, because a prompt
+  edited between the dev pass and the test pass turns a pre-registered comparison into a tuned one
+  and nothing in the output would show it.
+
+  **Two settings this record pre-registered cannot be honoured. This is the deviation record rule 2
+  requires; no threshold moved.** Both come from the Claude API reference, both are now stated in
+  the Setup above, and both are reported in every run under `rung_meta.*.unsupported_settings`:
+  1. **"greedy, temperature 0 for every model rung"** — sampling parameters return a 400 on current
+     Claude models, so temperature cannot be set on B4 at all. `output_config: {effort: "low"}`
+     stands in.
+  2. **"thinking disabled on the Hybrid models"** — `{type: "disabled"}` is a 400 on
+     `claude-opus-5-5` at every effort level.
+
+  *Flagged by Claude Code, because it changes how a result must be read:* a Claude rung is therefore
+  not strictly comparable to a Qwen rung on the decoding axis, and **its spread across the three
+  runs is not controllable the way the others' is**. That makes B4's spread load-bearing rather
+  than a formality — if it exceeds B4's distance to the rung below, the two have not separated.
+
+  Four further decisions, none of them changing a threshold:
+  - **The Qwen rungs go through Tinker's OpenAI-compatible inference** rather than its sampling SDK,
+    because the compatible shape is documented and the SDK's signatures would have been guesswork.
+    PE-003 trains rather than samples and will use Tinker's own training API.
+  - **A new `b2_constraint_check`.** B2 is B1 plus a constraint, and a *compatible* endpoint may
+    accept `response_format` and ignore it — in which case B2 is B1 under another name and no
+    accuracy figure would show it. The tell is parse failures, since a constrained rung cannot emit
+    an out-of-vocabulary answer. Reported, never thresholded, and `NOT_ESTABLISHED` when both B1 and
+    B2 are clean, because that is equally consistent with the constraint working and with B1 never
+    having needed it.
+  - **The floor is recomputed inside stage 2** rather than imported from stage 1, so Gate 2
+    condition 1 is genuinely paired on the same items. `--stage1-metrics` cross-checks it and a
+    mismatch stops the run, because it means the two runs are not on the same split.
+  - **Few-shot item ids are hashed, not emitted.** The seed and the train split already determine
+    the selection, so the ids add nothing to reproducibility — and an item id from a WhatsApp export
+    may encode a phone number.
+
+  Still open and still his: **Q7** (which models B4 and B5 are — configuration in `providers.yaml`
+  rather than a constant), **Q9** (consent scope), and whether k = 8 is right.
+  `prompt_b0_shipped.md` is a placeholder and says so: B0 measures "the shipped system", so it needs
+  the real shipped prompt before that rung means anything.
 - 2026-11-09: **Metric approved ("approved, write stage 1"); stage 1 built.** Status Draft →
   Planned. 65 tests, no model, no network, no credits. Three findings from building it, none of
   which changes a threshold:
