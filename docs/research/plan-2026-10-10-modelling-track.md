@@ -1081,7 +1081,8 @@ before any code as rule 1 requires and awaiting his approval. `STATE.md` gets no
 | Step | Gated on | Needs an upload? |
 |---|---|---|
 | PE-001, dataset audit | **approval of PE-001's Metric** — nothing else | No. Runs on his machine, returns `metrics.json` |
-| PE-002, baseline ladder | PE-001's Gate 1, Q9 (consent scope), Q1(c) for Gate 2's ceiling, Q7 (which frontier revisions) | Yes, at rungs B4/B5 and for the Qwen rungs |
+| PE-002 **stage 1**, B-triv only | PE-001's split, and nothing else | **No.** No model, no network, no credits |
+| PE-002 **stage 2**, B0–B5 | PE-001's Gate 1, **Q9** (consent scope), Q7 (which frontier revisions), and PE-001's re-test for Gate 2's ceiling | Yes. The first upload in this plan |
 | PE-003, LoRA fine-tune | PE-002's Gate 2, Q19 if a reply claim is wanted, Q8 if an equivalence claim is | Yes, Tinker |
 
 ### The old gating note, kept for the record
@@ -1202,6 +1203,15 @@ is first.
   fabricated data: measurement D conflates context dependence with label noise, so what it
   establishes is narrower than first written. The threshold stays at 30 and only the interpretation
   is narrowed, recorded in PE-001's Change log as rule 2 requires.
+- 2026-11-09: **PE-002's record drafted** at `docs/product/evals/PE-002-baseline-ladder.md`, Status
+  Draft, Metric awaiting approval, no code written. Two things in it are Claude Code's and not from
+  this plan, both flagged there. **The stage split:** B-triv runs locally with no upload, no
+  credits and no consent question, which puts the project's cheapest possible refutation — a TF-IDF
+  logistic regression matching the prompted models, meaning the pattern is lexical and no SLM is
+  needed — before any client text leaves the machine. §10's table is updated to gate the two stages
+  separately. **The parse-failure rule:** an output outside the action vocabulary counts as
+  incorrect *and* is counted separately, so accuracy cannot be flattered by discarding unparseable
+  answers, and the parse rate is what says whether B2's structured output does any work.
 - 2026-11-09: **Q1(c) answered, transcribed verbatim in §0: "no written guideline, i just labelled
   based on judgement."** Q1 is now fully answered. The label-noise ceiling has one instrument, the
   intra-rater re-test, whose sheet PE-001's script now writes with full context — distinct from the
