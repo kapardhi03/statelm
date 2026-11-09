@@ -298,6 +298,28 @@ def prompt_lengths(items: list[Item]) -> dict[str, Any]:
     }
 
 
+def conversation_context(items: list[Item], target: Item) -> str:
+    """The conversation up to and including `target`, as the original labelling saw it.
+
+    Used by the label-noise re-test sheet, which must present an item under the SAME conditions the
+    original labelling did. The memory-dependence sheet strips this on purpose; using one where the
+    other belongs measures the wrong quantity, which is why they are separate functions and
+    separate CLI flags.
+    """
+    same = [i for i in items if i.conversation_id == target.conversation_id]
+    ordered = sorted(
+        same, key=lambda i: (i.turn_index if i.turn_index is not None else i.row, i.row)
+    )
+    lines: list[str] = []
+    for it in ordered:
+        lines.append(f"customer: {it.user_message}")
+        if it is target or (it.row == target.row and it.item_id == target.item_id):
+            break
+        if it.reply.strip():
+            lines.append(f"bot: {it.reply}")
+    return "\n".join(lines)
+
+
 # --- Gate 1 ---------------------------------------------------------------------------------------
 
 @dataclass

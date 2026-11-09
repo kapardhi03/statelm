@@ -140,6 +140,36 @@ for him.
    it needs recording as a second, separate lifting of that rule — raised as **Q20**, with a
    recommendation to leave it as it is.
 
+### Kapardhi's answer of 2026-11-09 (Q1, part c)
+
+Transcribed verbatim:
+
+> "no written guideline, i just labelled based on judgement"
+
+**Q1 is now fully answered.** Two consequences, and the second is an ordering constraint.
+
+1. **The label-noise ceiling has exactly one instrument.** With a single annotator and no written
+   rule there is no agreement to fall back on, so EXP-000's recorded fallback is the only route:
+   relabel a blind subsample after ≥1 week, reported as **intra**-rater, never as agreement. §4's
+   Gate 2 thresholds on that ceiling, so without it Gate 2 has no number. PE-001's script now
+   writes that sheet (`--retest-sample-out`, full context) alongside the context-stripped one for
+   memory dependence, because the two measure different things and the sheets are not
+   interchangeable.
+2. **The re-test comes before any guideline is written.** *Claude Code's reading, not his
+   instruction:* a guideline derived from the existing labels and then used to re-label measures
+   **guideline-following**, not how stably the judgement was applied — the same distinction EXP-000
+   drew when it labelled its synthetic subset "guideline usability, not evidence for ADR-003". So
+   the order is: re-test blind first, then write the guideline from the disagreements, which are
+   exactly the cases a written rule would have settled. A later re-test against the guideline
+   measures something else and is reported as such.
+
+*Flagged:* the ceiling is not a formality. If his self-agreement is, say, 85%, then a model at 85%
+is already at it, and the +10 pp effect §3.2 pre-registers becomes unobservable however good the
+fine-tune is. The ceiling decides whether PE-002's comparison can detect anything at all, which is
+why it gates PE-003 rather than being reported beside it.
+
+---
+
 *Flagged by Claude Code, a fact rather than a criticism:* the data living in a Google Sheet means
 client conversation text is already on a third party's servers, so `data-privacy.md`'s "never
 leaves Kapardhi's machine" has not described reality for as long as the sheet has existed. That
@@ -674,6 +704,11 @@ relabel a blind subsample after ≥1 week, report it as **intra**-annotator. Wit
 Gate 2 has no threshold and reduces to a judgement call, which should be his and not Claude Code's.
 *Added 2026-10-10 after a `research-reviewer` pass.*
 
+**The instrument now exists** (2026-11-09, on his answer to Q1(c)): PE-001's
+`--retest-sample-out` writes the full-context blind re-label sheet, with the label column empty and
+the key in a separate file. The threshold Gate 2 compares against is still his to set, and §0 notes
+why it decides whether PE-002's comparison can detect anything at all.
+
 ### Step 3 · LoRA SFT on Tinker — *one fixed recipe, three seeds*
 
 Settings in §6. Pre-registered comparison: **the fine-tune vs rung B3**, paired McNemar on ≥150
@@ -948,12 +983,10 @@ research question, ADRs, experiment records and Decisions. Genesis never writes 
 - **Q1. What exactly are the labelled items?** **(a) and (b) answered 2026-11-08:** the labels are
   `action` + `reply` per user message, and he labelled them himself with no model involved. Two
   parts left:
-  - **(c) Does a written label guideline exist**, or was it judgement in the moment? **Now the last
-    open question about label quality**, and more load-bearing than it was: with a single annotator
-    there is no inter-annotator agreement to fall back on, so the intra-rater re-test is the only
-    route to the label-noise ceiling that Gate 2 thresholds on. With no guideline, the labels may
-    also have drifted across the labelling session, which is exactly what that re-test measures.
-    Does not block step 1; does block Gate 2.
+  - ~~**(c) Does a written label guideline exist?**~~ **Answered 2026-11-09: no, judgement in the
+    moment.** So the intra-rater re-test is the only route to Gate 2's label-noise ceiling, its
+    sheet is written by PE-001's script, and it must be done **before** any guideline is written.
+    See §0. **Q1 is fully answered.**
   - ~~**(d) Where does the file live and in what format?**~~ **Answered 2026-11-08: a Google
     Sheet.** Step 1 therefore runs locally on a CSV export and returns only aggregates, per §0.
     Still useful when you next open it: the column names, and whether every row is labelled.
@@ -1161,6 +1194,21 @@ is first.
   party's servers, so §3.1(a)'s drafted amendment should cover storage as well as upload. Q1(c) and
   Q18 are the remaining asks, and neither blocks the audit. `data/product-eval/` is now gitignored
   with a test case, closing the Q17 safety gap for the directory the export lands in.
+- 2026-11-09: **PE-001's Metric approved ("approved, write the audit script") and the script
+  written**, at `product/PE-001/`: 95 tests, no model, no network, no GPU. Two bugs in Claude Code's
+  own code were caught by its tests (a negative-heuristic class-name guard that let a 37-character
+  value through to the output, replaced by a positive label pattern; free-form gate reasons that
+  failed the output guard, now codes) and one flaw in a measurement was found by smoke-testing on
+  fabricated data: measurement D conflates context dependence with label noise, so what it
+  establishes is narrower than first written. The threshold stays at 30 and only the interpretation
+  is narrowed, recorded in PE-001's Change log as rule 2 requires.
+- 2026-11-09: **Q1(c) answered, transcribed verbatim in §0: "no written guideline, i just labelled
+  based on judgement."** Q1 is now fully answered. The label-noise ceiling has one instrument, the
+  intra-rater re-test, whose sheet PE-001's script now writes with full context — distinct from the
+  context-stripped sheet for memory dependence, since using either in the other's place would
+  report one quantity as the other. And an ordering constraint, Claude Code's reading: the
+  full-context re-test comes before any guideline is written, or it measures guideline-following
+  rather than label stability.
 
 ## 11. `research-reviewer` pass, 2026-10-10
 

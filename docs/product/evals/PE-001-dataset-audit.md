@@ -56,7 +56,7 @@ finding worth having before any money is spent, which is why it is condition 2 a
   needs no GPU and spends no Tinker credits.
 - Code entry point: `product/PE-001/`. Written 2026-11-09 after approval: `thresholds.py`,
   `normalize.py`, `safety.py`, `columns.py`, `audit.py` (measurements A–G and the gate, pure
-  functions), `provenance.py`, `run_audit.py`, and 88 tests. Run book in its `README.md`.
+  functions), `provenance.py`, `run_audit.py`, and 95 tests. Run book in its `README.md`.
 - Seeds and versions recorded in `runs/PE-001/<run-id>/config.json`: git commit, the export's row
   count and column names, a hash of the export, and the script version.
 
@@ -93,6 +93,21 @@ templated reply set makes `reply` a second classification and dissolves the prob
    with all prior turns stripped, blind to his original labels, and the two label sets are
    compared. The disagreement rate is the memory-dependence estimate. This is his time, so it is
    proposed only as the fallback that condition 2 needs when (1) is inconclusive.
+
+   *Added 2026-11-09, on his answer to Q1(c):* there is **no written label guideline**, so a
+   **second and separate** re-test is needed, and the tooling now writes both sheets. The
+   memory-dependence sheet strips context; the **label-noise** sheet keeps it, because it must show
+   the item under the same conditions the original labelling did. The label-noise ceiling belongs
+   to PE-002's Gate 2, but its instrument lives here (`--retest-sample-out`). Using one sheet where
+   the other belongs would report memory dependence as label noise, and nothing downstream would
+   reveal it.
+
+   **And an ordering constraint, which is cheap to honour and expensive to miss:** the full-context
+   re-test comes **before** any guideline is written. A guideline derived from the existing labels
+   and then used to re-label measures guideline-following rather than how stably the judgement was
+   applied, which is the distinction EXP-000 drew when it labelled its synthetic subset "guideline
+   usability, not evidence for ADR-003". Re-test first, then write the guideline from the
+   disagreements.
 
 **E. Duplicates and pilot overlap.** Near-duplicate user messages across split boundaries, and
 overlap against EXP-000's sampled item ids. `.claude/rules/data-and-splits.md`: "Pilot items used
@@ -175,6 +190,14 @@ gates is circular. Recorded in the plan's §4, 2026-10-10, after a `research-rev
 (pending, human; never written by Claude Code)
 
 ### Change log
+- 2026-11-09: **Q1(c) answered, transcribed verbatim: "no written guideline, i just labelled based
+  on judgement."** Two consequences recorded in the Setup above. First, the label-noise ceiling that
+  PE-002's Gate 2 thresholds on has no instrument other than an intra-rater re-test, and that
+  re-test needs the item shown **with** its context, which the memory-dependence sheet strips. The
+  script now writes both sheets and the run book sets out which measures what. Second, the
+  full-context re-test must happen **before** any guideline is written, or it measures
+  guideline-following instead of label stability. Claude Code's reading, not his instruction: a
+  guideline is worth writing, and the re-test's disagreements are the right material for it.
 - 2026-11-09: **Status Draft → Planned**, on his instruction "approved, write the audit script".
   The Hypothesis, Metric and the four thresholds above are now his, pre-registered, and do not move
   after a result is seen. Code written at `product/PE-001/`: 7 modules and 88 tests, no model, no

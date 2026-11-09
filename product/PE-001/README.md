@@ -62,22 +62,58 @@ missing. Two worth knowing before you run it:
 - **no `item_id`** → ids become `row-<n>`, which are stable only while the row order is. The
   pilot-overlap check and the re-label key both get fragile. Worth adding a column.
 
-## The context-stripped re-label sheet
+## Two re-label sheets, and the order they must be done in
 
-Gate 1 condition 2 asks whether at least 30 items are memory-dependent. The automatic measure is a
-**lower bound** and it **conflates context dependence with label noise** (see below), so when it
-falls short the condition reads `NOT_ESTABLISHED` and this is what decides it:
+They measure different things. Using one where the other belongs reports memory dependence as label
+noise, or the reverse, and nothing downstream would reveal the mistake.
+
+| Flag | Shows the item | Measures | Needed by |
+|---|---|---|---|
+| `--retest-sample-out` | **with** its conversation context, as the original labelling saw it | **label noise**: how stably the same judgement is applied | PE-002's Gate 2, which thresholds on a label-noise ceiling |
+| `--recheck-sample-out` | **without** context: the message alone | **memory dependence**: whether the action needed the prior turns | PE-001's Gate 1 condition 2, when the automatic lower bound falls short |
 
 ```sh
+# full context -> the label-noise ceiling
+uv run python run_audit.py --csv ... --columns columns.yaml \
+    --retest-sample-out ~/local/retest.csv --seed 11
+
+# context stripped -> memory dependence
 uv run python run_audit.py --csv ... --columns columns.yaml \
     --recheck-sample-out ~/local/recheck.csv --seed 0
 ```
 
-That writes two local files. `recheck.csv` has one row per sampled item: the message alone, no
-conversation context, no prior turns, and **an empty action column** — pre-filling it would be
-pre-labelling, which CLAUDE.md rule 3 forbids outright, and a test asserts the column is empty.
-`recheck.key.csv` holds the mapping back to the original labels and must not be open while you
-re-label. Both hold client text. Keep them local; `data/product-eval/` is gitignored for this.
+Use **different `--seed` values** if the two measurements should not share a sample; the run says so
+out loud when both sheets are written with one seed.
+
+### The sequencing rule, and it is easy to get wrong
+
+Kapardhi's answer of 2026-11-09: there is **no written label guideline** — the labels are judgement
+in the moment. Writing one now is worth doing, and it has to come **after** the full-context
+re-test, not before.
+
+A guideline written by reading the existing labels, then used to re-label, turns the re-test into a
+measure of **guideline-following** rather than of how stably the judgement was applied in the first
+place. That is the same distinction EXP-000 drew for its synthetic subset, where agreement on
+model-authored conversations was labelled "guideline usability, not evidence for ADR-003". So:
+
+1. **Re-test first**, blind, with no guideline written and the key file closed.
+2. **Then** write the guideline, using the disagreements as the material — they are precisely the
+   cases where a written rule would have helped.
+3. A later re-test *against* the guideline measures something else, and is reported as such.
+
+Both sheets write the label column **empty** and keep the answer key in a separate file. Pre-filling
+it would be pre-labelling, which CLAUDE.md rule 3 forbids outright, and a test asserts the column is
+empty in both.
+
+## What the context-stripped sheet is for
+
+Gate 1 condition 2 asks whether at least 30 items are memory-dependent. The automatic measure is a
+**lower bound** and it **conflates context dependence with label noise** (see below), so when it
+falls short the condition reads `NOT_ESTABLISHED` and the context-stripped sheet decides it:
+disagreement with the original label, on an item shown without its context, is evidence that the
+action depended on something the stripped version does not show.
+
+Both sheets hold client text. Keep them local; `data/product-eval/` is gitignored for this.
 
 ## What measurement D does and does not establish
 
@@ -115,7 +151,7 @@ admitted free-form strings it would stop being a guard.
 uv run python -m pytest tests/ -q
 ```
 
-88 tests, no model and no network. They cover every measurement against fabricated data with known
+95 tests, no model and no network. They cover every measurement against fabricated data with known
 answers, the normalisers the three grouping measurements share, the column mapping, the CLI, the
 re-label sheet's seeding and its empty action column, and the output guard — including a negative
 control, so the sentinel search can actually fail.

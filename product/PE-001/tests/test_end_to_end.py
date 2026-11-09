@@ -15,7 +15,8 @@ import pytest
 from conftest import SENTINEL, write_csv
 
 from columns import Columns
-from run_audit import main, write_recheck_sample
+from audit import conversation_context
+from run_audit import main, write_recheck_sample, write_retest_sample
 from thresholds import RECHECK_SAMPLE_N
 
 HEADER = ["conversation_id", "turn_index", "user_message", "action", "reply", "labeler", "item_id"]
@@ -161,16 +162,6 @@ def test_the_shipped_example_mapping_loads():
 
 # --- the context-stripped re-label sheet ----------------------------------------------------------
 
-def test_recheck_sample_leaves_the_action_column_empty(tmp_path, simple_items):
-    out = tmp_path / "recheck.csv"
-    write_recheck_sample(simple_items, out, seed=0)
-    rows = list(csv.DictReader(out.open(encoding="utf-8")))
-    assert rows, "sample must not be empty"
-    assert all(r["action_without_context"] == "" for r in rows), (
-        "pre-filling a label is pre-labelling, which CLAUDE.md rule 3 forbids"
-    )
-
-
 def test_recheck_sample_keeps_the_answer_key_in_a_separate_file(tmp_path, simple_items):
     out = tmp_path / "recheck.csv"
     write_recheck_sample(simple_items, out, seed=0)
@@ -210,3 +201,87 @@ def test_recheck_sample_handles_a_corpus_smaller_than_the_sample(tmp_path, simpl
     out = tmp_path / "r.csv"
     n = write_recheck_sample(simple_items, out, seed=0)
     assert n == len(simple_items)
+
+
+# --- the full-context re-test sheet, for the label-noise ceiling ----------------------------------
+# These two sheets measure different things and using one where the other belongs would report
+# memory dependence as label noise. The tests pin the difference.
+
+def test_retest_sheet_includes_the_conversation_context(tmp_path, simple_items):
+    out = tmp_path / "retest.csv"
+    write_retest_sample(simple_items, out, seed=0)
+    rows = list(csv.DictReader(out.open(encoding="utf-8")))
+    assert rows
+    assert "conversation_in_context" in rows[0]
+    # At least one sampled item is not the first turn of its conversation, so at least one row must
+    # carry more than a single line.
+    assert any("\n" in r["conversation_in_context"] for r in rows)
+
+
+def test_recheck_sheet_strips_the_conversation_context(tmp_path, simple_items):
+    out = tmp_path / "recheck.csv"
+    write_recheck_sample(simple_items, out, seed=0)
+    rows = list(csv.DictReader(out.open(encoding="utf-8")))
+    assert "user_message_without_context" in rows[0]
+    assert all("\n" not in r["user_message_without_context"] for r in rows)
+    assert all("bot:" not in r["user_message_without_context"] for r in rows)
+
+
+def test_both_sheets_leave_the_label_column_empty(tmp_path, simple_items):
+    for name, writer in (("rc.csv", write_recheck_sample), ("rt.csv", write_retest_sample)):
+        out = tmp_path / name
+        writer(simple_items, out, seed=0)
+        rows = list(csv.DictReader(out.open(encoding="utf-8")))
+        assert all(r["action"] == "" for r in rows), name
+
+
+def test_retest_sheet_keeps_its_key_separate(tmp_path, simple_items):
+    out = tmp_path / "retest.csv"
+    write_retest_sample(simple_items, out, seed=0)
+    assert "original_action" not in out.read_text(encoding="utf-8")
+    assert "original_action" in out.with_name("retest.key.csv").read_text(encoding="utf-8")
+
+
+def test_retest_sheet_is_deterministic_under_a_seed(tmp_path, simple_items):
+    a, b = tmp_path / "a.csv", tmp_path / "b.csv"
+    write_retest_sample(simple_items, a, seed=3)
+    write_retest_sample(simple_items, b, seed=3)
+    assert a.read_text(encoding="utf-8") == b.read_text(encoding="utf-8")
+
+
+def test_context_builder_stops_at_the_target_turn(simple_items):
+    """The context must not show the bot's reply to the very message being labelled."""
+    target = [i for i in simple_items if i.turn_index == 2 and i.conversation_id == "c1"][0]
+    ctx = conversation_context(simple_items, target)
+    assert ctx.rstrip().endswith(target.user_message)
+    assert ctx.count("customer:") == 2, "turns 1 and 2 only"
+    assert "what is the price" not in ctx, "turn 3 is in the future"
+
+
+def test_context_builder_uses_turn_index_not_row_order():
+    from conftest import item
+
+    items = [
+        item(2, "c1", "later message", "a", reply="r2", turn=2),
+        item(3, "c1", "earlier message", "a", reply="r1", turn=1),
+    ]
+    ctx = conversation_context(items, items[0])
+    assert ctx.index("earlier message") < ctx.index("later message")
+
+
+def test_both_sheets_written_in_one_run(tmp_path, columns_yaml, capsys):
+    csv_path = write_csv(tmp_path / "e.csv", _rows(), HEADER)
+    rc = main(
+        [
+            "--csv", str(csv_path),
+            "--columns", str(columns_yaml),
+            "--runs-dir", str(tmp_path / "runs"),
+            "--recheck-sample-out", str(tmp_path / "rc.csv"),
+            "--retest-sample-out", str(tmp_path / "rt.csv"),
+        ]
+    )
+    assert rc == 0
+    assert (tmp_path / "rc.csv").exists() and (tmp_path / "rc.key.csv").exists()
+    assert (tmp_path / "rt.csv").exists() and (tmp_path / "rt.key.csv").exists()
+    # Same seed means the same items, which the run says out loud rather than leaving to be found.
+    assert "different --seed" in capsys.readouterr().out

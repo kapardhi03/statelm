@@ -24,6 +24,7 @@ from typing import Any
 
 from audit import (
     Item,
+    conversation_context,
     action_distribution,
     completeness,
     corpus_shape,
@@ -129,35 +130,79 @@ def load_pilot_ids(path: Path | None) -> set[str] | None:
     return ids
 
 
-def write_recheck_sample(items: list[Item], out: Path, seed: int) -> int:
-    """Write the context-stripped re-label sheet for PE-001's measurement D(2).
-
-    Local output, never under `runs/`: it holds user messages, which is client text. One row per
-    sampled item, the message alone with no conversation context and no prior turns, and **no
-    action column pre-filled** — pre-filling it would be pre-labelling, which CLAUDE.md rule 3
-    forbids outright. The original labels stay in the sheet and are compared afterwards.
-    """
+def _sample(items: list[Item], seed: int) -> list[Item]:
     import random
 
     rng = random.Random(seed)
     eligible = [i for i in items if i.user_message.strip() and i.action.strip()]
     chosen = rng.sample(eligible, min(RECHECK_SAMPLE_N, len(eligible)))
     chosen.sort(key=lambda i: rng.random())  # presentation order, also seeded
+    return chosen
+
+
+def _write_sheet(
+    chosen: list[Item], out: Path, *, prefix: str, context_column: str, contexts: list[str]
+) -> int:
+    """Write a blind re-label sheet and its answer key as two files.
+
+    The label column is written EMPTY. Pre-filling it would be pre-labelling, which CLAUDE.md
+    rule 3 forbids outright, and a test asserts it stays empty. The key, which carries the original
+    label, goes in a separate file so it is not on screen while re-labelling.
+    """
     out.parent.mkdir(parents=True, exist_ok=True)
     with out.open("w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
-        w.writerow(["recheck_id", "user_message", "action_without_context"])
-        for n, it in enumerate(chosen, start=1):
-            w.writerow([f"rc-{n:03d}", it.user_message, ""])
-    # The mapping from recheck_id back to item_id is what makes the comparison possible, and it
-    # must not be visible while re-labelling. Separate file, same local directory.
+        w.writerow([f"{prefix}_id", context_column, "action"])
+        for n, (it, ctx) in enumerate(zip(chosen, contexts), start=1):
+            w.writerow([f"{prefix}-{n:03d}", ctx, ""])
     key = out.with_name(out.stem + ".key.csv")
     with key.open("w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
-        w.writerow(["recheck_id", "item_id", "original_action"])
+        w.writerow([f"{prefix}_id", "item_id", "original_action"])
         for n, it in enumerate(chosen, start=1):
-            w.writerow([f"rc-{n:03d}", it.item_id, it.action])
+            w.writerow([f"{prefix}-{n:03d}", it.item_id, it.action])
     return len(chosen)
+
+
+def write_recheck_sample(items: list[Item], out: Path, seed: int) -> int:
+    """Measurement D(2): the **context-stripped** sheet, for memory dependence.
+
+    The message alone, no conversation context, no prior turns. Disagreement with the original
+    label is evidence that the action depended on something the stripped version does not show.
+
+    Local output, never under `runs/`: it holds user messages, which is client text.
+    """
+    chosen = _sample(items, seed)
+    return _write_sheet(
+        chosen,
+        out,
+        prefix="rc",
+        context_column="user_message_without_context",
+        contexts=[it.user_message for it in chosen],
+    )
+
+
+def write_retest_sample(items: list[Item], out: Path, seed: int) -> int:
+    """The **full-context** sheet, for the label-noise ceiling that PE-002's Gate 2 thresholds on.
+
+    EXP-000's recorded fallback: "If no second annotator exists, intra-annotator agreement (relabel
+    after >= 1 week, blind to first labels) is a weaker fallback and must be reported as
+    intra-annotator, not inter-annotator." That is what this is for, and it needs the item shown
+    under the SAME conditions as the original labelling — context included. Using the
+    context-stripped sheet here would measure memory dependence and be reported as label noise,
+    which is the one mistake these two flags exist to prevent.
+
+    Seeded separately from the recheck sample by construction: pass a different --seed if the two
+    should not overlap, which the run book recommends.
+    """
+    chosen = _sample(items, seed)
+    return _write_sheet(
+        chosen,
+        out,
+        prefix="rt",
+        context_column="conversation_in_context",
+        contexts=[conversation_context(items, it) for it in chosen],
+    )
 
 
 def build_metrics(items: list[Item], pilot_ids: set[str] | None, split_written: bool) -> dict[str, Any]:
@@ -213,7 +258,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--print-columns", action="store_true", help="print the export's headers and exit")
     ap.add_argument("--exp000-manifest", type=Path, help="EXP-000's local sampler manifest")
     ap.add_argument("--split-assignment", type=Path, help="JSON item_id -> split, once one exists")
-    ap.add_argument("--recheck-sample-out", type=Path, help="write the context-stripped re-label sheet here (local path, never under runs/)")
+    ap.add_argument("--recheck-sample-out", type=Path, help="D(2): write the CONTEXT-STRIPPED re-label sheet here, for memory dependence (local path, never under runs/)")
+    ap.add_argument("--retest-sample-out", type=Path, help="write the FULL-CONTEXT blind re-label sheet here, for the label-noise ceiling PE-002's Gate 2 needs (local path, never under runs/)")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--runs-dir", type=Path, default=REPO / "runs" / "PE-001")
     args = ap.parse_args(argv)
@@ -285,12 +331,21 @@ def main(argv: list[str] | None = None) -> int:
     print(summarise(metrics))
     print(f"\nwrote {out_dir / 'metrics.json'}\nwrote {out_dir / 'config.json'}")
 
-    if args.recheck_sample_out:
-        n = write_recheck_sample(items, args.recheck_sample_out, args.seed)
+    for flag, writer, what in (
+        (args.recheck_sample_out, write_recheck_sample, "context STRIPPED, for memory dependence"),
+        (args.retest_sample_out, write_retest_sample, "full CONTEXT, for the label-noise ceiling"),
+    ):
+        if flag:
+            n = writer(items, flag, args.seed)
+            print(
+                f"\nwrote {flag} ({n} items, {what}, action column empty)"
+                f"\nwrote {flag.with_name(flag.stem + '.key.csv')}"
+                "\nBoth hold client text. Keep them local; do not commit them."
+            )
+    if args.recheck_sample_out and args.retest_sample_out and args.recheck_sample_out != args.retest_sample_out:
         print(
-            f"\nwrote {args.recheck_sample_out} ({n} items, context stripped, action column empty)"
-            f"\nwrote {args.recheck_sample_out.with_name(args.recheck_sample_out.stem + '.key.csv')}"
-            "\nBoth hold client text. Keep them local; do not commit them."
+            "\nNote: both sheets were drawn with the same seed, so they hold the same items. "
+            "Run them with different --seed values if the two measurements should not share a sample."
         )
     return 0
 
