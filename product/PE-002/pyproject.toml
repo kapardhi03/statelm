@@ -1,0 +1,18 @@
+[project]
+name = "pe-002-baseline-ladder"
+version = "0.1.0"
+description = "PE-002: baseline ladder. Stage 1 is local and needs no model."
+requires-python = ">=3.11"
+dependencies = ["pyyaml>=6.0"]
+
+[project.optional-dependencies]
+# Only B-triv-lex needs these. The split writer, B-triv-maj and every test that does not touch the
+# lexical baseline run without them, which is why the import is lazy.
+lexical = ["scikit-learn>=1.4", "scipy>=1.11", "numpy>=1.26"]
+
+[dependency-groups]
+dev = ["pytest>=8.0", "scikit-learn>=1.4"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

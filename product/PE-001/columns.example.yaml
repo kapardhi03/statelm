@@ -1,0 +1,41 @@
+# PE-001: which column of the labelling sheet holds which logical field.
+#
+# Copy this to `columns.yaml` and set each value to the column header as it appears in the CSV
+# export. `uv run python run_audit.py --print-columns --csv <export>` prints the export's headers
+# and reads no data row, so it is the quickest way to fill this in.
+#
+# Header names are not client text, so a filled-in columns.yaml is safe to commit, and committing
+# it is how a run stays reproducible: its hash goes into config.json.
+
+# --- required -------------------------------------------------------------------------------------
+# Groups rows into conversations. Without it there is no cluster for the bootstrap, no notion of a
+# prior turn, and measurement G cannot be computed.
+conversation_id: conversation_id
+
+# The customer's message that was labelled.
+user_message: user_message
+
+# The gold action for that message. PE-001 counts its classes; that count is also the answer to
+# Q18, so if these values are free text rather than a closed set, the audit says so and emits
+# hashes in place of the names.
+action: action
+
+# --- optional, and what is lost without each ------------------------------------------------------
+# Orders turns within a conversation. Without it the audit falls back to the export's row order and
+# records that fallback in config.json, because "earlier in the conversation" is then an assumption
+# about the export rather than a fact.
+turn_index: turn_index
+
+# The gold reply. Without it measurement C cannot run, and §3.4's question — are the replies
+# templated — stays open, which leaves the reply metric unchosen.
+reply: reply
+
+# Who labelled the row. Kapardhi's answer to Q1(b), 2026-11-08, is that he labelled them all with
+# no model involved, so this is expected to be constant; Gate 1 condition 4 checks coverage rather
+# than taking it on trust. Without the column, condition 4 fails rather than passing silently.
+labeler: labeler
+
+# A stable per-row id. Without it the audit uses `row-<n>`, which is stable only for as long as
+# the export's row order is, so the EXP-000 pilot-overlap check and the re-label key both become
+# fragile. Worth adding a column for.
+item_id: item_id

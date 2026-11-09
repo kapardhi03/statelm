@@ -1,0 +1,19 @@
+[project]
+name = "pe-003-lora-fine-tune"
+version = "0.1.0"
+description = "PE-003: LoRA fine-tune on Tinker, against B3. Offline-testable."
+requires-python = ">=3.11"
+dependencies = ["pyyaml>=6.0"]
+
+[project.optional-dependencies]
+# Only a real run needs these. The stub backend, the mask checks and every test run without them.
+train = ["tinker"]
+lexical = ["scikit-learn>=1.4"]
+
+[dependency-groups]
+dev = ["pytest>=8.0", "scikit-learn>=1.4"]
+
+[tool.pytest.ini_options]
+# PE-003 imports PE-002's modules so the B3 baseline is PE-002's own code, not a copy of it.
+pythonpath = [".", "../PE-002"]   # PE-003 first, so `recipe` and PE-002`s `thresholds` both resolve
+testpaths = ["tests"]
