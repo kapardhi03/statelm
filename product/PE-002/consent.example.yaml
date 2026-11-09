@@ -1,0 +1,27 @@
+# PE-002 stage 2 will not send client conversation text anywhere without this record.
+#
+# This is the plan's **Q9**. Kapardhi's answer to Q2 on 2026-10-10 was "client. consent is taken
+# and can be used also i g wehave >400 examples" — hedged, and about *using* the data rather than
+# uploading it to a third party that retains it. §3.1 therefore does not treat hosted work as
+# unblocked, and the first upload is not recoverable.
+#
+# Nothing here establishes that consent exists. It records that a decision was made, in his words,
+# and ties each run to the exact file that authorised it by hash.
+
+instructed_on: 2026-01-01
+
+# What he actually said, quoted. Not a paraphrase and not a tick-box: the record should show what
+# was authorised.
+instruction_verbatim: >
+  REPLACE WITH HIS OWN WORDS
+
+# Every provider a run may reach. A run that would reach one not listed here stops before sending
+# anything: adding a provider is a decision, not a config edit.
+providers:
+  - tinker
+  - anthropic
+  - openai
+
+# Which data this covers, in his terms.
+data_slice: >
+  REPLACE: e.g. the labelled product-eval export, dev and test splits only

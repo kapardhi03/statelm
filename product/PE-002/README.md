@@ -6,7 +6,7 @@ anybody.
 | Stage | Rungs | Needs | Uploads client text |
 |---|---|---|---|
 | **1 (built)** | B-triv-maj, B-triv-lex | the split, and nothing else | **No.** No model, no network, no credits |
-| **2 (not built)** | B0 – B5 | Q9 consent scope, Q7 frontier revisions, PE-001's Gate 1 | Yes. The first upload in the plan |
+| **2 (built)** | B0 – B5 | Q9 consent scope, Q7 frontier revisions, PE-001's Gate 1 | Yes. The first upload in the plan |
 
 Stage 1 is the cheapest possible refutation of this project: if a TF-IDF logistic regression on the
 user message matches what the prompted models do, the pattern is lexical, an SLM is not needed, and
@@ -99,6 +99,80 @@ A **zero-width** cluster interval is not a precision claim: it means every conve
 alike, so resampling cannot move the statistic. Treat it as a signal to look at the clusters. A
 test pins that behaviour.
 
+## 3. Run stage 2
+
+```sh
+# dev, offline first: the whole pipeline against the stub backend. No key, no upload, no credits.
+uv run python run_stage2.py --csv ~/export.csv --columns ../PE-001/columns.yaml \
+    --split-assignment ../../data/product-eval/split_assignment.json \
+    --providers providers.yaml --consent consent.yaml --split dev --stub
+
+# dev, for real
+uv run python run_stage2.py --csv ~/export.csv --columns ../PE-001/columns.yaml \
+    --split-assignment ../../data/product-eval/split_assignment.json \
+    --providers providers.yaml --consent consent.yaml \
+    --split dev --rungs B0 B1 B2 B3 B4 B5 --label-noise-ceiling 0.87
+
+# test: one scored pass, with the prompt pinned
+uv run python run_stage2.py ... --split test --prompt-sha <sha from the dev run's config>
+```
+
+### Two gates, in code, before anything is sent
+
+**The consent gate (Q9).** Stage 2 is the first step in the plan that uploads client conversation
+text, and that is not recoverable. It refuses to start without `consent.yaml` recording the date,
+Kapardhi's instruction **verbatim**, every provider a run may reach, and the data slice. A run that
+would reach a provider the record does not name stops before sending anything: adding a provider is
+a decision, not a config edit. The file's SHA-256 goes into the run config so a later reader can
+tie the run to the exact record that authorised it. Nothing in the code decides whether consent
+exists — only that a decision was written down.
+
+**The prompt freeze.** `--split test` requires `--prompt-sha` and refuses unless it matches the
+template on disk. Dev is where iteration belongs, so no pin is required there. A prompt edited
+between the dev pass and the test pass is the quietest way to turn a pre-registered comparison into
+a tuned one, and nothing in the output would show it.
+
+### Two settings PE-002 pre-registered that cannot be honoured on a Claude rung
+
+Both come from the Claude API reference, both are recorded in PE-002's Change log, and both are
+reported in every run rather than papered over (`rung_meta.*.unsupported_settings`):
+
+- **`temperature: 0` is unreachable.** Sampling parameters return a 400 on current Claude models.
+  The nearest equivalent for a classification task is `output_config: {effort: "low"}`.
+- **Thinking cannot be disabled** on `claude-opus-5-5`: `{type: "disabled"}` is a 400 at every
+  effort level.
+
+So a Claude rung is not strictly comparable to a Qwen rung on the decoding axis, and **its spread
+across the three runs is not controllable the way the others' is.** That makes B4's spread
+load-bearing rather than a formality: if it exceeds B4's distance to the rung below, the two have
+not separated.
+
+### The B2 constraint check
+
+B2 is B1 plus a constraint on the answer. An OpenAI-**compatible** endpoint may accept
+`response_format` and ignore it, in which case B2 is B1 under another name — and no accuracy figure
+would show it. The tell is parse failures: a constrained rung cannot emit an out-of-vocabulary
+answer. `b2_constraint_check` reports `FAIL` if B2 has any, `PASS` if B2 is clean where B1 was not,
+and `NOT_ESTABLISHED` when both are clean, because that is equally consistent with the constraint
+working and with B1 never having needed it. Reported, never thresholded.
+
+### What stage 2 decides
+
+Gate 2's two conditions, plus one report:
+
+1. **Does the task need a language model?** Best prompted rung against the floor, paired McNemar,
+   ≥10 pp at p<0.05. The floor is **recomputed here**, not imported, so the comparison is genuinely
+   paired on the same items; pass `--stage1-metrics` to cross-check it against stage 1's figure, and
+   a mismatch stops the run because it means the splits differ.
+2. **Is there headroom?** Best prompted **Qwen** rung against the label-noise ceiling from PE-001's
+   full-context re-test. Frontier rungs do not count toward this: condition 2 is about the small
+   model's headroom. No ceiling yet reads `NOT_ESTABLISHED`.
+3. **The frontier gap** is reported, not thresholded. It decides which POC sentence is available.
+
+Also reported: cost per item and latency per item for every rung, which is what the POC sentence
+actually rests on; the secondary pairings between every pair of rungs, Holm-corrected, carrying no
+claim; and nothing at all about `reply`, per the plan's §3.4, until Q19.
+
 ## Baselines, and why they are not tuned
 
 `B-triv-maj` predicts the most frequent train `action`, ties broken on the label so the fit is
@@ -121,7 +195,7 @@ numeric dependency.
 uv run python -m pytest tests/ -q
 ```
 
-65 tests, no model and no network. The statistics carry most of them, because the Gate 2 verdict is
+116 tests, no model and no network. The statistics carry most of them, because the Gate 2 verdict is
 two numbers against a threshold: Wilson checked against the plan's own published figures, the exact
 McNemar against a hand-computed value and for symmetry, the cluster bootstrap for determinism,
 for being wider than Wilson when clusters differ, for narrowing as clusters are added, and for the
@@ -139,4 +213,10 @@ determinism, both refusals) and the CLI's two privacy behaviours.
 | `data.py` | Loading the export and applying the frozen split |
 | `make_split.py` | The split writer. Dry run by default |
 | `run_stage1.py` | The stage 1 CLI |
+| `consent.py` | The Q9 gate. No recorded decision, no requests |
+| `prompts.py` | Prompt assembly, few-shot selection, and the freeze |
+| `backends.py` | Stub, Anthropic, and OpenAI-compatible adapters |
+| `rungs.py` | The ladder's definitions and the provider table |
+| `run_stage2.py` | The stage 2 CLI |
+| `prompts/` | `prompt_b1.md`, and `prompt_b0_shipped.md` — **replace B0's with the real shipped prompt** |
 | `safety.py`, `provenance.py`, `columns.py`, `normalize.py` | Copies of PE-001's. EXP-003's record already put the promote-or-duplicate question to Kapardhi; this is the second reuse, so it is live, and copying is the reversible answer |

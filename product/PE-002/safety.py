@@ -51,6 +51,15 @@ ALLOWED_VALUE_STRINGS: frozenset[str] = frozenset(
         "B-triv-maj",
         "B-triv-lex",
         "no_prompted_rung_yet",
+        "no_label_noise_ceiling",
+        "stage_2",
+        "B0",
+        "B1",
+        "B2",
+        "B3",
+        "B4",
+        "B5",
+        "B-triv",
         "scikit_learn_not_installed",
         "degenerate_single_class_train",
         # config.json's record of how turns were ordered.
@@ -79,6 +88,11 @@ IDENTIFIER_KEYS: frozenset[str] = frozenset(
         "generated_at",
         "columns_sha256",
         "split_assignment_sha256",
+        "prompt_b1_sha256",
+        "prompt_sha256",
+        "providers_sha256",
+        "consent_sha256",
+        "consent_instructed_on",
         # Short non-reversible group ids, from normalize.stable_hash.
         "duplicate_group_ids",
     }
@@ -91,6 +105,53 @@ IDENTIFIER_KEYS: frozenset[str] = frozenset(
 # hashes if the column looks like free text, so the bound here is a second line and not the first.
 CLASS_LABEL_KEYS: frozenset[str] = frozenset({"classes_below_floor", "floor_class"})
 MAX_CLASS_LABEL_CHARS = 64
+
+# Values that come from the configuration files Kapardhi writes — a model id, a backend name, a
+# provider name, an effort level, a short-hash list. Not derived from client data, but not a closed
+# set either: a model id cannot be enumerated in advance. Bounded by a conservative charset and a
+# length instead, which is enough to keep a sentence out.
+CONFIG_IDENTIFIER_KEYS: frozenset[str] = frozenset(
+    {
+        "model",
+        "backend",
+        "provider",
+        "provider_ref",
+        "prompt_file",
+        "effort",
+        "step",
+        "stage",
+        "split",
+        "unsupported_settings",
+        "rungs_run",
+        "fewshot_item_id_hashes",
+        "columns_mapped",
+    }
+)
+_CONFIG_ID_CHARS = set(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_./:+"
+)
+MAX_CONFIG_IDENTIFIER_CHARS = 128
+
+# One field is short prose rather than an identifier: the price table's provenance, which he writes
+# so a cost figure can be checked later. Length-bounded and newline-free; its value is his
+# configuration text, never anything read from the corpus.
+CONFIG_TEXT_KEYS: frozenset[str] = frozenset({"price_table_version"})
+MAX_CONFIG_TEXT_CHARS = 200
+
+# Subtrees whose every string, however deeply nested, is configuration rather than data: the rung
+# -> provider map, the model table, what each backend actually sent. Enumerating their inner keys
+# would mean editing this file whenever a backend gains a setting, which is how a guard rots; the
+# charset bound travels down instead.
+CONFIG_IDENTIFIER_SUBTREE_KEYS: frozenset[str] = frozenset(
+    {
+        "rung_to_provider",
+        "provider_models",
+        "settings_sent",
+        "rung_meta",
+        "consent_providers",
+        "lexical_settings",
+    }
+)
 
 _IDENTIFIER_CHARS = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.:+TZ")
 
@@ -120,6 +181,18 @@ def assert_output_safe(obj: Any, path: str = "$", *, key: str | None = None) -> 
             if not obj or not set(obj) <= _IDENTIFIER_CHARS:
                 _fail(path, obj, "identifier contains characters outside the strict charset")
             return
+        if key in CONFIG_IDENTIFIER_KEYS or key in CONFIG_IDENTIFIER_SUBTREE_KEYS:
+            if (
+                not obj
+                or len(obj) > MAX_CONFIG_IDENTIFIER_CHARS
+                or not set(obj) <= _CONFIG_ID_CHARS
+            ):
+                _fail(path, obj, "config identifier is empty, too long, or outside its charset")
+            return
+        if key in CONFIG_TEXT_KEYS:
+            if not obj or len(obj) > MAX_CONFIG_TEXT_CHARS or any(c in obj for c in "\r\n"):
+                _fail(path, obj, "config text is empty, too long, or contains a line break")
+            return
         if key in CLASS_LABEL_KEYS:
             if not obj or len(obj) > MAX_CLASS_LABEL_CHARS or any(c in obj for c in "\r\n\t"):
                 _fail(path, obj, "class label is empty, too long, or contains a line break")
@@ -128,14 +201,16 @@ def assert_output_safe(obj: Any, path: str = "$", *, key: str | None = None) -> 
             _fail(path, obj, "string value is not in the controlled vocabulary")
         return
     if isinstance(obj, dict):
+        inherited = key if key in CONFIG_IDENTIFIER_SUBTREE_KEYS else None
         for k, v in obj.items():
             if not isinstance(k, str):
                 _fail(f"{path}.{k!r}", k, "dict key is not a string")
-            assert_output_safe(v, f"{path}.{k}", key=k)
+            assert_output_safe(v, f"{path}.{k}", key=inherited or k)
         return
     if isinstance(obj, (list, tuple)):
+        inherited = key if key in CONFIG_IDENTIFIER_SUBTREE_KEYS else key
         for i, v in enumerate(obj):
-            assert_output_safe(v, f"{path}[{i}]", key=key)
+            assert_output_safe(v, f"{path}[{i}]", key=inherited)
         return
     _fail(path, obj, "value is not a number, bool, null, controlled string, dict or list")
 

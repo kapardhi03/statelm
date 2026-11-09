@@ -1,0 +1,62 @@
+# PE-002 stage 2: which model runs each rung, and what it costs.
+#
+# Copy to providers.yaml and edit. Which models B4 and B5 are is **Q7** and is Kapardhi's to
+# answer; the entries below are a starting point, not a decision.
+#
+# `price_table_version` is required. Prices move — three models changed availability in the Tinker
+# catalogue inside a month — so a cost figure that does not name its source cannot be checked.
+
+price_table_version: "tinker models.json fetched 2026-11-08; Claude API reference 2026-10-06"
+
+rungs:
+  B0: {provider_ref: qwen_9b}
+  B1: {provider_ref: qwen_9b}
+  B2: {provider_ref: qwen_9b}
+  B3: {provider_ref: qwen_9b}
+  B4: {provider_ref: frontier_anthropic}
+  B5: {provider_ref: frontier_openai_compatible}
+
+providers:
+  # The primary model, per D1 as amended on 2026-11-08.
+  qwen_9b:
+    backend: openai_compatible          # Tinker exposes OpenAI-compatible inference
+    provider: tinker
+    model: Qwen/Qwen3.5-9B
+    base_url: null                      # set to Tinker's OpenAI-compatible endpoint
+    api_key_env: TINKER_API_KEY
+    temperature: 0.0                    # settable here, unlike on a Claude rung
+    max_tokens: 256
+    price_per_mtok: {input: 0.30, output: 0.807}
+
+  # The <=4B curve point of D1, reported beside the ladder rather than as a rung.
+  qwen_4b:
+    backend: openai_compatible
+    provider: tinker
+    model: Qwen/Qwen3.5-4B
+    base_url: null
+    api_key_env: TINKER_API_KEY
+    temperature: 0.0
+    max_tokens: 256
+    price_per_mtok: {input: 0.33, output: 1.005}
+
+  # B4. temperature is NOT settable on current Claude models and thinking cannot be disabled on
+  # this one, so `effort` is the only depth control — see backends.py and PE-002's Change log.
+  frontier_anthropic:
+    backend: anthropic
+    provider: anthropic
+    model: claude-opus-5-5
+    effort: low
+    max_tokens: 256
+    price_per_mtok: {input: 4.00, output: 20.00}
+
+  # B5. A second vendor, so "frontier" is not one vendor's result. Q7 names it; fill in the model,
+  # the endpoint and its real prices before running.
+  frontier_openai_compatible:
+    backend: openai_compatible
+    provider: openai
+    model: REPLACE_ME
+    base_url: null
+    api_key_env: OPENAI_API_KEY
+    temperature: 0.0
+    max_tokens: 256
+    price_per_mtok: {input: 0.0, output: 0.0}
