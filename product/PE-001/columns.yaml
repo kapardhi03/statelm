@@ -1,0 +1,33 @@
+# PE-001: which column of the labelling sheet holds which logical field.
+#
+# Filled in from Kapardhi's answer of 2026-11-09: the sheet has conversation_id, user_message,
+# action and reply. The three optional fields below are absent, and what each costs is noted.
+#
+# Header names are not client text, so this file is safe to commit, and committing it is how a run
+# stays reproducible: its hash goes into config.json.
+
+# --- present ---------------------------------------------------------------------------------------
+conversation_id: conversation_id
+user_message: user_message
+action: action
+reply: reply
+
+# --- absent, and what that costs -------------------------------------------------------------------
+#
+# turn_index: not in the sheet.
+#   Turn order falls back to the export's row order, and config.json records
+#   `turn_order_from: export_row_order` so a reader knows "earlier in the conversation" is an
+#   assumption about the export rather than a fact. Measurements D and G both depend on that order.
+#
+# labeler: not in the sheet.
+#   **Gate 1 condition 4 will FAIL**: it requires a `labeler` value on every item destined for dev
+#   or test, and the audit cannot invent one. His answer to Q1(b) establishes the provenance for the
+#   whole corpus ("i labelled them myself, no model involved"), but the condition asks for it per
+#   row, which is what `data-and-splits.md` requires on every record.
+#   Cheapest fix: add a `labeler` column to the sheet and fill it down with one value.
+#
+# item_id: not in the sheet.
+#   Ids become `row-<n>`, which are stable only while the export's row order is. That makes the
+#   EXP-000 pilot-overlap check and the re-label answer key fragile: re-sort or re-export the sheet
+#   and the ids no longer refer to the same rows.
+#   Cheapest fix: add an `item_id` column with a stable value per row.
