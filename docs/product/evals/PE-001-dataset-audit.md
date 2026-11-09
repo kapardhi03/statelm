@@ -1,21 +1,25 @@
 # PE-001: Dataset audit — does the labelled corpus contain the pattern?
 
-Status: **Draft**
+Status: **Planned**
 Owner: Kapardhi
 Created: 2026-11-08
 Product decision informed: whether to run PE-002 (baseline ladder) and PE-003 (LoRA fine-tune) on
 this corpus at all, and under what split. This is Gate 1 of
 `docs/research/plan-2026-10-10-modelling-track.md` §4.
-Blocked by: nothing to run it; **approval of the Metric below before any code** (CLAUDE.md rule 1).
+Blocked by: nothing. The Metric was approved on 2026-11-09 and the code exists at
+`product/PE-001/`. It needs a CSV export of the sheet to run, and `--exp000-manifest` for Gate 1
+condition 3 to be evaluable rather than `NOT_ESTABLISHED`.
 
 > **What is approved and what is not, as of 2026-11-08.**
 > **His, transcribed in the plan's §0:** the label space is `action` + `reply` per user message
 > (Q1a); he labelled the items himself with no model involved (Q1b); the data is in a Google Sheet
 > (Q1d); the product track gets this separate series (Q16); this is a product-evaluation set and
 > not the benchmark (Q12).
-> **Not approved:** the Hypothesis, Metric and thresholds below. They are **Claude Code's
-> proposals**, written before any code as rule 1 and rule 2 require, for him to approve, change or
-> replace. No code has been written. The Decision section is left for him (rule 5).
+> **Approved by Kapardhi, 2026-11-09**, in answer to this record as it then stood: "approved, write
+> the audit script". The Hypothesis, Metric and the four thresholds are now pre-registered and do
+> not move after a result is seen (rule 2). The code was written after that approval, not before.
+> The Decision section is still left for him (rule 5), and the Result and Interpretation stay empty
+> until the audit is run on his machine.
 > Everything marked *Flagged* is Claude Code's reading rather than his instruction.
 
 ## Hypothesis
@@ -50,7 +54,9 @@ finding worth having before any money is spent, which is why it is condition 2 a
   read the sheet (plan §9, Q20).
 - **What changes vs baseline:** nothing is trained and no model is called. This step calls no API,
   needs no GPU and spends no Tinker credits.
-- Code entry point: `product/PE-001/` — **not created yet**; the Metric below is unapproved.
+- Code entry point: `product/PE-001/`. Written 2026-11-09 after approval: `thresholds.py`,
+  `normalize.py`, `safety.py`, `columns.py`, `audit.py` (measurements A–G and the gate, pure
+  functions), `provenance.py`, `run_audit.py`, and 88 tests. Run book in its `README.md`.
 - Seeds and versions recorded in `runs/PE-001/<run-id>/config.json`: git commit, the export's row
   count and column names, a hash of the export, and the script version.
 
@@ -73,11 +79,16 @@ templated reply set makes `reply` a second classification and dissolves the prob
 **D. Memory dependence, two ways.**
 
 1. **Automatic, a lower bound, no human needed:** the number of items whose user message text
-   (normalised) appears elsewhere in the corpus with a **different** gold `action`. If the same
-   message maps to different actions in different positions, the action cannot be a function of the
-   current message alone. *Flagged:* this is a **lower bound**. It finds context dependence only
-   where a message repeats. A corpus of all-distinct messages scores 0 here and may still be
-   thoroughly context-dependent, so a low number does not establish independence.
+   (normalised) appears elsewhere in the corpus with a **different** gold `action`. What it
+   establishes is that the gold action is **not a function of the normalised message alone**.
+   *Flagged, two limits, both carried in `metrics.json`'s own fields rather than left to a reader:*
+   (a) it is a **lower bound** — it finds anything only where a message repeats, so an
+   all-distinct corpus scores 0 and may still be thoroughly context-dependent, and a low number
+   does not establish independence; (b) it **conflates context dependence with label noise**, since
+   the same message carrying two actions is equally consistent with context mattering and with the
+   labels being inconsistent on identical inputs. A diagnostic is reported and thresholds nothing:
+   two different actions at the **same** conversation position are harder to explain by context
+   than two at different positions.
 2. **Confirmation, if the lower bound falls short:** he re-labels a seeded subsample of 30 items
    with all prior turns stripped, blind to his original labels, and the two label sets are
    compared. The disagreement rate is the memory-dependence estimate. This is his time, so it is
@@ -121,6 +132,7 @@ move after a result is seen; if one must, the change and its reason are recorded
 |---|---|---|
 | 1 | Each scored `action` class | n ≥ 10. A class below it is reported with its count and marked **not measurable**, never dropped or silently merged — the handling EXP-000 pre-registered for its interpretability floor |
 | 2 | Memory-dependent items | ≥ 30. Established by measurement D(1) alone; if D(1) < 30 the condition reads **not established** rather than refuted, and D(2) decides it. "Not established" blocks PE-003, not PE-002 |
+| | *Narrowed 2026-11-09, interpretation only — the threshold of 30 is unchanged* | What D(1) establishes is that the gold action is **not a function of the normalised message alone**. See the Change log: it conflates context dependence with label noise, so D(1) meeting the threshold does not by itself establish context dependence, and D(2) is what separates them |
 | 3 | Cross-split duplicates, and EXP-000 pilot overlap in dev or test | exactly 0 of each |
 | 4 | Items destined for dev or test with a `labeler` value | 100% |
 
@@ -163,6 +175,22 @@ gates is circular. Recorded in the plan's §4, 2026-10-10, after a `research-rev
 (pending, human; never written by Claude Code)
 
 ### Change log
+- 2026-11-09: **Status Draft → Planned**, on his instruction "approved, write the audit script".
+  The Hypothesis, Metric and the four thresholds above are now his, pre-registered, and do not move
+  after a result is seen. Code written at `product/PE-001/`: 7 modules and 88 tests, no model, no
+  network, no GPU. Run book in that directory's `README.md`.
+- 2026-11-09, **one narrowing of an interpretation, recorded here because rule 2 requires it, with
+  no threshold changed.** While smoke-testing the script on fabricated data the memory-dependence
+  count saturated at every item, because the fabricated actions were assigned at random. That
+  exposed a flaw in Claude Code's own measure, not in the data: D(1) counts items whose message
+  maps to two different actions, which is equally consistent with **context dependence** and with
+  **label noise on identical inputs**, and the first version of this record read it as the former.
+  What D(1) establishes is therefore narrower — *the gold action is not a function of the
+  normalised message alone* — and D(2), the context-stripped re-label, is what separates the two
+  readings. **The threshold stays at 30**, both limits now travel in `metrics.json`'s own fields
+  (`is_lower_bound`, `establishes`, `conflates`, `measure_has_purchase`), and a same-turn-conflict
+  diagnostic is reported and thresholds nothing. Found by Claude Code, 2026-11-09; the change is to
+  what the number may be read as, not to what is measured or to any verdict.
 - 2026-11-08: created on Kapardhi's answer to Q16 ("yes to Q16"), in the new product series this
   answer approves. The Hypothesis, Metric and thresholds are Claude Code's proposals awaiting his
   approval; his transcribed answers to Q1(a), Q1(b), Q1(d) and Q12 are recorded in the plan's §0

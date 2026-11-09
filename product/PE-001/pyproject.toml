@@ -1,0 +1,15 @@
+[project]
+name = "pe-001-dataset-audit"
+version = "0.1.0"
+description = "PE-001: dataset audit of the product labelling sheet. Aggregates only."
+requires-python = ">=3.11"
+dependencies = ["pyyaml>=6.0"]
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+# The modules import each other by bare name (`from audit import Item`), as EXP-000's do, so the
+# experiment directory has to be on the path when tests run from it.
+pythonpath = ["."]
+testpaths = ["tests"]
