@@ -82,6 +82,38 @@ classification and `reply` is free text. Every binary per-item comparison in thi
 tables, the paired test, the +10 pp effect, the scorecard's pass/fail — works for `action` and does
 not work for `reply`. §3.4 sets out what follows and what has to be decided.
 
+### Kapardhi's answer of 2026-11-08 (Q1, part b)
+
+Transcribed verbatim:
+
+> "i labelled them myself, no model involved"
+
+**This clears the worst risk in the plan.** Four things follow:
+
+1. **`labeler` is answerable**: human, Annotator A, for every item he labelled. The frozen split
+   can be written once (d) gives the file (`data-and-splits.md` requires the field, and §3.2(iv)
+   was blocking on it).
+2. **No distillation ceiling on the existing labels.** §4's flag — a frontier model's accuracy
+   becoming the fine-tune's ceiling — does not apply here. "Beats a frontier model on `action`" is
+   reachable by construction rather than ruled out by it. The flag still governs **step 4**, any
+   data added later.
+3. **No pre-labelling problem.** CLAUDE.md rule 3's second sentence is satisfied: these are human
+   judgements throughout, not model proposals a human accepted.
+4. **And one cost: a single annotator means there is no inter-annotator agreement on these labels
+   either.** The only remaining route to a label-noise ceiling is the **intra**-rater re-test
+   EXP-000 already records (relabel a blind subsample after ≥1 week, reported as intra-rater, never
+   as agreement). Gate 2 thresholds on that ceiling, so without the re-test Gate 2 has no number.
+   This makes **Q1(c)**, whether a written guideline exists, the last open question about label
+   quality: with one annotator and no guideline, the labels are judgement in the moment and may
+   have drifted across the labelling session, and the re-test is what would measure that.
+
+*Flagged by Claude Code, not a defect and worth stating once:* he labelled the data, he owns the
+product's intended behaviour, and he would also be the rater if §3.4's human-preference route is
+taken. So this eval set measures **agreement with Kapardhi's judgement**, not with a ground truth
+independent of him. For a *product*-evaluation set that is the correct target — the product's job
+is to do what he wants — and after Q12 it carries no research claim. It would not be an acceptable
+basis for a benchmark, which is one more reason the two tracks stay separate.
+
 ---
 
 ## 1. The seven asks, restated
@@ -289,16 +321,17 @@ Two things the conversation-level split must still do, because they are not benc
 near-duplicate control across split boundaries, and a stable assignment recorded in a file so the
 test split is reproducible and frozen.
 
-**(iv) Provenance before freezing.** `data-and-splits.md` requires `source`, `generator`,
-`labeler`, `created_at` and `split` on every record. **The frozen split may not be written until
-every item in it has a `labeler` value.** An earlier version of this section said his 100 "carry
-the most trustworthy labels in the corpus"; that asserted label quality while Q1(b) still asks
-whether model output touched any label at any stage, so it is withdrawn. What can be said is
-narrower: they are the items he reviewed himself, which is a provenance fact, and the other ~300
-have unknown provenance.
+**(iv) Provenance before freezing — answered 2026-11-08.** `data-and-splits.md` requires `source`,
+`generator`, `labeler`, `created_at` and `split` on every record. Q1(b): *"i labelled them myself,
+no model involved"*, so `labeler` is human (Annotator A) and `generator` is null for every item he
+labelled. The frozen split can be written as soon as (d) gives the file.
+
+One thing to confirm while writing it rather than assume: whether "them" covers the whole corpus or
+only the 100 he first described. If some items are unlabelled, those are training candidates at
+most and cannot enter dev or test. Step 1 reports labelled and unlabelled counts separately.
 
 **Where his 100 go: proposed for the test split**, because the frozen set is the one place label
-quality cannot be fixed later, subject to (ii) and (iv).
+quality cannot be fixed later, subject to (ii).
 
 **The contradiction with ADR-001 is resolved, 2026-11-08 (Q12).** It was: ADR-001, Accepted
 2026-10-09, carries his verbatim *"The benchmark is built from constructed conversations; real
@@ -635,7 +668,9 @@ So the split is:
 | A human labels a model-written conversation from the guideline alone, seeing no model output | A model proposes a label a human then accepts or corrects, however it is recorded (rule 3, sentence 2) |
 | Synthetic **inputs** in train and dev, with `source=synthetic` and `generator` recorded | Synthetic items in the frozen test split, or any item whose label a model supplied |
 
-*Flagged, and it is fatal to A4 if missed:* **if a frontier model labels the training data, that
+*Flagged, and it is fatal to A4 if missed. **Scoped 2026-11-08:** this applies to data added here
+in step 4, not to the existing labels — Q1(b) establishes those are his own, with no model
+involved, so there is no ceiling on them.* **If a frontier model labels the training data, that
 model's accuracy becomes the ceiling of the fine-tune on that distribution.** "It beats Claude"
 is then close to arithmetically impossible, because the thing it learned to imitate is Claude.
 Training on a frontier model's labels is distillation; the resulting claim is "cheaper than Claude
@@ -868,18 +903,17 @@ research question, ADRs, experiment records and Decisions. Genesis never writes 
 
 **Q1 is the one that still blocks step 1 code**, because it decides what the audit measures.
 
-- **Q1. What exactly are the labelled items?** **(a) Answered 2026-11-08:** `action` + `reply` per
-  user message. Three parts still open, and (b) and (d) still block step 1:
-  - **(b) Who labelled them, and did any model output touch a label at any stage** — including as a
-    suggestion a human then accepted? This decides two things, not one: the `labeler` value that
-    `data-and-splits.md` requires on every record, and whether the labels are usable at all. If a
-    frontier model proposed them, §4's distillation-ceiling point applies and "beats Claude"
-    becomes close to unreachable by construction; if the product SLM proposed them, the labels
-    partly encode what the current system already does, which is worse.
-  - **(c) Does a written label guideline exist**, or was it judgement in the moment? Without one,
-    §3.3's intra-rater re-test is the only way to bound label noise, and Gate 2 has no ceiling.
-  - **(d) Where does the file live and in what format?** I need this to write the audit script;
-    it runs on your machine and returns counts only.
+- **Q1. What exactly are the labelled items?** **(a) and (b) answered 2026-11-08:** the labels are
+  `action` + `reply` per user message, and he labelled them himself with no model involved. Two
+  parts left:
+  - **(c) Does a written label guideline exist**, or was it judgement in the moment? **Now the last
+    open question about label quality**, and more load-bearing than it was: with a single annotator
+    there is no inter-annotator agreement to fall back on, so the intra-rater re-test is the only
+    route to the label-noise ceiling that Gate 2 thresholds on. With no guideline, the labels may
+    also have drifted across the labelling session, which is exactly what that re-test measures.
+    Does not block step 1; does block Gate 2.
+  - **(d) Where does the file live and in what format?** **The last thing blocking step 1.** I need
+    it to write the audit script, which runs on your machine and returns counts only.
 - **Q18. What is the `action` set?** The exact classes, as labelled. Step 1 counts them anyway, but
   knowing them now decides whether any class is abstain-like, which settles **Q11**, and whether
   the set is closed or was invented per item.
@@ -1035,6 +1069,20 @@ is first.
   settles Q11) and **Q19** (the reply metric, deferred until step 1 reports). Q1(b), (c) and (d)
   are still open and (b) and (d) still block step 1. Nothing built, no record created, `STATE.md`
   untouched.
+- 2026-11-08: **Q1(b) answered, transcribed verbatim in §0: "i labelled them myself, no model
+  involved."** This clears the plan's worst risk. `labeler` is human (Annotator A) and `generator`
+  is null, so §3.2(iv) stops blocking the frozen split; §4's distillation-ceiling flag is scoped to
+  data added in step 4 and does not touch the existing labels, so "beats a frontier model on
+  `action`" is reachable by construction rather than ruled out by it; and CLAUDE.md rule 3's
+  second sentence is satisfied, since these are human judgements and not model proposals accepted
+  by a human. The cost it carries: a single annotator means no inter-annotator agreement on these
+  labels either, so the only route to the label-noise ceiling Gate 2 thresholds on is EXP-000's
+  recorded intra-rater re-test, which makes **Q1(c)** the last open question about label quality.
+  Flagged, not as a defect: he labelled the data, owns the product's intended behaviour, and would
+  be the rater under §3.4's preference route, so this set measures agreement with his judgement
+  rather than with an independent ground truth — the correct target for a product eval set after
+  Q12, and one more reason the two tracks stay apart. **Q1(d) is now the only thing blocking step
+  1.** Nothing built, no record created, `STATE.md` untouched.
 
 ## 11. `research-reviewer` pass, 2026-10-10
 
