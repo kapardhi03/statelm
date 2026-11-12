@@ -188,6 +188,35 @@ basis for a benchmark, which is one more reason the two tracks stay separate.
 
 ---
 
+### Kapardhi's answer of 2026-11-12 (Q20)
+
+Asked after four attempts to get a CSV export of the labelling sheet onto his Mac had failed, and
+after the only recent CSVs in `~/Downloads` turned out to be an unrelated prospect-scoring dataset.
+
+> **Q20, reading the sheet directly:** "yes read the sheet directly"
+
+**It could not be acted on, and the reason is worth recording.** This session's Drive connector is
+authorised for `kapardhikannekanti@gmail.com`. Searched 2026-11-12: every Google Sheet in that
+account (most recent modification 2026-10-15), every uploaded `.xlsx` and `.csv` (most recent
+2026-06-12), and a full-text search for `conversation_id`, which matched two Google Docs titled
+"SLM Building" and nothing else. The account has no shared drives. The labelling sheet is not in
+it, so no client text was read and the instruction never took effect.
+
+**It also cuts against §3.1(b), so it needs its own amendment if it is ever used.** The amendment
+drafted in §3.1(a) covers *uploading* text to a named provider. It does not cover Claude Code
+*reading* the text, which (b) kept excluded on the grounds that consent to use the data for the
+product is not a reason for Claude Code to read it. A second clause would be needed, and it is his
+to write.
+
+*Flagged by Claude Code:* I would rather that clause were not written. PE-001's audit is built so
+that it is not needed — the script runs on his machine and emits counts, ratios and verdicts, with
+an output guard that a sentinel test proves holds. Reading the sheet through this session would
+put client conversation text into a cloud container's transcript to obtain numbers a local run
+produces without it. The blocker has never been that the text is out of reach; it is that the
+export has not landed where the script can see it. Recorded as his standing instruction, unused.
+
+---
+
 ## 1. The seven asks, restated
 
 | # | His words (condensed) | Where it lands below |
