@@ -4,6 +4,9 @@
     uv run python run_audit.py --csv /path/to/export.csv --columns columns.yaml
     uv run python run_audit.py --csv ... --columns ... --recheck-sample-out /local/path.csv
 
+A `.tsv`, `.tab` or `.txt` export is read as tab-separated, which is what a clipboard copy out of
+Google Sheets produces. `--delimiter` overrides the detection.
+
 Reads a CSV export of the labelling sheet, computes PE-001's measurements A to G, evaluates the
 four pre-registered Gate 1 conditions, and writes `runs/PE-001/<run-id>/{config,metrics}.json`.
 
@@ -60,15 +63,42 @@ from thresholds import (
 REPO = Path(__file__).resolve().parents[2]
 
 
-def read_header(csv_path: Path) -> list[str]:
+TAB_SUFFIXES = {".tsv", ".tab", ".txt"}
+
+
+def delimiter_for(path: Path, override: str | None = None) -> str:
+    """The field separator, detected from the suffix unless overridden.
+
+    Not cosmetic. When a browser download of the sheet fails or is restricted, the route that
+    still works is to copy the sheet and write the clipboard to a file, and what that produces is
+    tab-separated, not comma-separated. Reading it as CSV would give one column whose name is the
+    whole header line, and the column mapping would fail with a confusing error rather than this.
+    """
+    if override is not None:
+        if override in ("tab", "\\t", "\t"):
+            return "\t"
+        if len(override) != 1:
+            raise ValueError(
+                f"--delimiter takes a single character or 'tab', not {override!r}"
+            )
+        return override
+    return "\t" if path.suffix.lower() in TAB_SUFFIXES else ","
+
+
+def read_header(csv_path: Path, delimiter: str = ",") -> list[str]:
     with csv_path.open(newline="", encoding="utf-8-sig") as fh:
-        return next(csv.reader(fh), [])
+        return next(csv.reader(fh, delimiter=delimiter), [])
 
 
-def read_items(csv_path: Path, cols: Columns, split_by_item: dict[str, str] | None) -> list[Item]:
+def read_items(
+    csv_path: Path,
+    cols: Columns,
+    split_by_item: dict[str, str] | None,
+    delimiter: str = ",",
+) -> list[Item]:
     items: list[Item] = []
     with csv_path.open(newline="", encoding="utf-8-sig") as fh:
-        reader = csv.DictReader(fh)
+        reader = csv.DictReader(fh, delimiter=delimiter)
         cols.validate_against(list(reader.fieldnames or []))
         for row_no, row in enumerate(reader, start=2):  # 1 is the header
             def get(field: str) -> str:
@@ -260,6 +290,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--split-assignment", type=Path, help="JSON item_id -> split, once one exists")
     ap.add_argument("--recheck-sample-out", type=Path, help="D(2): write the CONTEXT-STRIPPED re-label sheet here, for memory dependence (local path, never under runs/)")
     ap.add_argument("--retest-sample-out", type=Path, help="write the FULL-CONTEXT blind re-label sheet here, for the label-noise ceiling PE-002's Gate 2 needs (local path, never under runs/)")
+    ap.add_argument("--delimiter", help="field separator: a single character, or 'tab'. Default: tab for .tsv/.tab/.txt, comma otherwise")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--runs-dir", type=Path, default=REPO / "runs" / "PE-001")
     args = ap.parse_args(argv)
@@ -268,9 +299,15 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {args.csv} does not exist", file=sys.stderr)
         return 2
 
+    try:
+        delimiter = delimiter_for(args.csv, args.delimiter)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
     if args.print_columns:
         # Header names are not client text. No row is read.
-        for name in read_header(args.csv):
+        for name in read_header(args.csv, delimiter):
             print(name)
         return 0
 
@@ -278,13 +315,20 @@ def main(argv: list[str] | None = None) -> int:
         print("error: --columns is required (or use --print-columns first)", file=sys.stderr)
         return 2
 
-    cols = Columns.load(args.columns)
     split_by_item: dict[str, str] | None = None
     if args.split_assignment:
         split_by_item = {
             str(k): str(v) for k, v in json.loads(args.split_assignment.read_text()).items()
         }
-    items = read_items(args.csv, cols, split_by_item)
+    # A bad column mapping is user input, not a defect, so it exits 2 with its message like every
+    # other input error here rather than raising a traceback. The commonest cause is a separator
+    # mismatch, where the message shows a single run-together header and names the real one.
+    try:
+        cols = Columns.load(args.columns)
+        items = read_items(args.csv, cols, split_by_item, delimiter)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     if not items:
         print("error: the export has no data rows", file=sys.stderr)
         return 2
