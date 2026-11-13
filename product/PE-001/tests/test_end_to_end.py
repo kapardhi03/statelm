@@ -16,7 +16,7 @@ from conftest import SENTINEL, write_csv
 
 from columns import Columns
 from audit import conversation_context
-from run_audit import main, write_recheck_sample, write_retest_sample
+from run_audit import delimiter_for, main, write_recheck_sample, write_retest_sample
 from thresholds import RECHECK_SAMPLE_N
 
 HEADER = ["conversation_id", "turn_index", "user_message", "action", "reply", "labeler", "item_id"]
@@ -285,3 +285,86 @@ def test_both_sheets_written_in_one_run(tmp_path, columns_yaml, capsys):
     assert (tmp_path / "rt.csv").exists() and (tmp_path / "rt.key.csv").exists()
     # Same seed means the same items, which the run says out loud rather than leaving to be found.
     assert "different --seed" in capsys.readouterr().out
+
+
+# --- the field separator ---------------------------------------------------------------------------
+#
+# Added 2026-11-13, after four attempts to get a CSV download of the sheet onto Kapardhi's machine
+# failed and no file with the sheet's headers could be found anywhere in his home directory. The
+# route that does not involve the download at all is to copy the sheet and write the clipboard to a
+# file, and that produces TSV. Read as CSV, a TSV export yields a single column whose name is the
+# entire header line, so the failure surfaces as a confusing column-mapping error rather than as
+# "this file is tab-separated". These tests pin the detection and that failure mode.
+
+def write_tsv(path: Path, rows: list[dict[str, str]], header: list[str]) -> Path:
+    with path.open("w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=header, delimiter="\t")
+        w.writeheader()
+        for r in rows:
+            w.writerow(r)
+    return path
+
+
+@pytest.mark.parametrize(
+    "name, expected",
+    [
+        ("e.csv", ","),
+        ("e.CSV", ","),
+        ("e.tsv", "\t"),
+        ("e.TSV", "\t"),
+        ("e.tab", "\t"),
+        ("e.txt", "\t"),
+        ("e", ","),
+        ("clipboard.paste", ","),
+    ],
+)
+def test_delimiter_detected_from_the_suffix(name, expected):
+    assert delimiter_for(Path(name)) == expected
+
+
+@pytest.mark.parametrize("override", ["tab", "\\t", "\t"])
+def test_tab_can_be_asked_for_by_name(override):
+    assert delimiter_for(Path("e.csv"), override) == "\t"
+
+
+def test_an_override_beats_the_suffix():
+    assert delimiter_for(Path("e.tsv"), ",") == ","
+    assert delimiter_for(Path("e.csv"), ";") == ";"
+
+
+def test_a_multi_character_delimiter_is_refused():
+    with pytest.raises(ValueError, match="single character"):
+        delimiter_for(Path("e.csv"), "::")
+
+
+def test_print_columns_on_a_tsv_reads_no_data_row(tmp_path, capsys):
+    path = write_tsv(tmp_path / "e.tsv", _rows(sentinel=True), HEADER)
+    rc = main(["--print-columns", "--csv", str(path)])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert out.splitlines() == HEADER, "one header per line, not one run-together line"
+    assert SENTINEL not in out
+
+
+def test_a_tsv_export_audits_identically_to_the_same_csv(tmp_path, columns_yaml):
+    """The separator must not reach any measurement. Same rows, two encodings, same numbers."""
+    rows = _rows(24)
+    csv_runs, tsv_runs = tmp_path / "rc", tmp_path / "rt"
+    assert main(["--csv", str(write_csv(tmp_path / "e.csv", rows, HEADER)),
+                 "--columns", str(columns_yaml), "--runs-dir", str(csv_runs)]) == 0
+    assert main(["--csv", str(write_tsv(tmp_path / "e.tsv", rows, HEADER)),
+                 "--columns", str(columns_yaml), "--runs-dir", str(tsv_runs)]) == 0
+
+    def metrics(d: Path) -> dict:
+        return json.loads(next(d.rglob("metrics.json")).read_text())
+
+    assert metrics(csv_runs) == metrics(tsv_runs)
+
+
+def test_a_tsv_read_as_csv_fails_rather_than_measuring_the_wrong_thing(tmp_path, columns_yaml):
+    """The reason the detection exists: forced to comma, a TSV must not produce numbers."""
+    path = write_tsv(tmp_path / "e.tsv", _rows(), HEADER)
+    rc = main(["--csv", str(path), "--columns", str(columns_yaml),
+               "--delimiter", ",", "--runs-dir", str(tmp_path / "runs")])
+    assert rc != 0, "a one-column read must not be audited"
+    assert not list((tmp_path / "runs").rglob("*.json"))
