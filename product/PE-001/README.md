@@ -20,8 +20,11 @@ cd product/PE-001
 # 1. See the export's headers. Reads the header row only, no data row.
 uv run python run_audit.py --print-columns --csv ~/path/to/export.csv
 
-# 2. Copy the example mapping and set each value to the matching header.
-cp columns.example.yaml columns.yaml && $EDITOR columns.yaml
+# 2. Check the committed mapping against those headers, and edit it IN PLACE if they differ.
+#    columns.yaml is tracked, because its hash goes into config.json and a run is not
+#    reproducible without it. Do not copy the example over it: that is what
+#    columns.example.yaml is for, and `git pull` refuses to overwrite an untracked copy.
+$EDITOR columns.yaml
 
 # 3. Audit.
 uv run python run_audit.py \
@@ -35,6 +38,24 @@ uv run python run_audit.py \
     --exp000-manifest ~/path/to/EXP-000-annotation/manifest.json \
     --split-assignment ~/path/to/split_assignment.json
 ```
+
+### If the sheet will not download
+
+A browser download of the sheet is not the only route, and on 2026-11-12 it was not a working one.
+Copying the sheet and writing the clipboard to a file skips the download entirely:
+
+```sh
+# with the sheet open in the browser: select all, copy, then
+pbpaste > ~/labelled.tsv && wc -l ~/labelled.tsv && head -1 ~/labelled.tsv
+```
+
+That produces **tab**-separated text, not comma-separated. The audit detects the separator from the
+suffix — `.tsv`, `.tab` and `.txt` are tabs, everything else commas — so `~/labelled.tsv` needs no
+extra flag. `--delimiter` overrides the detection and takes one character, or `tab`.
+
+Check the two printed values before going on: the line count should match the sheet's row count
+plus one, and the header line should show tab-separated names. A header that comes back as one
+run-together string means the clipboard held something other than sheet cells.
 
 Output lands in `runs/PE-001/<run-id>/`. `metrics.json` and `config.json` are tracked by git; the
 root `.gitignore` keeps everything else under a run directory local.
